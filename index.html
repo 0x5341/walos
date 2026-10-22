@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>walos — WASI workbench</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <span class="mark">w/</span>
+          <h1>walos <small>WASI workbench</small></h1>
+        </div>
+        <span id="state">Starting…</span>
+      </header>
+      <section class="intro">
+        <p>A small OS, running in your browser.</p>
+        <span>Preview 1 · trusted applications · Chromium</span>
+      </section>
+      <div class="workspace">
+        <section class="console">
+          <div class="bar">
+            <span>Terminal</span
+            ><button id="interrupt" type="button">Stop pipeline <kbd>Ctrl C</kbd></button>
+          </div>
+          <pre id="terminal" role="log" aria-label="Terminal output" aria-live="polite"></pre>
+          <div class="entry">
+            <span>›</span
+            ><input
+              id="input"
+              aria-label="Terminal input"
+              placeholder="Enter a command…"
+              autocomplete="off"
+              spellcheck="false"
+              disabled
+            />
+          </div>
+        </section>
+        <aside>
+          <h2>Try it</h2>
+          <code
+            >cd /home<br />cat README.md | grep TODO | sort<br />echo saved &gt; note.txt<br />cat
+            &lt; note.txt</code
+          >
+          <h2>Processes</h2>
+          <pre id="processes"></pre>
+          <p>Files in /home persist across reloads.<br />/tmp resets at startup.</p>
+          <p>Small WASI Shell. No network, job control, or security isolation.</p>
+        </aside>
+      </div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

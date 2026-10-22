@@ -1,0 +1,5 @@
+# Preserve exact generator output and the supplied Markdown hard line breaks.
+wit/generated/** linguist-generated=true -whitespace
+docs/grilled_webos_concept.md -whitespace
+wit/deps/** linguist-vendored=true
+apps/vendor/** linguist-vendored=true
