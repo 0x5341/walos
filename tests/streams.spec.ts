@@ -109,3 +109,74 @@ test('endpoint migration preserves buffered bytes and cumulative accounting', as
   });
   expect(result).toEqual([1, 2, 3]);
 });
+
+test('Preview 2 nonblocking streams share readiness, permits and pollable wakeups', async ({
+  page,
+}) => {
+  await page.goto('/tests/fixtures/library.html');
+  const result = await page.evaluate(async () => {
+    const { PortStream } = await import('/packages/os/dist/internal/streams.js');
+    const { InputStream, OutputStream, poll } = await import('/packages/os/dist/internal/p2-io.js');
+    const c = new MessageChannel();
+    const input = new InputStream(
+      new PortStream({ kind: 'pipe', id: 1, direction: 'in', port: c.port1, capacity: 4 }),
+    );
+    const output = new OutputStream(
+      new PortStream({ kind: 'pipe', id: 2, direction: 'out', port: c.port2, capacity: 4 }),
+    );
+    const a = input.subscribe(),
+      b = input.subscribe();
+    const empty = input.read(8n).length;
+    const initiallyReady = a.ready();
+    const pending = poll([a, b]);
+    const permit = output.checkWrite();
+    output.write(new Uint8Array([1, 2, 3, 4]));
+    const full = output.checkWrite();
+    const indices = [...(await pending)];
+    const writable = output.subscribe();
+    const resume = writable.block();
+    const first = input.read(1n);
+    await resume;
+    const restored = output.checkWrite();
+    let trap = '';
+    try {
+      output.write(new Uint8Array(2));
+    } catch (e) {
+      trap = String(e);
+    }
+    output[Symbol.dispose]();
+    const rest = await input.blockingRead(8n);
+    let eof = '';
+    try {
+      await input.blockingRead(8n);
+    } catch (e: any) {
+      eof = e.tag;
+    }
+    a[Symbol.dispose]();
+    b[Symbol.dispose]();
+    writable[Symbol.dispose]();
+    input[Symbol.dispose]();
+    return {
+      empty,
+      initiallyReady,
+      permit: Number(permit),
+      full: Number(full),
+      indices,
+      restored: Number(restored),
+      bytes: [...first, ...rest],
+      trap,
+      eof,
+    };
+  });
+  expect(result).toMatchObject({
+    empty: 0,
+    initiallyReady: false,
+    permit: 4,
+    full: 0,
+    indices: [0, 1],
+    restored: 1,
+    bytes: [1, 2, 3, 4],
+    eof: 'closed',
+  });
+  expect(result.trap).toContain('permit');
+});
