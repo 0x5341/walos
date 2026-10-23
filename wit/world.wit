@@ -1,4 +1,4 @@
-package webos:runtime@0.1.0;
+package walos:runtime@0.1.0;
 
 interface process {
     use wasi:filesystem/types@0.2.0.{descriptor};

@@ -1,4 +1,4 @@
-/** @module Interface webos:runtime/process@0.1.0 **/
+/** @module Interface walos:runtime/process@0.1.0 **/
 export function spawn(executable: Descriptor, cwd: Descriptor, argv: Array<string>, env: Array<EnvironmentEntry>, stdin: InputStream | undefined, stdout: OutputStream | undefined, stderr: OutputStream | undefined): ChildProcess;
 export type Descriptor = import('./wasi-filesystem-types.js').Descriptor;
 export type InputStream = import('./wasi-io-streams.js').InputStream;
