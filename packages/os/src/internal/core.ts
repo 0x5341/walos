@@ -1,5 +1,5 @@
-import type { Exit, FromProcess, Request, Spec, StreamRef } from './protocol';
-import { transferables, RpcFailure } from './protocol';
+import type { CoreEvent, Exit, FromProcess, Request, Spec, StreamRef } from './protocol.js';
+import { transferables, RpcFailure } from './protocol.js';
 interface RecordEntry {
   pid: number;
   parent: number | null;
@@ -19,7 +19,7 @@ interface RecordEntry {
   spawnRequest?: number;
 }
 export interface CoreEvents {
-  (event: unknown, ports?: Transferable[]): void;
+  (event: CoreEvent, ports?: Transferable[]): void;
 }
 // Only control traffic reaches this manager. File bytes never enter the Core.
 export class ProcessManager {
@@ -41,7 +41,7 @@ export class ProcessManager {
   constructor(
     private emit: CoreEvents,
     private makeWorker = () =>
-      new Worker(new URL('./process.worker.ts', import.meta.url), { type: 'module' }),
+      new Worker(new URL('./process.worker.js', import.meta.url), { type: 'module' }),
     private timeout = 15_000,
   ) {}
   private tty(pid: number, direction: 'in' | 'out'): StreamRef {
@@ -254,6 +254,11 @@ export class ProcessManager {
   }
   terminate(pid: number) {
     this.finish(pid, { kind: 'terminated', message: 'supervisor terminate' });
+  }
+  dispose() {
+    for (const pid of [...this.records.keys()]) this.terminate(pid);
+    this.records.clear();
+    this.owners.clear();
   }
   private finish(pid: number, exit: Exit) {
     const r = this.records.get(pid);

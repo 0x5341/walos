@@ -1,5 +1,5 @@
-import { Rpc, type ToProcess } from './protocol';
-import { Wasi, WasiExit } from './wasi';
+import { Rpc, type ToProcess } from './protocol.js';
+import { Wasi, WasiExit } from './wasi.js';
 const scope = self as unknown as DedicatedWorkerGlobalScope;
 const rpc = new Rpc((r, ports) => scope.postMessage(r, ports));
 let wasi: Wasi | undefined;

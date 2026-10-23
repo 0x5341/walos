@@ -1,4 +1,57 @@
 import { test, expect } from '@playwright/test';
+test('supervisor disposal terminates running and starting processes once', async ({ page }) => {
+  await page.goto('/tests/fixtures/library.html');
+  const result = await page.evaluate(async () => {
+    const { ProcessManager } = await import('/packages/os/dist/internal/core.js');
+    const workers: any[] = [];
+    const events: any[] = [];
+    const manager = new ProcessManager(
+      (event) => events.push(event),
+      () => {
+        const worker = {
+          onmessage: null as any,
+          postMessage() {},
+          terminated: 0,
+          terminate() {
+            this.terminated++;
+          },
+        };
+        workers.push(worker);
+        return worker as any;
+      },
+    );
+    const spec = () => ({
+      file: {} as any,
+      cwd: {} as any,
+      cwdPath: '/',
+      argv: ['fixture'],
+      env: {},
+      stdio: [null, null, null],
+    });
+    const boot = manager.spawn(spec(), null);
+    workers[0].onmessage({ data: { type: 'ready' } });
+    await boot;
+    for (const id of [1, 2]) {
+      workers[0].onmessage({ data: { type: 'request', id, op: 'spawn', spec: spec() } });
+      if (id === 1) workers[1].onmessage({ data: { type: 'ready' } });
+      await Promise.resolve();
+    }
+    manager.dispose();
+    manager.dispose();
+    for (const worker of workers) worker.onmessage({ data: { type: 'ready' } });
+    await Promise.resolve();
+    return {
+      terminations: workers.map((worker) => worker.terminated),
+      exits: events
+        .filter((event) => event.type === 'exit')
+        .map((event) => event.pid)
+        .sort(),
+      finalProcesses: events.filter((event) => event.type === 'processes').at(-1).processes,
+    };
+  });
+  expect(result).toEqual({ terminations: [1, 1, 1], exits: [1, 2, 3], finalProcesses: [] });
+});
+
 for (const reason of ['normal', 'trap'] as const)
   for (const readyFirst of [false, true]) {
     test(`parent ${reason} exit ${readyFirst ? 'after' : 'before'} child READY`, async ({
@@ -7,7 +60,7 @@ for (const reason of ['normal', 'trap'] as const)
       await page.goto('/');
       const result = await page.evaluate(
         async ({ reason, readyFirst }) => {
-          const { ProcessManager } = await import('/src/core.ts');
+          const { ProcessManager } = await import('/packages/os/dist/internal/core.js');
           const workers: any[] = [];
           const events: any[] = [];
           class WorkerDouble {
@@ -77,7 +130,7 @@ for (const reason of ['normal', 'trap'] as const)
 test('startup timeout ignores late READY and releases once', async ({ page }) => {
   await page.goto('/');
   const result = await page.evaluate(async () => {
-    const { ProcessManager } = await import('/src/core.ts');
+    const { ProcessManager } = await import('/packages/os/dist/internal/core.js');
     const events: any[] = [];
     let worker: any;
     const pm = new ProcessManager(
@@ -133,7 +186,7 @@ test('startup timeout ignores late READY and releases once', async ({ page }) =>
 test('explicit cancellation ignores late READY and never stops a READY child', async ({ page }) => {
   await page.goto('/');
   const result = await page.evaluate(async () => {
-    const { ProcessManager } = await import('/src/core.ts');
+    const { ProcessManager } = await import('/packages/os/dist/internal/core.js');
     const workers: any[] = [];
     const pm = new ProcessManager(
       () => {},
@@ -185,7 +238,7 @@ test('wait consumes one exit result and dropping a live handle leaves the child 
 }) => {
   await page.goto('/');
   const result = await page.evaluate(async () => {
-    const { ProcessManager } = await import('/src/core.ts');
+    const { ProcessManager } = await import('/packages/os/dist/internal/core.js');
     const workers: any[] = [];
     const pm = new ProcessManager(
       () => {},

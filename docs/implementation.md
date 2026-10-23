@@ -10,10 +10,10 @@ the user's request in this conversation.
 This change delivers the Preview 1 vertical path, rather than claiming all seven
 baseline slices are complete. Review in this order:
 
-1. `wit/world.wit`, `src/protocol.ts`: public contract and private Worker transport.
-2. `src/core.ts`: one Process Worker per process; READY, resource ownership,
+1. `wit/world.wit`, `packages/os/src/internal/protocol.ts`: public contract and private Worker transport.
+2. `packages/os/src/internal/core.ts`: one Process Worker per process; READY, resource ownership,
    wait/drop, parent exit, timeout/cancellation and stop escalation.
-3. `src/streams.ts`, `src/fs.ts`, `src/wasi.ts`, `src/process.worker.ts`: process-local
+3. `packages/os/src/internal/{streams,fs,wasi,process.worker}.ts`: process-local
    resources, direct I/O and Preview 1 adapter.
 4. `apps/sh.c`, `apps/webos.h`, `apps/compat.c`: the shell and compatibility bridge.
 5. `tests`, CI and the reproducible validation below.
@@ -35,7 +35,7 @@ bytes; command parsing, PATH search and pipelines execute in the WASI shell.
 
 ## Runtime boundaries
 
-Main bootstraps `/bin`, creates the initial filesystem and resets `/tmp` before
+The `@walos/os` library bootstraps `/bin`, creates the initial filesystem and resets `/tmp` before
 launching the shell. After boot, each Process Worker opens its executable from a
 cloned `FileSystemFileHandle`, and performs file/namespace I/O directly against
 OPFS. The Core receives handles and control messages, not executable bytes.
@@ -70,12 +70,33 @@ operations use the descriptor's actual cloned directory handle. File rename
 uses Chromium's OPFS `FileSystemFileHandle.move`; directory rename is not
 implemented. Snapshot path names are descriptive, not an isolation mechanism.
 
-TTY has no capacity limit or ACK. Main has one input owner and discards input
+TTY has no capacity limit or ACK. The library has one input owner and discards input
 when there is none. Shell foreground changes and restoring its input pass
-through the Core. The UI holds the shell prompt until foreground output CLOSE messages
+through the Core. The library holds the shell prompt until foreground output CLOSE messages
 arrive, without adding TTY data ACKs. Ctrl+C interrupts the foreground pipeline and cancels a
 pending foreground startup. General FD duplication and file/pipe implicit
 inheritance are unsupported; implicit stdio inheritance is TTY/Null only.
+
+## Library boundary
+
+`packages/os` is an npm workspace with one public entry, `@walos/os`. Its `Walos`
+class exposes boot, input, interrupt, disposal, state snapshots and typed events.
+No DOM access or workbench selectors exist inside the package. Boot installs the
+hosted WASI commands; `binUrl` lets another UI choose their asset location. The
+public entry owns TTY decoding and prompt ordering; `internal` contains private
+bootstrap, Worker transport, process management and WASI adapters.
+
+The root workbench imports the compiled package. Its `src/main.ts` subscribes to
+output/state/process events and forwards input/interrupt actions. It does not
+know about OPFS handles, Worker messages or MessagePorts. Disposal terminates all
+session processes through the supervisor before terminating the Core Worker and
+closing terminal ports; it can also cancel an in-flight boot.
+
+The package build uses TypeScript to emit ESM and declarations. Relative module
+Worker URLs remain in the output for the consumer bundler to process. Vite's
+production build bundles both levels of Workers. Browser library tests use an
+empty HTML host to verify real pipelines, Unicode output, file I/O, interrupts,
+boot errors and cancellation without creating the workbench UI.
 
 ## Preview 1 compatibility ABI
 
@@ -136,6 +157,8 @@ The security scope remains trusted applications only. There is no enforced
 capability sandbox or resource quota. Shared OPFS and boot-time `/tmp` reset mean
 multiple simultaneous OS tabs are not supported in this slice.
 
-Final local validation: TypeScript build, WIT generation/diff, 16 development
-browser tests and 5 production browser tests passed. Hosted CI is reported
-separately by the PR.
+Final local validation after library extraction: TypeScript library/UI builds,
+WIT generation/diff, 21 development browser tests and 5 production browser tests
+passed. Packing the library, installing its tarball in a separate consumer,
+consumer type checking and a consumer Vite production build also passed. Hosted
+CI is reported separately by the PR.

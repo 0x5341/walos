@@ -7,15 +7,16 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
+    "dev": "npm run build:os && vite --host 127.0.0.1",
     "build:apps": "node scripts/build-apps.mjs",
-    "check": "tsc --noEmit",
+    "check": "npm run build:os && tsc --noEmit",
     "build": "npm run build:apps && npm run check && vite build",
     "test": "playwright test",
     "preview": "vite preview --host 127.0.0.1",
     "check:wit": "jco types wit -o work/wit-generated",
-    "format": "prettier --write src tests scripts *.ts *.json index.html",
-    "test:production": "WALOS_TEST_BUILD=1 playwright test"
+    "format": "prettier --write src packages/os/src packages/os/*.json tests scripts *.ts *.json index.html",
+    "test:production": "WALOS_TEST_BUILD=1 playwright test",
+    "build:os": "npm run build --workspace @walos/os"
   },
   "devDependencies": {
     "@bytecodealliance/jco": "1.15.1",
@@ -23,5 +24,11 @@
     "prettier": "3.6.2",
     "typescript": "5.9.3",
     "vite": "7.1.12"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "dependencies": {
+    "@walos/os": "*"
   }
 }
