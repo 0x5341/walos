@@ -17,6 +17,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: bash scripts/setup-sdk.sh
+      - run: bash scripts/setup-wit-bindgen.sh
       - run: npx playwright install --with-deps chromium
       - run: npm run check:wit
       - run: diff -ru wit/generated work/wit-generated

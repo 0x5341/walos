@@ -1,5 +1,5 @@
 import { Filesystem } from './fs.js';
-import { connect } from './streams.js';
+import { connect, type Stream } from './streams.js';
 import {
   Rpc,
   RpcFailure,
@@ -15,6 +15,7 @@ import {
   poll,
   StreamFailure,
   StreamResource,
+  type SharedStream,
 } from './p2-io.js';
 import { Descriptor, DirectoryEntryStream, P2Filesystem, filesystemErrorCode } from './p2-fs.js';
 import { WasiExit } from './wasi.js';
@@ -32,10 +33,17 @@ const timer = (instant: bigint) =>
   new Pollable(
     () => now() >= instant,
     (wake) => {
-      const id = setTimeout(
-        wake,
-        Math.min(2147483647, Math.max(0, Number((instant - now()) / 1000000n) + 1)),
-      );
+      let id: ReturnType<typeof setTimeout>;
+      const schedule = () => {
+        id = setTimeout(
+          () => {
+            if (now() >= instant) wake();
+            else schedule();
+          },
+          Math.min(2147483647, Math.max(0, Number((instant - now()) / 1000000n) + 1)),
+        );
+      };
+      schedule();
       return () => clearTimeout(id);
     },
   );
@@ -80,7 +88,7 @@ export class Wasi2 {
   stopping = false;
   private streams = new Set<StreamResource>();
   private children = new Set<ChildProcess>();
-  private stdio: StreamResource[] = [];
+  private stdio: { stream: Stream; shared: SharedStream }[] = [];
   private fs!: P2Filesystem;
   constructor(
     private spec: Spec,
@@ -104,11 +112,17 @@ export class Wasi2 {
     );
     for (let i = 0; i < 3; i++) {
       const stream = await connect(this.spec.stdio[i]!, true);
-      const resource =
-        i === 0 ? new InputStream(stream, this.release) : new OutputStream(stream, this.release);
-      this.track(resource);
-      this.stdio.push(resource);
+      this.stdio.push({ stream, shared: { resources: new Set(), moved: false } });
     }
+  }
+  private standardStream(index: number) {
+    const { stream, shared } = this.stdio[index];
+    const resource =
+      index === 0
+        ? new InputStream(stream, this.release, shared)
+        : new OutputStream(stream, this.release, shared);
+    this.track(resource);
+    return resource;
   }
   private checkStop() {
     if (this.stopping) throw new WasiExit(130);
@@ -194,9 +208,9 @@ export class Wasi2 {
           throw new WasiExit(status.tag === 'ok' ? 0 : 1);
         },
       },
-      'wasi:cli/stdin': { getStdin: () => this.stdio[0] },
-      'wasi:cli/stdout': { getStdout: () => this.stdio[1] },
-      'wasi:cli/stderr': { getStderr: () => this.stdio[2] },
+      'wasi:cli/stdin': { getStdin: () => this.standardStream(0) },
+      'wasi:cli/stdout': { getStdout: () => this.standardStream(1) },
+      'wasi:cli/stderr': { getStderr: () => this.standardStream(2) },
       'wasi:cli/terminal-input': { TerminalInput },
       'wasi:cli/terminal-output': { TerminalOutput },
       'wasi:cli/terminal-stdin': {
@@ -274,9 +288,16 @@ export class Wasi2 {
         stream[Symbol.dispose]();
       } catch {}
     }
+    for (const { stream, shared } of this.stdio)
+      if (!shared.moved) {
+        try {
+          stream.close();
+        } catch {}
+      }
     this.fs?.close();
   }
   gone(id: number) {
+    for (const { stream } of this.stdio) if (stream.ref.id === id) stream.gone();
     for (const resource of this.streams) if (resource.stream.ref.id === id) resource.stream.gone();
   }
 }

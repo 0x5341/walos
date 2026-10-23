@@ -67,3 +67,4 @@ cc2(
   ['-Iapps/vendor/sbase'],
 );
 cc2('p2-fs-probe', ['tests/fixtures/filesystem.c']);
+await import('./build-p2-probe.mjs');

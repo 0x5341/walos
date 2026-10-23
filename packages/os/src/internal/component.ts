@@ -44,7 +44,17 @@ async function readCache(cache: FileSystemDirectoryHandle, key: string): Promise
   if (
     manifest.key !== key ||
     !/^stage-[a-f0-9-]+$/.test(manifest.directory) ||
-    !manifest.files.some((f) => f.name === 'command.js')
+    !Array.isArray(manifest.files) ||
+    !manifest.files.some((f) => f.name === 'command.js') ||
+    !Array.isArray(manifest.imports) ||
+    manifest.imports.some((name) => typeof name !== 'string') ||
+    !Array.isArray(manifest.exports) ||
+    manifest.exports.some(
+      (entry) =>
+        !Array.isArray(entry) ||
+        entry.length !== 2 ||
+        entry.some((value) => typeof value !== 'string'),
+    )
   )
     throw new Error('Invalid component cache manifest');
   const dir = await cache.getDirectoryHandle(manifest.directory);

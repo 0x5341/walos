@@ -53,7 +53,7 @@ export class P2Filesystem {
   constructor(
     public fs: Filesystem,
     public track: (stream: StreamResource) => void,
-    public release: (stream: StreamResource) => void,
+    public release: (stream: StreamResource, moved?: boolean) => void,
   ) {}
   descriptor(data: FileDescriptor, flags: Flags) {
     const descriptor = new Descriptor(this, this.next++, data, flags);
@@ -121,21 +121,33 @@ export class Descriptor {
   }
   readViaStream(offset: bigint) {
     return fsCall(async () => {
-      const resource = new InputStream(await this.fileStream('in', offset), this.owner.release);
+      const stream = await this.fileStream('in', offset);
+      const resource = new InputStream(stream, (resource, moved) => {
+        this.streams.delete(stream);
+        this.owner.release(resource, moved);
+      });
       this.owner.track(resource);
       return resource;
     });
   }
   writeViaStream(offset: bigint) {
     return fsCall(async () => {
-      const resource = new OutputStream(await this.fileStream('out', offset), this.owner.release);
+      const stream = await this.fileStream('out', offset);
+      const resource = new OutputStream(stream, (resource, moved) => {
+        this.streams.delete(stream);
+        this.owner.release(resource, moved);
+      });
       this.owner.track(resource);
       return resource;
     });
   }
   appendViaStream() {
     return fsCall(async () => {
-      const resource = new OutputStream(await this.fileStream('out', 0n, true), this.owner.release);
+      const stream = await this.fileStream('out', 0n, true);
+      const resource = new OutputStream(stream, (resource, moved) => {
+        this.streams.delete(stream);
+        this.owner.release(resource, moved);
+      });
       this.owner.track(resource);
       return resource;
     });

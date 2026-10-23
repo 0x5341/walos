@@ -58,14 +58,22 @@ export async function poll(list: Pollable[]): Promise<Uint32Array> {
   return new Uint32Array(ready());
 }
 
+export interface SharedStream {
+  resources: Set<StreamResource>;
+  moved: boolean;
+  permit?: number;
+}
 export abstract class StreamResource {
   protected live = true;
   constructor(
     public stream: Stream,
     private release: (s: StreamResource, moved: boolean) => void = () => {},
-  ) {}
+    protected shared?: SharedStream,
+  ) {
+    shared?.resources.add(this);
+  }
   protected check() {
-    if (!this.live) throw closed();
+    if (!this.live || this.shared?.moved) throw closed();
   }
   protected operation<T>(fn: () => T): T {
     this.check();
@@ -85,6 +93,14 @@ export abstract class StreamResource {
   protected abstract ready(): boolean;
   take(): StreamRef {
     this.check();
+    if (this.shared && this.shared.resources.size > 1) {
+      this[Symbol.dispose]();
+      throw new Error('Cannot transfer stdio while another local resource owns it');
+    }
+    if (this.shared) {
+      this.shared.moved = true;
+      this.shared.resources.delete(this);
+    }
     this.live = false;
     this.release(this, true);
     return this.stream.detach();
@@ -92,6 +108,12 @@ export abstract class StreamResource {
   [Symbol.dispose]() {
     if (!this.live) return;
     this.live = false;
+    if (this.shared) {
+      this.shared.resources.delete(this);
+      // Ambient stdio survives an individual getter resource's drop.
+      this.release(this, true);
+      return;
+    }
     try {
       this.stream.close();
     } finally {
@@ -121,7 +143,14 @@ export class InputStream extends StreamResource {
   }
 }
 export class OutputStream extends StreamResource {
-  private permit = 0;
+  private localPermit = 0;
+  private get permit() {
+    return this.shared ? (this.shared.permit ?? 0) : this.localPermit;
+  }
+  private set permit(value: number) {
+    if (this.shared) this.shared.permit = value;
+    else this.localPermit = value;
+  }
   protected ready() {
     try {
       return this.stream.writable() > 0;
