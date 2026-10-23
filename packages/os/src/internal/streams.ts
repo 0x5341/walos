@@ -277,13 +277,13 @@ export class FileStream implements Stream {
     this.access.truncate(n);
   }
   flush() {
-    this.access?.flush();
+    if (this.ref.direction === 'out') this.access?.flush();
   }
   close() {
     if (this.closed) return;
     this.closed = true;
     try {
-      this.access?.flush();
+      if (this.ref.direction === 'out') this.access?.flush();
     } finally {
       this.access?.close();
       this.access = undefined;

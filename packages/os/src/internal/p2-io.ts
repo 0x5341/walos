@@ -62,7 +62,7 @@ export abstract class StreamResource {
   protected live = true;
   constructor(
     public stream: Stream,
-    private release: (s: StreamResource) => void = () => {},
+    private release: (s: StreamResource, moved: boolean) => void = () => {},
   ) {}
   protected check() {
     if (!this.live) throw closed();
@@ -86,14 +86,17 @@ export abstract class StreamResource {
   take(): StreamRef {
     this.check();
     this.live = false;
-    this.release(this);
+    this.release(this, true);
     return this.stream.detach();
   }
   [Symbol.dispose]() {
     if (!this.live) return;
     this.live = false;
-    this.stream.close();
-    this.release(this);
+    try {
+      this.stream.close();
+    } finally {
+      this.release(this, false);
+    }
   }
 }
 export class InputStream extends StreamResource {

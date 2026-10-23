@@ -35,3 +35,35 @@ cc(
   ['-Iapps/vendor/sbase'],
 );
 cc('fs-probe', ['tests/fixtures/filesystem.c']);
+
+// wasi-sdk emits a real Component Model executable for wasm32-wasip2.
+const cc2 = (name, files, extra = []) =>
+  execFileSync(
+    `${sdk}/bin/clang`,
+    [
+      '--target=wasm32-wasip2',
+      '-O2',
+      '-Wall',
+      '-Wextra',
+      '-Wl,--strip-all',
+      ...extra,
+      ...files,
+      'apps/compat2.c',
+      '-o',
+      `public/bin/${name}.wasm`,
+    ],
+    { stdio: 'inherit' },
+  );
+for (const name of ['echo', 'pwd', 'env', 'false', 'true', 'trap', 'hang', 'grep', 'sort'])
+  cc2(`p2-${name}`, ['apps/tools.c']);
+cc2(
+  'p2-cat',
+  [
+    'apps/vendor/sbase/cat.c',
+    'apps/vendor/sbase/libutil/concat.c',
+    'apps/vendor/sbase/libutil/eprintf.c',
+    'apps/vendor/sbase/libutil/writeall.c',
+  ],
+  ['-Iapps/vendor/sbase'],
+);
+cc2('p2-fs-probe', ['tests/fixtures/filesystem.c']);

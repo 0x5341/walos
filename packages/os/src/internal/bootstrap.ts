@@ -12,6 +12,16 @@ const commands = [
   'true',
   'trap',
   'hang',
+  'p2-cat',
+  'p2-echo',
+  'p2-pwd',
+  'p2-env',
+  'p2-false',
+  'p2-true',
+  'p2-trap',
+  'p2-hang',
+  'p2-grep',
+  'p2-sort',
 ];
 
 export async function bootstrap(binUrl: string | URL, signal: AbortSignal): Promise<Spec> {
