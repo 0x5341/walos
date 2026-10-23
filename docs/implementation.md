@@ -1,36 +1,33 @@
-# Preview 1 review slice
+# WASI runtime implementation
 
 ## Scope and review order
 
-The supplied `concept.md` is retained unchanged. The supplied grilled baseline
-resolves its earlier open decisions; its statement that implementation was
-approved is treated as background context. The work and PR are authorized by
-the user's request in this conversation.
+`concept.md` is retained unchanged. The grilled baseline resolves its earlier
+open decisions. The runtime implements the Preview 1 path and the Preview 2
+(wasip2) vertical slice, with the supported subsets described below.
 
-This change delivers the Preview 1 vertical path, rather than claiming all seven
-baseline slices are complete. Review in this order:
+Review the commits in this order:
 
-1. `wit/world.wit`, `packages/os/src/internal/protocol.ts`: public contract and private Worker transport.
-2. `packages/os/src/internal/core.ts`: one Process Worker per process; READY, resource ownership,
-   wait/drop, parent exit, timeout/cancellation and stop escalation.
-3. `packages/os/src/internal/{streams,fs,wasi,process.worker}.ts`: process-local
-   resources, direct I/O and Preview 1 adapter.
-4. `apps/sh.c`, `apps/webos.h`, `apps/compat.c`: the shell and compatibility bridge.
-5. `tests`, CI and the reproducible validation below.
+1. WIT extension rename: `webos:runtime` → `walos:runtime`; regenerated declarations.
+2. Shared nonblocking stream operations and standard P2 pollables.
+3. Browser Jco packaging, Process-local conversion, OPFS cache and manual clearing.
+4. P2 filesystem/process adapter, executable detection and bundled wasip2 commands.
+5. Generated-WIT C fixture, browser integration tests, CSP/cache tests and CI.
+6. Updated support status and reproducible hosting/build instructions.
 
-| Baseline slice | Implemented in this PR | Remaining |
+| Baseline slice | Implemented | Remaining |
 | --- | --- | --- |
 | 1. Worker/Wasm | Main → Core → Process Worker; real WASI commands; READY/EXIT, trap, terminate | Broader Worker disappearance diagnostics |
-| 2. WASI 0.1/OPFS | argv/env, directory descriptor cwd, stdio, read/write/seek, basic stat, mkdir/unlink/rmdir and file rename, persistence | Wider syscall/rights coverage, read/write descriptors, directory rename, readdir |
+| 2. WASI 0.1/OPFS | argv/env, directory descriptor cwd, stdio, read/write/seek, basic stat, mkdir/unlink/rmdir and file rename, persistence | Wider P1 syscall/rights coverage, P1 read/write descriptors and readdir; directory rename |
 | 3. spawn/wait | Descriptor-based spawn, local process resources, one-shot wait, drop, stop, parent normal/abnormal distinction, explicit cancel | Full generated C bindings and richer P1 error payloads |
-| 4. Streams | Direct MessagePort DATA; 64 KiB capacity, 16 KiB chunks, cumulative ACKs, EOF/Broken Pipe, migration, foreground TTY | Preview 2 nonblocking methods and standard pollables; configurable UI controls for capacities |
+| 4. Streams | Direct MessagePort DATA; 64 KiB capacity, 16 KiB chunks, cumulative ACKs, EOF/Broken Pipe, migration, foreground TTY, P2 nonblocking operations and standard pollables | Configurable UI controls for capacities |
 | 5. Shell | PATH, cwd, env, exit status, pipelines, `<`, `>`, `>>`, small literal/quote grammar | Full POSIX syntax is outside this PoC |
-| 6. WASI 0.2 | WIT validated against standard types; generated TypeScript declarations | Component execution, process-local Jco browser conversion, common P2 adapter, OPFS transformation cache and CSP experiments |
+| 6. WASI 0.2 | Real wasip2 commands; Process-local Jco conversion; shared P2 host adapter; persistent cache; generated-WIT spawn/IPC; CSP tests | Broader filesystem coverage and unsupported network interfaces |
 | 7. Completion | Unmodified sbase cat compiled for WASI, regression tests, one large-I/O timing sample | Full startup/memory/CPU/I/O benchmark matrix and all PoC acceptance criteria |
 
-Preview 2 remains a required later PoC stage; this change does not replace it
-with a private WASI variant. No Execution Worker pool, central file server or
-Pipe DATA relay is introduced. The Web UI displays output and sends keyboard
+Preview 2 uses standard WASI 0.2.x interfaces and the `walos:runtime@0.1.0`
+extension. No Execution Worker pool, central file server or Pipe DATA relay is
+introduced. The Web UI displays output and sends keyboard
 bytes; command parsing, PATH search and pipelines execute in the WASI shell.
 
 ## Runtime boundaries
@@ -129,6 +126,73 @@ a documented subset: no sockets, poll_oneoff, pread/pwrite, symlinks, arbitrary
 FD sharing or complete rights enforcement. Read-only and write-only file
 streams are supported; O_RDWR is not a supported portability target yet.
 
+## Preview 2 adapter and supported subset
+
+The Wasm header selects the P1 Core Wasm or P2 Component loader. In the P2 path,
+the Process Worker prepares stdio, loads or converts the Component with Jco
+1.15.1, instantiates its JSPI bindings, validates `wasi:cli/run`, then sends READY.
+Conversion, import or initial resource failures are startup errors. After READY,
+`run` success/failure maps to exit 0/1, standard CLI exit maps to 0/1, Wasm traps
+remain traps, and the supervisor can terminate a CPU-bound Component. The P2
+standard CLI exit API has no arbitrary numeric exit status. A P2 parent can
+still observe the full exit variant/code of a P1 child through the walos WIT.
+
+`wasi2.ts`, `p2-fs.ts` and `p2-io.ts` adapt Component resources to the existing
+Core RPC, `Filesystem`, `FileStream` and `PortStream`. Resource objects never
+cross Workers. `spawn` borrows descriptors and consumes every explicit stream
+before descriptor validation; failed preparation releases the consumed streams.
+Standard stdio getters return independent local resource owners of the same
+logical stream. Dropping one leaves the ambient stream and other owners alive;
+transferring stdio with multiple live owners returns `invalid-stream`, since
+general stream sharing across Workers is outside the PoC.
+P1/P2 use the same startup/parent-exit/stop/wait supervisor. Child resource drop
+leaves the child running; wait consumes the result once. The P1 `webos_v1`
+compatibility import names remain stable; only the WIT namespace was renamed.
+
+| Interface | Supported | Limits |
+| --- | --- | --- |
+| CLI | argv/env, standard initial-cwd, stdin/out/err, terminal detection, exit | Standard success/failure exit; shell remains P1 |
+| I/O | Nonblocking read/write/check-write, blocking convenience methods, skip/splice/zeroes, flush, subscribe, level-triggered poll/pollable | Single reader/writer per Pipe; no general stream duplication |
+| Filesystem | Borrowed file/directory resources, preopens, open, read/write streams, offset reads/writes, stat, size, directory listing, mkdir/unlink/rmdir, file rename, metadata hashes, identity and flush | No links, timestamp mutation, directory rename or integrity-sync open flags |
+| Clocks/random | Wall and monotonic clocks, timer pollables, cryptographic random and insecure interfaces | Browser clock precision and allocation limits |
+| walos extensions | spawn, PID, wait/drop/request-stop, Pipe creation, foreground terminal operations | Same TTY/Null-only implicit stdio inheritance as P1 |
+| Network/other imports | Explicit unsupported-import startup errors | Sockets/HTTP and WASI 0.3 are outside this slice |
+
+File input uses shared read-only OPFS sync access handles; output uses exclusive
+readwrite handles. Conflicting opens fail immediately without retries. File
+streams maintain independent logical offsets and move their handle/offset state
+at spawn. A writer cannot coexist with a read-only sync handle for the same file;
+OPFS lock errors are exposed as standard filesystem/stream errors. Close flushes
+output only and releases handles. Browser crash/forced-stop flush is not promised.
+`apps/compat2.c` initializes wasi-sdk 27's libc cwd through standard `initial-cwd`;
+libc otherwise starts at `/`. Preopen calls return fresh owned resources.
+
+## Component conversion, cache and CSP
+
+The library build bundles Jco's browser converter and Wasm assets into a lazy
+module. The production converter is about 9.8 MB before compression and is loaded
+only on a cold conversion. The Process Worker performs conversion; the main
+thread and Core do not convert Components. The only execution engine is the
+browser's WebAssembly runtime.
+
+Cache keys include the Component SHA-256, converter version, host cache revision
+and all Jco options, including exact JSPI import/export selectors. Each Worker
+keeps an in-memory promise/result cache and accesses `.walos-components` in OPFS.
+A unique staging directory holds JS and Core Wasm artifacts. Publishing the
+manifest with `createWritable().close()` happens after every artifact is closed.
+Concurrent duplicate conversions are allowed; either completed manifest can win.
+Readers validate manifest shape and SHA-256 hashes. Incomplete/corrupt entries are
+regenerated. Cache quota/write errors leave execution using the in-memory result.
+Partial/superseded staging directories are reclaimed by the exported
+`clearComponentCache()` API; automatic LRU and a central cache manager are absent.
+
+Generated JS is loaded through a temporary Blob module URL, which is revoked
+after instantiation. Core Wasm bytes are supplied explicitly to Jco's generated
+instantiator, avoiding OPFS fetch URLs or JS rewriting. CSP tests serve policy on
+the page and Workers, allowing `'self'`, Blob modules, `'wasm-unsafe-eval'` and
+`data:` fetches for Jco's bundled Wasm. The exact tested policy is in the library
+README. No `eval`/`new Function` fallback is used.
+
 ## Validation evidence
 
 Environment: Linux x86-64, Node 24.19.0, wasi-sdk 27.0, Chromium
@@ -162,3 +226,29 @@ WIT generation/diff, 21 development browser tests and 5 production browser tests
 passed. Packing the library, installing its tarball in a separate consumer,
 consumer type checking and a consumer Vite production build also passed. Hosted
 CI is reported separately by the PR.
+
+## wasip2 validation
+
+Run the setup/build/test commands in the root README. `setup-wit-bindgen.sh`
+installs checksum-pinned wit-bindgen 0.46.0, and `build-p2-probe.mjs` generates C
+bindings and a real Component from the canonical WIT plus `process2.wit`. This
+fixture starts a P2 producer and P1 consumer through public WIT, transfers a Pipe,
+checks distinct PIDs and one-shot wait, and checks invalid-descriptor spawn after
+stream consumption. It also verifies independent stdio getter resource lifetimes,
+file-stream ownership/offset transfer and WIT request-stop escalation. `p2-*` CLI fixtures are compiled by wasi-sdk 27's native
+`--target=wasm32-wasip2` toolchain. The upstream sbase cat also runs as a P2 CLI.
+
+The browser suite covers P1/P2 mixed pipelines, a byte-equal 1 MiB transfer,
+argv/env/cwd/exit, persistent file redirection, namespace operations, trap/stop
+recovery, nonblocking permits and multiple pollable wakeups. Cache tests check
+fresh-Worker reuse while blocking the converter fetch, hash-corruption recovery,
+concurrent Worker publication and idempotent public cache clearing. Both dev and
+production tests exercise the supported CSP.
+
+Current local validation: Node 24.19.0, wasi-sdk 27.0, wit-bindgen 0.46.0,
+Jco 1.15.1 and system Chromium. WIT generation/diff, TypeScript/production builds,
+all 29 development browser tests and all 11 production browser tests pass.
+Packing the library, installing it in a separate consumer, consumer type checking
+and a consumer Vite production build (with `worker.format: 'es'`) also pass.
+Full startup/memory/CPU/I/O benchmark coverage remains future PoC completion work; no performance superiority claim is
+made.
