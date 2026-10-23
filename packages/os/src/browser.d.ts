@@ -1,4 +1,5 @@
 interface DedicatedWorkerGlobalScope {
+  close(): void;
   postMessage(message: unknown, transfer?: Transferable[]): void;
   onmessage: ((event: MessageEvent) => void) | null;
 }

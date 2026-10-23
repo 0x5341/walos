@@ -1,7 +1,15 @@
-export type Exit =
-  | { kind: 'exited'; code: number }
-  | { kind: 'trap'; message: string }
-  | { kind: 'terminated'; message: string };
+import type { Exit, ProcessInfo } from '../types.js';
+export type { Exit } from '../types.js';
+export type CoreEvent =
+  | { type: 'tty'; pid: number; direction: 'in' | 'out'; port: MessagePort }
+  | { type: 'tty-close'; pid: number; abnormal: boolean }
+  | { type: 'foreground'; input: number | null; pids: number[] }
+  | { type: 'processes'; processes: ProcessInfo[] }
+  | { type: 'exit'; pid: number; exit: Exit; durationMs: number }
+  | { type: 'booted'; pid: number }
+  | { type: 'disposed' }
+  | { type: 'error'; message: string };
+
 export type StreamRef =
   | { kind: 'null'; id: number; direction: 'in' | 'out' }
   | {

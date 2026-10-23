@@ -1,4 +1,4 @@
-import { FileStream, IoError } from './streams';
+import { FileStream, IoError } from './streams.js';
 export interface Descriptor {
   file?: FileSystemFileHandle;
   dir?: FileSystemDirectoryHandle;

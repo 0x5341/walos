@@ -1,4 +1,4 @@
-import { RpcFailure, type StreamRef } from './protocol';
+import { RpcFailure, type StreamRef } from './protocol.js';
 export class IoError extends Error {
   constructor(
     public errno: number,

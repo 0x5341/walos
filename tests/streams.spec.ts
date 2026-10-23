@@ -4,7 +4,7 @@ test('bounded pipe wakes a blocked writer after even a small read and drains bef
 }) => {
   await page.goto('/');
   const result = await page.evaluate(async () => {
-    const { PortStream } = await import('/src/streams.ts');
+    const { PortStream } = await import('/packages/os/dist/internal/streams.js');
     const c = new MessageChannel();
     const reader = new PortStream({
       kind: 'pipe',
@@ -44,7 +44,7 @@ test('bounded pipe wakes a blocked writer after even a small read and drains bef
 test('reader disconnection and invalid cumulative ACKs reject pending writes', async ({ page }) => {
   await page.goto('/');
   const result = await page.evaluate(async () => {
-    const { PortStream } = await import('/src/streams.ts');
+    const { PortStream } = await import('/packages/os/dist/internal/streams.js');
     const c = new MessageChannel();
     const reader = new PortStream({
       kind: 'pipe',
@@ -92,7 +92,7 @@ test('reader disconnection and invalid cumulative ACKs reject pending writes', a
 test('endpoint migration preserves buffered bytes and cumulative accounting', async ({ page }) => {
   await page.goto('/');
   const result = await page.evaluate(async () => {
-    const { PortStream } = await import('/src/streams.ts');
+    const { PortStream } = await import('/packages/os/dist/internal/streams.js');
     const c = new MessageChannel();
     const r = new PortStream({ kind: 'pipe', id: 1, direction: 'in', port: c.port1, capacity: 8 });
     const w = new PortStream({ kind: 'pipe', id: 2, direction: 'out', port: c.port2, capacity: 8 });

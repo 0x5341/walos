@@ -1,6 +1,6 @@
-import { Filesystem } from './fs';
-import { connect, FileStream, IoError, ioError, type Stream } from './streams';
-import { Rpc, transferables, type Spec, type StreamRef } from './protocol';
+import { Filesystem } from './fs.js';
+import { connect, FileStream, IoError, ioError, type Stream } from './streams.js';
+import { Rpc, transferables, type Spec, type StreamRef } from './protocol.js';
 export class WasiExit {
   constructor(public code: number) {}
 }

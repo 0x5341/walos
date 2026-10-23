@@ -45,7 +45,7 @@ test('trap and forced stop leave the shell responsive', async ({ page }) => {
   expect(await command(page, 'echo alive')).toContain('alive\n');
   await page.getByLabel('Terminal input').fill('hang');
   await page.getByLabel('Terminal input').press('Enter');
-  await expect(page.locator('#processes')).toContainText('/bin');
+  await expect(page.locator('#processes')).toContainText('running hang');
   await page.getByRole('button', { name: 'Stop pipeline' }).click();
   await expect(page.getByRole('log')).toContainText('hang\n/ $');
   expect(await command(page, 'echo recovered')).toContain('recovered\n');

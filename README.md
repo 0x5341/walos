@@ -10,6 +10,31 @@ whole PoC: Preview 2 execution, component conversion/cache, WASI pollables and
 full benchmark coverage remain follow-up work. See [implementation status](docs/implementation.md).
 Only run trusted applications. Worker boundaries do not enforce capability isolation.
 
+## OS library and UI
+
+The OS is the independent npm workspace [`@walos/os`](packages/os/README.md).
+It owns OPFS bootstrap, WASI execution, Core/Process Workers, terminal streams
+and process lifecycle. `src/main.ts` is a workbench UI that imports the package
+and only handles rendering, local echo and keyboard events.
+
+```ts
+import { Walos } from '@walos/os';
+
+const os = new Walos();
+os.subscribe((event) => {
+  if (event.type === 'output') console.log(event.text);
+});
+await os.boot();
+os.writeInput('echo hello\n');
+// Call await os.dispose() when the session is no longer needed.
+```
+
+`npm run build:os` builds just the library, including ESM modules, Worker assets
+and TypeScript declarations. `npm pack --workspace @walos/os` creates an
+installable tarball. See the package README for the public API and consumer
+hosting requirements. `npm run dev`, `npm run check` and `npm run build` build
+the library before using it; no UI internals are imported by the OS package.
+
 ## Run
 
 Requires Node.js 22.12+, a current desktop Chromium browser with JSPI, and wasi-sdk 27.
