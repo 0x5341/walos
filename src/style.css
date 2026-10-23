@@ -1,0 +1,170 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #deded6;
+  background: #141815;
+  color-scheme: dark;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 1320px;
+  margin: auto;
+  padding: 32px;
+}
+header,
+header > div,
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+header > div {
+  gap: 16px;
+}
+h1 {
+  font-size: 22px;
+  font-weight: 550;
+}
+h1 small {
+  color: #8c998d;
+  font-size: 13px;
+  margin-left: 12px;
+  font-weight: 400;
+}
+.mark {
+  background: #c5e4a4;
+  color: #263022;
+  padding: 8px;
+  border-radius: 5px;
+  font-family: monospace;
+  font-weight: bold;
+}
+#state {
+  color: #bddb9d;
+  font-size: 12px;
+}
+.intro {
+  padding: 28px 0;
+}
+.intro p {
+  font-size: 28px;
+  letter-spacing: -0.7px;
+  margin: 10px 0;
+}
+.intro span {
+  color: #8c998d;
+  font-size: 13px;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 255px;
+  gap: 28px;
+}
+.console {
+  border: 1px solid #3d473c;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #101410;
+}
+.bar {
+  padding: 12px 16px;
+  background: #20271f;
+  font-size: 12px;
+}
+button {
+  background: none;
+  border: 0;
+  color: #bdcbb9;
+  cursor: pointer;
+}
+kbd {
+  font-size: 10px;
+  border: 1px solid #485246;
+  padding: 3px;
+  margin-left: 8px;
+  border-radius: 3px;
+}
+#terminal {
+  height: 480px;
+  overflow: auto;
+  margin: 0;
+  padding: 20px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    14px/1.65 ui-monospace,
+    monospace;
+}
+.entry {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #293226;
+  color: #b8d49c;
+}
+input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #e0e8dc;
+  font:
+    14px ui-monospace,
+    monospace;
+}
+aside h2 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #a8b5a3;
+  margin: 8px 0 16px;
+}
+aside h2:not(:first-child) {
+  margin-top: 32px;
+}
+aside code,
+aside pre {
+  font:
+    11px/1.9 ui-monospace,
+    monospace;
+  white-space: pre-wrap;
+  color: #bfd3af;
+}
+aside p {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #83917d;
+}
+input:focus-visible,
+button:focus-visible {
+  outline: 1px solid #c5e4a4;
+  outline-offset: 4px;
+}
+@media (max-width: 850px) {
+  main {
+    padding: 18px;
+  }
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+  aside {
+    display: none;
+  }
+  .intro p {
+    font-size: 23px;
+  }
+  h1 small {
+    display: none;
+  }
+  #terminal {
+    height: 55vh;
+  }
+}
+
+aside code {
+  white-space: normal;
+}

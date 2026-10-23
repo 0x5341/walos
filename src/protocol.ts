@@ -1,0 +1,110 @@
+export type Exit =
+  | { kind: 'exited'; code: number }
+  | { kind: 'trap'; message: string }
+  | { kind: 'terminated'; message: string };
+export type StreamRef =
+  | { kind: 'null'; id: number; direction: 'in' | 'out' }
+  | {
+      kind: 'tty' | 'pipe';
+      id: number;
+      direction: 'in' | 'out';
+      port: MessagePort;
+      capacity: number;
+      state?: {
+        queue: Uint8Array[];
+        sent: number;
+        ack: number;
+        consumed: number;
+        eof: boolean;
+        error?: { errno: number; message: string };
+      };
+    }
+  | {
+      kind: 'file';
+      id: number;
+      direction: 'in' | 'out';
+      file: FileSystemFileHandle;
+      position: number;
+      append: boolean;
+    };
+export interface Spec {
+  file: FileSystemFileHandle;
+  cwd: FileSystemDirectoryHandle;
+  cwdPath: string;
+  argv: string[];
+  env: Record<string, string>;
+  stdio: (StreamRef | null)[];
+}
+export type Operation =
+  | { op: 'spawn'; spec: Spec }
+  | { op: 'cancel-spawn'; requestId: number }
+  | { op: 'wait'; pid: number }
+  | { op: 'drop'; pid: number }
+  | { op: 'stop'; pid: number }
+  | { op: 'pipe' }
+  | { op: 'stream-close'; streamId: number }
+  | { op: 'foreground'; pids: number[]; input: number | null };
+export type Request = Operation & { type: 'request'; id: number };
+export type RpcError = {
+  kind: 'invalid-resource' | 'startup' | 'timeout' | 'cancelled' | 'internal';
+  message: string;
+};
+export class RpcFailure extends Error {
+  constructor(
+    public kind: RpcError['kind'],
+    message: string,
+  ) {
+    super(message);
+  }
+}
+export type Reply = { type: 'reply'; id: number; value?: unknown; error?: RpcError };
+export type FromProcess =
+  | Request
+  | { type: 'ready' }
+  | { type: 'exit'; exit: Exit }
+  | { type: 'boot-error'; message: string };
+export type ToProcess = Reply | { type: 'start'; pid: number; spec: Spec } | { type: 'stop' };
+export const transferables = (refs: (StreamRef | null)[]) =>
+  refs.flatMap((s) => (s && (s.kind === 'pipe' || s.kind === 'tty') ? [s.port] : []));
+export class Rpc {
+  private next = 1;
+  private pending = new Map<
+    number,
+    { resolve: (v: any) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }
+  >();
+  constructor(private send: (r: Request, ports: Transferable[]) => void) {}
+  call(op: Operation, ports: Transferable[] = []): Promise<any> {
+    const id = this.next++;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(
+        () => {
+          this.pending.delete(id);
+          if (op.op === 'spawn')
+            try {
+              this.send(
+                { type: 'request', id: this.next++, op: 'cancel-spawn', requestId: id },
+                [],
+              );
+            } catch {}
+          reject(new RpcFailure('timeout', `RPC timeout: ${op.op}`));
+        },
+        op.op === 'wait' ? 86_400_000 : 30_000,
+      );
+      this.pending.set(id, { resolve, reject, timer });
+      try {
+        this.send({ ...op, type: 'request', id } as Request, ports);
+      } catch (e) {
+        clearTimeout(timer);
+        this.pending.delete(id);
+        reject(e);
+      }
+    });
+  }
+  receive(r: Reply) {
+    const p = this.pending.get(r.id);
+    if (!p) return;
+    clearTimeout(p.timer);
+    this.pending.delete(r.id);
+    r.error ? p.reject(new RpcFailure(r.error.kind, r.error.message)) : p.resolve(r.value);
+  }
+}

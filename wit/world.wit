@@ -1,0 +1,38 @@
+package webos:runtime@0.1.0;
+
+interface process {
+    use wasi:filesystem/types@0.2.0.{descriptor};
+    use wasi:io/streams@0.2.0.{input-stream, output-stream};
+    record environment-entry { key: string, value: string }
+    variant spawn-error { invalid-descriptor, invalid-stream, initialization(string), timeout, cancelled }
+    variant exit-result { exited(u32), trap(string), terminated(string) }
+    variant wait-error { already-consumed }
+    resource child-process {
+        pid: func() -> u32;
+        wait: func() -> result<exit-result, wait-error>;
+        request-stop: func();
+    }
+    spawn: func(
+        executable: borrow<descriptor>,
+        cwd: borrow<descriptor>,
+        argv: list<string>,
+        env: list<environment-entry>,
+        stdin: option<input-stream>,
+        stdout: option<output-stream>,
+        stderr: option<output-stream>
+    ) -> result<child-process, spawn-error>;
+}
+interface ipc {
+    use wasi:io/streams@0.2.0.{input-stream, output-stream};
+    create-pipe: func() -> tuple<input-stream, output-stream>;
+}
+interface terminal {
+    use process.{child-process};
+    set-foreground: func(children: list<borrow<child-process>>, input: option<borrow<child-process>>);
+    restore-shell-input: func();
+}
+world command {
+    import process;
+    import ipc;
+    import terminal;
+}

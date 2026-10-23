@@ -1,0 +1,30 @@
+name: Validate WASI vertical slice
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/setup-sdk.sh
+      - run: npx playwright install --with-deps chromium
+      - run: npm run check:wit
+      - run: diff -ru wit/generated work/wit-generated
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:production
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: test-results

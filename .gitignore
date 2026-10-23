@@ -111,3 +111,9 @@ dist
 
 # TernJS port file
 .tern-port
+
+# Local toolchain and browser test output
+work/
+test-results/
+playwright-report/
+public/bin/*.wasm
