@@ -16,7 +16,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && vite build --config vite.jco.config.ts",
     "check": "tsc -p tsconfig.json --noEmit",
     "prepack": "npm run build"
   },
