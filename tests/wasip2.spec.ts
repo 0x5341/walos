@@ -1,5 +1,22 @@
 import { test, expect, type Page } from '@playwright/test';
 
+for (const cat of ['cat', 'p2-cat'])
+  test(`upstream ${cat} keeps stderr separate from redirected stdout`, async ({ page }) => {
+    await boot(page);
+    await command(page, 'cd /home');
+    const output = await command(page, `${cat} missing-audit-input > audit-output`);
+    expect(output).toContain('missing-audit-input:');
+    expect(await command(page, 'echo $?')).toContain('1\n');
+    expect(
+      await page.evaluate(async () => {
+        const home = await (await navigator.storage.getDirectory()).getDirectoryHandle('home');
+        return (await (await home.getFileHandle('audit-output')).getFile()).size;
+      }),
+    ).toBe(0);
+    await command(page, 'echo audit-stdio > audit-input');
+    expect(await command(page, `${cat} < audit-input`)).toContain('audit-stdio\n');
+  });
+
 async function boot(page: Page) {
   await page.goto('/');
   await expect(page.getByLabel('Terminal input')).toBeEnabled();
