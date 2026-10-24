@@ -10,36 +10,42 @@ if (!existsSync(bindgen))
   throw new Error(
     'Run bash scripts/setup-wit-bindgen.sh or set WIT_BINDGEN_PATH to wit-bindgen 0.46.0',
   );
-const directory = 'work/p2-bindings';
-mkdirSync(`${directory}/wit`, { recursive: true });
-cpSync('wit/deps', `${directory}/wit/deps`, { recursive: true });
-cpSync('wit/world.wit', `${directory}/wit/world.wit`);
-cpSync('tests/fixtures/process2.wit', `${directory}/wit/probe.wit`);
-execFileSync(
-  bindgen,
-  ['c', `${directory}/wit`, '--world', 'process-probe', '--out-dir', directory],
-  { stdio: 'inherit' },
-);
-execFileSync(
-  `${sdk}/bin/clang`,
-  [
-    '--target=wasm32-wasip1',
-    '-mexec-model=reactor',
-    '-O2',
-    `-I${directory}`,
-    'tests/fixtures/process2.c',
-    `${directory}/process_probe.c`,
-    `${directory}/process_probe_component_type.o`,
-    '-o',
-    `${directory}/probe.core.wasm`,
-  ],
-  { stdio: 'inherit' },
-);
-// The generated public WIT bindings use native Component resources. The reactor
-// adapter only supplies libc's incidental Preview 1 imports (allocation/abort).
-writeFileSync(
-  'public/bin/p2-process-probe.wasm',
-  await componentNew(readFileSync(`${directory}/probe.core.wasm`), [
-    ['wasi_snapshot_preview1', readFileSync(preview1AdapterReactorPath())],
-  ]),
-);
+for (const [world, source, wit, output] of [
+  ['process-probe', 'process2', 'process2', 'p2-process-probe'],
+  ['lifecycle-probe', 'lifecycle2', 'lifecycle2', 'p2-lifecycle-parent'],
+]) {
+  const directory = `work/${world}-bindings`;
+  const stem = world.replaceAll('-', '_');
+  mkdirSync(`${directory}/wit`, { recursive: true });
+  cpSync('wit/deps', `${directory}/wit/deps`, { recursive: true });
+  cpSync('wit/world.wit', `${directory}/wit/world.wit`);
+  cpSync(`tests/fixtures/${wit}.wit`, `${directory}/wit/probe.wit`);
+  execFileSync(bindgen, ['c', `${directory}/wit`, '--world', world, '--out-dir', directory], {
+    stdio: 'inherit',
+  });
+  execFileSync(
+    `${sdk}/bin/clang`,
+    [
+      '--target=wasm32-wasip1',
+      '-mexec-model=reactor',
+      '-O2',
+      '-Wall',
+      '-Wextra',
+      `-I${directory}`,
+      `tests/fixtures/${source}.c`,
+      `${directory}/${stem}.c`,
+      `${directory}/${stem}_component_type.o`,
+      '-o',
+      `${directory}/probe.core.wasm`,
+    ],
+    { stdio: 'inherit' },
+  );
+  // Generated public WIT bindings use native Component resources. The reactor
+  // adapter only supplies libc's incidental Preview 1 imports (allocation/abort).
+  writeFileSync(
+    `public/bin/${output}.wasm`,
+    await componentNew(readFileSync(`${directory}/probe.core.wasm`), [
+      ['wasi_snapshot_preview1', readFileSync(preview1AdapterReactorPath())],
+    ]),
+  );
+}

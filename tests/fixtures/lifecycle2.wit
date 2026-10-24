@@ -1,0 +1,9 @@
+package walos:runtime@0.1.0;
+
+world lifecycle-probe {
+    include command;
+    import wasi:filesystem/preopens@0.2.0;
+    import wasi:cli/environment@0.2.0;
+    import wasi:cli/stdout@0.2.0;
+    export wasi:cli/run@0.2.0;
+}

@@ -35,6 +35,7 @@ cc(
   ['-Iapps/vendor/sbase'],
 );
 cc('fs-probe', ['tests/fixtures/filesystem.c']);
+cc('lifecycle-parent', ['tests/fixtures/lifecycle.c']);
 
 // wasi-sdk emits a real Component Model executable for wasm32-wasip2.
 const cc2 = (name, files, extra = []) =>
