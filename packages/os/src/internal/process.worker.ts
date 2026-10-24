@@ -5,6 +5,18 @@ import { executableFormat, loadComponent } from './component.js';
 const scope = self as unknown as DedicatedWorkerGlobalScope;
 const rpc = new Rpc((r, ports) => scope.postMessage(r, ports));
 let wasi: Wasi | Wasi2 | undefined;
+// Deserialization failures in this direction do not fire Worker.onmessageerror
+// in the Core. Report them over the remaining control channel instead.
+scope.onmessageerror = () => {
+  scope.postMessage({ type: 'boot-error', message: 'worker incoming message error' });
+};
+scope.onunhandledrejection = (event) => {
+  event.preventDefault();
+  scope.postMessage({
+    type: 'boot-error',
+    message: `worker unhandled rejection: ${String(event.reason)}`,
+  });
+};
 scope.onmessage = async (e) => {
   const m = e.data as ToProcess | { type: 'stream-gone'; id: number };
   if (m.type === 'reply') {

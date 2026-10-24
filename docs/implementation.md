@@ -17,7 +17,7 @@ Review the commits in this order:
 
 | Baseline slice | Implemented | Remaining |
 | --- | --- | --- |
-| 1. Worker/Wasm | Main → Core → Process Worker; real WASI commands; READY/EXIT, trap, terminate | Broader Worker disappearance diagnostics |
+| 1. Worker/Wasm | Main → Core → Process Worker; real WASI commands; READY/EXIT, trap, terminate, Worker failure recovery | Silent browser/renderer loss is not observable |
 | 2. WASI 0.1/OPFS | argv/env, directory descriptor cwd, stdio, read/write/seek, basic stat, mkdir/unlink/rmdir and file rename, persistence | Wider P1 syscall/rights coverage, P1 read/write descriptors and readdir; directory rename |
 | 3. spawn/wait | Descriptor-based spawn, local process resources, one-shot wait, drop, stop, parent normal/abnormal distinction, explicit cancel | Full generated C bindings and richer P1 error payloads |
 | 4. Streams | Direct MessagePort DATA; 64 KiB capacity, 16 KiB chunks, cumulative ACKs, EOF/Broken Pipe, migration, foreground TTY, P2 nonblocking operations and standard pollables | Configurable UI controls for capacities |
@@ -73,6 +73,44 @@ through the Core. The library holds the shell prompt until foreground output CLO
 arrive, without adding TTY data ACKs. Ctrl+C interrupts the foreground pipeline and cancels a
 pending foreground startup. General FD duplication and file/pipe implicit
 inheritance are unsupported; implicit stdio inheritance is TTY/Null only.
+
+## Unexpected Process Worker failure
+
+The Core treats Worker `error`, Core-side `messageerror`, Process-side incoming
+`messageerror` and unhandled promise rejections as abnormal exits. Synchronous
+control `postMessage` failures (startup, RPC replies, stop and peer notifications)
+also enter the same one-shot cleanup path. The existing `exit` diagnostic event
+contains `pid`, `exit.kind`, a reason in `exit.message`, and `durationMs`; Worker
+errors and send/decode failures have distinct reason text. A channel send failure
+means the protocol cannot continue, even when it does not prove Worker death.
+
+Cleanup marks the record EXITED before terminating its Worker, rejects pending
+startup, resolves its pending wait, clears process resources and stream ownership,
+and emits one TTY close and one exit event. Late READY/EXIT and duplicate failure
+events are ignored. Starting children of an abnormal parent are cancelled; READY
+children survive and are adopted by the supervisor. A child that becomes READY
+just before the parent's asynchronous spawn continuation does not restore a
+resource to the dead parent.
+
+Transferred ports cannot be recovered or closed from the Core. Worker termination
+releases its realm's ports and OPFS access handles through the browser; output
+flush and immediate lock-release timing are not guaranteed. Untransferred ports
+are closed locally. The Core removes ownership before notifying remaining peers,
+so even a second Worker failing during notification cannot interrupt or duplicate
+the first cleanup. A lost writer wakes readers with EOF; a lost reader wakes
+writers with Broken Pipe. Loss during startup is retained on the endpoint and
+sent after READY, including when that endpoint moves to another child before
+READY. Normal close still travels on the data port to preserve queued DATA order.
+
+Dedicated Workers/MessagePorts provide no portable close/death event. A successful
+`postMessage` does not prove a receiver is alive. Silent `self.close()`, external
+`terminate()`, renderer/browser crashes, OS kills and an unresponsive CPU-bound
+Worker may produce no detectable event. There is no heartbeat that would falsely
+classify busy or background-throttled Workers as dead. Startup timeout and explicit
+stop escalation remain the available bounds for those operations; post-READY
+silent disappearance has no automatic detection guarantee, and peer/wait may
+remain pending until explicit supervisor disposal/termination. Losing the Core or
+the whole browser is outside Process recovery.
 
 ## Library boundary
 
@@ -258,3 +296,14 @@ snapshots, CPU, OPFS and size-dependent Pipe throughput/latency. Raw samples,
 toolchain/environment metadata, aggregation and measurement limits are retained.
 CI runs a single-trial integrity check without performance thresholds. No
 performance superiority claim is made.
+
+Issue #5 regression coverage adds error/messageerror/send failures before and after
+READY, parent/child races, duplicate and late events, endpoint migration during
+startup, failed peer notifications, blocked reader/writer wakeup, and failed READY
+notification. Test-only real P1/P2 Workers inject uncaught handler errors, incoming
+messageerror and unhandled rejections; tests check wait completion, Pipe EOF, OPFS
+writer-lock reopening and continued shell execution. These injected failures test
+observable browser events, not silent renderer crashes.
+Local Issue #5 validation: app compilation, library/UI type checking and production
+bundling, WIT generation/diff, 47 development browser tests, 11 production browser
+tests and both benchmark aggregation tests pass with system Chromium.
