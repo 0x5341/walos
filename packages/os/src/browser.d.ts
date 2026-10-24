@@ -1,4 +1,6 @@
 interface DedicatedWorkerGlobalScope {
+  onmessageerror: ((event: MessageEvent) => void) | null;
+  onunhandledrejection: ((event: PromiseRejectionEvent) => void) | null;
   close(): void;
   postMessage(message: unknown, transfer?: Transferable[]): void;
   onmessage: ((event: MessageEvent) => void) | null;

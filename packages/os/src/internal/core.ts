@@ -28,7 +28,7 @@ export class ProcessManager {
   private records = new Map<number, RecordEntry>();
   private owners = new Map<
     number,
-    { pid: number; peer?: number; state: 'preparing' | 'connected' }
+    { pid: number; peer?: number; gone?: boolean; state: 'preparing' | 'connected' }
   >();
   private foreground: number[] = [];
   private inputOwner: number | null = null;
@@ -111,7 +111,7 @@ export class ProcessManager {
       worker.onmessage = (e) => this.message(r, e.data as FromProcess);
       worker.onerror = (e) => {
         e.preventDefault();
-        this.finish(pid, { kind: 'trap', message: e.message });
+        this.finish(pid, { kind: 'trap', message: `worker error: ${e.message}` });
       };
       worker.onmessageerror = () =>
         this.finish(pid, { kind: 'trap', message: 'worker message error' });
@@ -132,10 +132,13 @@ export class ProcessManager {
     if (r.state === 'EXITED') return;
     if (m.type === 'ready') {
       if (r.state !== 'STARTING') return;
-      r.state = 'RUNNING';
       clearTimeout(r.timer);
       for (const s of r.spec.stdio)
         if (s?.id && this.owners.has(s.id)) this.owners.get(s.id)!.state = 'connected';
+      for (const [id, owner] of this.owners)
+        if (owner.pid === r.pid && owner.gone)
+          if (!this.send(r, { type: 'stream-gone', id })) return;
+      r.state = 'RUNNING';
       r.resolve(r.pid);
       this.publish();
     } else if (m.type === 'exit') this.finish(r.pid, m.exit);
@@ -149,7 +152,7 @@ export class ProcessManager {
       switch (m.op) {
         case 'spawn':
           value = await this.spawn(m.spec, r.pid, m.id);
-          r.handles.add(value as number);
+          if (r.state !== 'EXITED') r.handles.add(value as number);
           break;
         case 'cancel-spawn':
           this.cancelSpawn(r.pid, m.requestId);
@@ -203,14 +206,26 @@ export class ProcessManager {
           this.focus(m.input === 0 ? r.pid : m.input);
           break;
       }
-      if (r.state !== 'EXITED') r.worker?.postMessage({ type: 'reply', id: m.id, value }, ports);
+      this.send(r, { type: 'reply', id: m.id, value }, ports);
     } catch (e) {
       if (r.state !== 'EXITED')
-        r.worker?.postMessage({
+        this.send(r, {
           type: 'reply',
           id: m.id,
           error: { kind: e instanceof RpcFailure ? e.kind : 'internal', message: String(e) },
         });
+    }
+  }
+  private send(r: RecordEntry, message: unknown, ports: Transferable[] = []): boolean {
+    if (r.state === 'EXITED') return false;
+    try {
+      r.worker!.postMessage(message, ports);
+      return true;
+    } catch (error) {
+      // A failed transfer leaves these endpoints in the Core.
+      for (const port of ports) if (port instanceof MessagePort) port.close();
+      this.finish(r.pid, { kind: 'trap', message: `worker control send failed: ${String(error)}` });
+      return false;
     }
   }
   private owned(r: RecordEntry, pid: number) {
@@ -240,7 +255,7 @@ export class ProcessManager {
   requestStop(pid: number) {
     const r = this.records.get(pid);
     if (!r || r.state === 'EXITED') return;
-    r.worker?.postMessage({ type: 'stop' });
+    if (!this.send(r, { type: 'stop' })) return;
     setTimeout(() => {
       if (r.state !== 'EXITED')
         this.finish(pid, { kind: 'terminated', message: 'stop grace period expired' });
@@ -287,16 +302,20 @@ export class ProcessManager {
           exit.kind === 'exited' ? `exit before READY (${exit.code})` : exit.message,
         ),
       );
-    for (const [id, s] of this.owners) {
-      if (s.pid !== pid) continue;
-      const peer = s.peer === undefined ? undefined : this.owners.get(s.peer);
-      if (peer && exit.kind !== 'exited') {
-        const target = this.records.get(peer.pid);
-        if (target?.state !== 'EXITED')
-          target?.worker?.postMessage({ type: 'stream-gone', id: s.peer });
-      }
-      this.owners.delete(id);
+    // Remove ownership before notifying peers: a failed notification may recursively
+    // finish another Worker. No recursive cleanup can see these resources twice.
+    const released = [...this.owners].filter(([, owner]) => owner.pid === pid);
+    for (const [id] of released) this.owners.delete(id);
+    for (const [, owner] of released) {
+      const peer = owner.peer === undefined ? undefined : this.owners.get(owner.peer);
+      if (!peer || exit.kind === 'exited') continue;
+      peer.gone = true;
+      const target = this.records.get(peer.pid);
+      // Initialization is asynchronous. Deliver only after READY so the adapter
+      // has connected every stream; keep the flag when the endpoint moves again.
+      if (target?.state === 'RUNNING') this.send(target, { type: 'stream-gone', id: owner.peer });
     }
+    r.handles.clear();
     this.emit({ type: 'tty-close', pid, abnormal: exit.kind !== 'exited' });
     this.emit({ type: 'exit', pid, exit, durationMs: performance.now() - r.started });
     if (this.inputOwner === pid || this.controller === pid) this.focus(null);
