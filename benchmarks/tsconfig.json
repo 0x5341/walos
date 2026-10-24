@@ -1,0 +1,5 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": { "types": [] },
+  "include": ["*.ts", "../packages/os/src/browser.d.ts"]
+}

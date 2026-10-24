@@ -99,6 +99,12 @@ operations, traps and termination; separate browser tests exercise OPFS locks,
 pipe protocol errors/migration, and deterministic process lifecycle races.
 Production tests exercise the bundled Worker assets.
 
+Run `npm run benchmark -- --trials 5` for the P1/P2 startup, conversion cache,
+Worker memory, CPU, OPFS and Pipe benchmarks. See the
+[benchmark methodology and recorded results](docs/benchmarks.md) for setup,
+timing boundaries, variability and measurement limits. CI runs a single-trial
+integrity check and uploads the raw JSON and summary without performance gates.
+
 The `p2-*` commands are compiled with `--target=wasm32-wasip2`. The shell remains
 Preview 1 and detects either executable format through the shared runtime.
 `apps/compat2.c` initializes wasi-sdk 27's libc cwd using standard `initial-cwd`.

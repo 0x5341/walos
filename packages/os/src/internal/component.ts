@@ -5,6 +5,16 @@ const cacheDirectory = '.walos-components';
 const memory = new Map<string, Promise<Converted>>();
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+/** Opt-in diagnostics for the benchmark harness; all durations are milliseconds. */
+export interface ComponentMetrics {
+  cache?: 'memory' | 'opfs' | 'miss';
+  keyMs?: number;
+  lookupMs?: number;
+  converterLoadMs?: number;
+  convertMs?: number;
+  publishMs?: number;
+  instantiateMs?: number;
+}
 const digest = async (bytes: Uint8Array) =>
   Array.from(
     new Uint8Array(await crypto.subtle.digest('SHA-256', bytes as Uint8Array<ArrayBuffer>)),
@@ -69,18 +79,37 @@ async function readCache(cache: FileSystemDirectoryHandle, key: string): Promise
   }
   return { files, imports: manifest.imports, exports: manifest.exports };
 }
-async function convertComponent(bytes: Uint8Array, key: string): Promise<Converted> {
+async function convertComponent(
+  bytes: Uint8Array,
+  key: string,
+  metrics?: ComponentMetrics,
+): Promise<Converted> {
+  const lookupStart = performance.now();
   let cache: FileSystemDirectoryHandle | undefined;
   try {
     cache = await (
       await navigator.storage.getDirectory()
     ).getDirectoryHandle(cacheDirectory, { create: true });
-    return await readCache(cache, key);
+    const result = await readCache(cache, key);
+    if (metrics) {
+      metrics.cache = 'opfs';
+      metrics.lookupMs = performance.now() - lookupStart;
+    }
+    return result;
   } catch {
     /* Missing/corrupt/unavailable caches are regenerated locally. */
   }
+  if (metrics) {
+    metrics.cache = 'miss';
+    metrics.lookupMs = performance.now() - lookupStart;
+  }
+  const loadStart = performance.now();
   const { convert } = await import('./jco.js');
+  const convertStart = performance.now();
+  if (metrics) metrics.converterLoadMs = convertStart - loadStart;
   const result = await convert(bytes, componentOptions);
+  const publishStart = performance.now();
+  if (metrics) metrics.convertMs = publishStart - convertStart;
   if (cache) {
     let stage: string | undefined;
     try {
@@ -110,18 +139,25 @@ async function convertComponent(bytes: Uint8Array, key: string): Promise<Convert
       if (stage) await cache.removeEntry(stage, { recursive: true }).catch(() => {});
     }
   }
+  if (metrics) metrics.publishMs = performance.now() - publishStart;
   return result;
 }
-export async function loadComponent(bytes: Uint8Array, imports: Record<string, unknown>) {
+export async function loadComponent(
+  bytes: Uint8Array,
+  imports: Record<string, unknown>,
+  metrics?: ComponentMetrics,
+) {
+  const keyStart = performance.now();
   const content = await digest(bytes);
   const key = await digest(
     encoder.encode(JSON.stringify({ content, converterVersion, componentOptions })),
   );
+  if (metrics) metrics.keyMs = performance.now() - keyStart;
   let pending = memory.get(key);
   if (!pending) {
-    pending = convertComponent(bytes, key);
+    pending = convertComponent(bytes, key, metrics);
     memory.set(key, pending);
-  }
+  } else if (metrics) metrics.cache = 'memory';
   let result: Converted;
   try {
     result = await pending;
@@ -129,6 +165,7 @@ export async function loadComponent(bytes: Uint8Array, imports: Record<string, u
     memory.delete(key);
     throw error;
   }
+  const instantiateStart = performance.now();
   for (const name of result.imports)
     if (!(name in imports)) throw new Error(`Unsupported component import: ${name}`);
   const files = new Map(result.files);
@@ -144,6 +181,7 @@ export async function loadComponent(bytes: Uint8Array, imports: Record<string, u
     }, imports);
   } finally {
     URL.revokeObjectURL(url);
+    if (metrics) metrics.instantiateMs = performance.now() - instantiateStart;
   }
 }
 /** Clear the shared persistent conversion cache. Call while OS sessions are stopped. */

@@ -23,7 +23,7 @@ Review the commits in this order:
 | 4. Streams | Direct MessagePort DATA; 64 KiB capacity, 16 KiB chunks, cumulative ACKs, EOF/Broken Pipe, migration, foreground TTY, P2 nonblocking operations and standard pollables | Configurable UI controls for capacities |
 | 5. Shell | PATH, cwd, env, exit status, pipelines, `<`, `>`, `>>`, small literal/quote grammar | Full POSIX syntax is outside this PoC |
 | 6. WASI 0.2 | Real wasip2 commands; Process-local Jco conversion; shared P2 host adapter; persistent cache; generated-WIT spawn/IPC; CSP tests | Broader filesystem coverage and unsupported network interfaces |
-| 7. Completion | Unmodified sbase cat compiled for WASI, regression tests, one large-I/O timing sample | Full startup/memory/CPU/I/O benchmark matrix and all PoC acceptance criteria |
+| 7. Completion | Unmodified sbase cat compiled for WASI, regression tests, reproducible P1/P2 startup/cache, Worker memory, CPU, OPFS and Pipe benchmarks with raw samples and variability | Broader validation of the remaining PoC acceptance criteria |
 
 Preview 2 uses standard WASI 0.2.x interfaces and the `walos:runtime@0.1.0`
 extension. No Execution Worker pool, central file server or Pipe DATA relay is
@@ -250,5 +250,11 @@ Jco 1.15.1 and system Chromium. WIT generation/diff, TypeScript/production build
 all 29 development browser tests and all 11 production browser tests pass.
 Packing the library, installing it in a separate consumer, consumer type checking
 and a consumer Vite production build (with `worker.format: 'es'`) also pass.
-Full startup/memory/CPU/I/O benchmark coverage remains future PoC completion work; no performance superiority claim is
-made.
+
+The performance portion of Slice 7 and baseline §12 criterion 9 are covered by
+`npm run benchmark`. See [methodology and recorded results](benchmarks.md) for
+five-trial P1/P2 comparisons, cold/warm/OPFS conversion reuse, Worker heap
+snapshots, CPU, OPFS and size-dependent Pipe throughput/latency. Raw samples,
+toolchain/environment metadata, aggregation and measurement limits are retained.
+CI runs a single-trial integrity check without performance thresholds. No
+performance superiority claim is made.
