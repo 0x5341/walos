@@ -1,3 +1,4 @@
+export { clearComponentCache } from './internal/component.js';
 import { bootstrap } from './internal/bootstrap.js';
 import type { CoreEvent } from './internal/protocol.js';
 import type { Foreground, ProcessInfo, WalosEvent, WalosOptions, WalosState } from './types.js';

@@ -1,8 +1,10 @@
 import { Rpc, type ToProcess } from './protocol.js';
 import { Wasi, WasiExit } from './wasi.js';
+import { Wasi2 } from './wasi2.js';
+import { executableFormat, loadComponent } from './component.js';
 const scope = self as unknown as DedicatedWorkerGlobalScope;
 const rpc = new Rpc((r, ports) => scope.postMessage(r, ports));
-let wasi: Wasi | undefined;
+let wasi: Wasi | Wasi2 | undefined;
 scope.onmessage = async (e) => {
   const m = e.data as ToProcess | { type: 'stream-gone'; id: number };
   if (m.type === 'reply') {
@@ -22,20 +24,47 @@ scope.onmessage = async (e) => {
   try {
     if (typeof WebAssembly.Suspending !== 'function')
       throw new Error('This slice requires Chromium with JSPI support');
-    wasi = new Wasi(m.spec, rpc);
-    await wasi.init();
-    const module = await WebAssembly.compile(await (await m.spec.file.getFile()).arrayBuffer());
-    const instance = await WebAssembly.instantiate(
-      module,
-      wasi.imports() as unknown as WebAssembly.Imports,
-    );
-    wasi.memory = instance.exports.memory as WebAssembly.Memory;
-    if (!wasi.memory || typeof instance.exports._start !== 'function')
-      throw new Error('Expected a WASI Preview 1 command with memory and _start exports');
+    const bytes = new Uint8Array(await (await m.spec.file.getFile()).arrayBuffer());
+    let run: () => Promise<unknown>;
+    if (executableFormat(bytes) === 'p2') {
+      const adapter = new Wasi2(m.spec, rpc);
+      wasi = adapter;
+      await adapter.init();
+      const component = await loadComponent(bytes, adapter.imports());
+      if (typeof component.run?.run !== 'function')
+        throw new Error('Expected a wasi:cli/run command component');
+      run = async () => {
+        try {
+          await component.run.run();
+        } catch (error) {
+          // wasi:cli/run returns result<_, _>; Jco represents err(_) as a payload error.
+          if (
+            error instanceof Error &&
+            Object.hasOwn(error, 'payload') &&
+            (error as Error & { payload: unknown }).payload === undefined
+          )
+            throw new WasiExit(1);
+          throw error;
+        }
+      };
+    } else {
+      const adapter = new Wasi(m.spec, rpc);
+      wasi = adapter;
+      await adapter.init();
+      const module = await WebAssembly.compile(bytes);
+      const instance = await WebAssembly.instantiate(
+        module,
+        adapter.imports() as unknown as WebAssembly.Imports,
+      );
+      adapter.memory = instance.exports.memory as WebAssembly.Memory;
+      if (!adapter.memory || typeof instance.exports._start !== 'function')
+        throw new Error('Expected a WASI Preview 1 command with memory and _start exports');
+      run = WebAssembly.promising(instance.exports._start);
+    }
     scope.postMessage({ type: 'ready' });
     ready = true;
     try {
-      await WebAssembly.promising(instance.exports._start)();
+      await run();
       await wasi.close();
       scope.postMessage({ type: 'exit', exit: { kind: 'exited', code: 0 } });
     } catch (e) {

@@ -34,6 +34,11 @@ export interface Stream {
   close(): void;
   detach(): StreamRef;
   gone(): void;
+  readNow(n: number): Uint8Array | undefined;
+  writeNow(b: Uint8Array): number;
+  readable(): boolean;
+  writable(): number;
+  onReady(listener: () => void): () => void;
 }
 export class PortStream implements Stream {
   private queue: Uint8Array[] = [];
@@ -45,6 +50,7 @@ export class PortStream implements Stream {
   private closed = false;
   private error?: IoError;
   private waiters = new Set<() => void>();
+  private listeners = new Set<() => void>();
   constructor(public ref: Extract<StreamRef, { kind: 'tty' | 'pipe' }>) {
     if (ref.state) {
       const s = ref.state;
@@ -94,7 +100,14 @@ export class PortStream implements Stream {
     }
     this.wake();
   }
+  onReady(listener: () => void) {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
   private wake() {
+    for (const listener of this.listeners) listener();
     for (const w of this.waiters) w();
     this.waiters.clear();
   }
@@ -111,10 +124,27 @@ export class PortStream implements Stream {
     else this.error = new IoError(64, 'broken pipe');
     this.wake();
   }
+  readable() {
+    return this.closed || !!this.available || this.eof || !!this.error;
+  }
+  writable() {
+    if (this.closed) throw new IoError(8, 'closed stream');
+    if (this.error) throw this.error;
+    return this.ref.kind === 'tty'
+      ? 65536
+      : Math.min(16384, this.ref.capacity - (this.sent - this.ack));
+  }
   async read(n: number) {
+    for (;;) {
+      const bytes = this.readNow(n);
+      if (bytes !== undefined) return bytes;
+      await this.changed();
+    }
+  }
+  readNow(n: number) {
     if (this.ref.direction !== 'in' || this.closed) throw new IoError(8, 'not readable');
     if (n === 0) return new Uint8Array();
-    while (!this.available && !this.eof && !this.error && !this.closed) await this.changed();
+    if (!this.readable()) return undefined;
     if (this.error) throw this.error;
     const bytes = new Uint8Array(Math.min(n, this.available));
     let offset = 0;
@@ -133,21 +163,12 @@ export class PortStream implements Stream {
     return bytes;
   }
   async write(b: Uint8Array) {
-    if (this.ref.direction !== 'out' || this.closed) throw new IoError(8, 'not writable');
-    if (!b.length) return 0;
-    while (
-      this.ref.kind === 'pipe' &&
-      this.sent - this.ack >= this.ref.capacity &&
-      !this.error &&
-      !this.closed
-    )
-      await this.changed();
-    if (this.error) throw this.error;
-    if (this.closed) throw new IoError(8, 'closed stream');
-    const n =
-      this.ref.kind === 'tty'
-        ? b.length
-        : Math.min(b.length, this.ref.capacity - (this.sent - this.ack), 16384);
+    while (!this.writable() && b.length) await this.changed();
+    return this.writeNow(b);
+  }
+  writeNow(b: Uint8Array) {
+    if (this.ref.direction !== 'out') throw new IoError(8, 'not writable');
+    const n = Math.min(b.length, this.writable());
     const bytes = b.slice(0, n);
     this.sent += n;
     this.ref.port.postMessage({ type: 'data', bytes: bytes.buffer }, [bytes.buffer]);
@@ -178,11 +199,26 @@ export class PortStream implements Stream {
 }
 class NullStream implements Stream {
   constructor(public ref: Extract<StreamRef, { kind: 'null' }>) {}
-  async read() {
+  readNow() {
     return new Uint8Array();
   }
-  async write(b: Uint8Array) {
+  writeNow(b: Uint8Array) {
     return b.length;
+  }
+  readable() {
+    return true;
+  }
+  writable() {
+    return 65536;
+  }
+  onReady(_listener: () => void) {
+    return () => {};
+  }
+  async read() {
+    return this.readNow();
+  }
+  async write(b: Uint8Array) {
+    return this.writeNow(b);
   }
   close() {}
   gone() {}
@@ -194,11 +230,32 @@ export class FileStream implements Stream {
   private access?: FileSystemSyncAccessHandle;
   private closed = false;
   constructor(public ref: Extract<StreamRef, { kind: 'file' }>) {}
-  async open() {
+  async open(syncRead = false) {
+    if (syncRead && this.ref.direction === 'in')
+      this.access = await this.ref.file.createSyncAccessHandle({ mode: 'read-only' });
     if (this.ref.direction === 'out') this.access = await this.ref.file.createSyncAccessHandle();
     return this;
   }
+  onReady(_listener: () => void) {
+    return () => {};
+  }
+  readable() {
+    return true;
+  }
+  writable() {
+    if (this.closed) throw new IoError(8, 'closed stream');
+    return 65536;
+  }
+  readNow(n: number) {
+    if (this.closed || this.ref.direction !== 'in' || !this.access)
+      throw new IoError(8, 'not readable');
+    const bytes = new Uint8Array(n);
+    const count = this.access.read(bytes, { at: this.ref.position });
+    this.ref.position += count;
+    return bytes.subarray(0, count);
+  }
   async read(n: number) {
+    if (this.access && this.ref.direction === 'in') return this.readNow(n);
     if (this.closed || this.ref.direction !== 'in') throw new IoError(8, 'not readable');
     const f = await this.ref.file.getFile();
     const b = new Uint8Array(await f.slice(this.ref.position, this.ref.position + n).arrayBuffer());
@@ -206,6 +263,9 @@ export class FileStream implements Stream {
     return b;
   }
   async write(b: Uint8Array) {
+    return this.writeNow(b);
+  }
+  writeNow(b: Uint8Array) {
     if (this.closed || !this.access) throw new IoError(8, 'not writable');
     if (this.ref.append) this.ref.position = this.access.getSize();
     const n = this.access.write(b, { at: this.ref.position });
@@ -217,13 +277,13 @@ export class FileStream implements Stream {
     this.access.truncate(n);
   }
   flush() {
-    this.access?.flush();
+    if (this.ref.direction === 'out') this.access?.flush();
   }
   close() {
     if (this.closed) return;
     this.closed = true;
     try {
-      this.access?.flush();
+      if (this.ref.direction === 'out') this.access?.flush();
     } finally {
       this.access?.close();
       this.access = undefined;
@@ -237,9 +297,9 @@ export class FileStream implements Stream {
     return this.ref;
   }
 }
-export async function connect(ref: StreamRef): Promise<Stream> {
+export async function connect(ref: StreamRef, syncRead = false): Promise<Stream> {
   return ref.kind === 'file'
-    ? new FileStream(ref).open()
+    ? new FileStream(ref).open(syncRead)
     : ref.kind === 'null'
       ? new NullStream(ref)
       : new PortStream(ref);

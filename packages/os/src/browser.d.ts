@@ -12,7 +12,9 @@ interface FileSystemSyncAccessHandle {
   close(): void;
 }
 interface FileSystemFileHandle {
-  createSyncAccessHandle(): Promise<FileSystemSyncAccessHandle>;
+  createSyncAccessHandle(options?: {
+    mode?: 'read-only' | 'readwrite';
+  }): Promise<FileSystemSyncAccessHandle>;
   move?(directory: FileSystemDirectoryHandle, name: string): Promise<void>;
 }
 declare namespace WebAssembly {
@@ -20,4 +22,8 @@ declare namespace WebAssembly {
     constructor(fn: (...args: any[]) => any);
   }
   function promising(fn: Function): (...args: any[]) => Promise<any>;
+}
+
+interface FileSystemDirectoryHandle {
+  entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
 }

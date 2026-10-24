@@ -6,6 +6,8 @@
 int main(int argc, char **argv) {
   const char *name = strrchr(argv[0], '/');
   name = name ? name + 1 : argv[0];
+  if (!strncmp(name, "p2-", 3))
+    name += 3;
   if (!strcmp(name, "echo")) {
     for (int i = 1; i < argc; i++)
       printf("%s%s", i > 1 ? " " : "", argv[i]);

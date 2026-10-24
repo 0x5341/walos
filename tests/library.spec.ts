@@ -1,4 +1,35 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+type WorkerCounts = { created: number; terminated: number };
+
+// Chromium can retain a terminated Worker's DevTools target, so page.workers()
+// is not a reliable count of running threads. Observe the actual browser API
+// calls instead; native Workers still execute all WASI work in these tests.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const counts = { created: 0, terminated: 0 };
+    Object.defineProperty(window, '__walosWorkerCounts', { value: counts });
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      constructor(url: string | URL, options?: WorkerOptions) {
+        super(url, options);
+        counts.created++;
+      }
+      terminate() {
+        counts.terminated++;
+        super.terminate();
+      }
+    };
+  });
+});
+
+async function expectWorkerCounts(page: Page, expected: WorkerCounts) {
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __walosWorkerCounts: WorkerCounts }).__walosWorkerCounts,
+    ),
+  ).toEqual(expected);
+}
 
 test('public package runs real WASI pipelines without the workbench UI', async ({ page }) => {
   await page.goto('/tests/fixtures/library.html');
@@ -68,7 +99,7 @@ test('public package runs real WASI pipelines without the workbench UI', async (
   expect(result.inputAfterDispose).toBe(false);
   expect(result.processesAfterDispose).toEqual([]);
   expect(result.domChildren).toBe(0);
-  await expect.poll(() => page.workers().map((worker) => worker.url())).toEqual([]);
+  await expectWorkerCounts(page, { created: 1, terminated: 1 });
 });
 
 test('library interrupts a foreground process and disposes an active session', async ({ page }) => {
@@ -109,7 +140,7 @@ test('library interrupts a foreground process and disposes an active session', a
   expect(result.state).toBe('disposed');
   expect(result.foreground).toEqual({ input: null, pids: [] });
   expect(result.processes).toEqual([]);
-  await expect.poll(() => page.workers().length).toBe(0);
+  await expectWorkerCounts(page, { created: 1, terminated: 1 });
 });
 
 test('boot rejects and reports one error when command assets are unavailable', async ({ page }) => {
@@ -137,7 +168,7 @@ test('boot rejects and reports one error when command assets are unavailable', a
   expect(result.failedState).toBe('failed');
   expect(result.input).toBe(false);
   expect(result.finalState).toBe('disposed');
-  expect(page.workers()).toHaveLength(0);
+  await expectWorkerCounts(page, { created: 0, terminated: 0 });
 });
 
 test('dispose cancels an in-flight bootstrap without starting a Worker', async ({ page }) => {
@@ -159,5 +190,5 @@ test('dispose cancels an in-flight bootstrap without starting a Worker', async (
   expect(result.rejected).toBe(true);
   expect(result.state).toBe('disposed');
   expect(result.events).not.toContain('error');
-  expect(page.workers()).toHaveLength(0);
+  await expectWorkerCounts(page, { created: 0, terminated: 0 });
 });

@@ -1,6 +1,6 @@
 # @walos/os
 
-A browser WASI Preview 1 runtime independent of the walos workbench UI. The
+A browser WASI Preview 1 / Preview 2 runtime independent of the walos workbench UI. The
 package owns filesystem bootstrap, the Core/Process Workers, terminal streams,
 foreground selection, prompt ordering and lifecycle cleanup. It has no DOM or
 UI framework dependency. Applications subscribe to typed events and supply input.
@@ -46,18 +46,68 @@ From the repository root, `npm ci` links the npm workspace and
 `packages/os/dist`. `npm pack --workspace @walos/os` creates an installable package;
 the package has no runtime npm dependencies. Build tools live in the repository's
 root development dependencies. A consumer can install the tarball and import
-`@walos/os` using Vite, which bundles the nested module Workers. Both development
-and production workbench builds use this compiled package entry.
+`@walos/os` using Vite, which bundles the nested module Workers. Set
+`worker.format` to `es` so the Worker can load the converter as a separate chunk:
+
+```ts
+export default { worker: { format: 'es' } };
+```
+
+Both development and production workbench builds use this compiled package entry.
 
 The separately compiled WASI command assets are host-provided. Run
 `npm run build:apps` and serve the files in `public/bin` at `binUrl` (defaults to
 `/bin/`; relative URLs resolve against the current page). `binUrl` is a directory
 URL with an optional trailing slash. Bootstrap installs sh, cat, grep, sort,
-echo, pwd, env, false, true, trap and hang into OPFS `/bin`. Existing `/home`
-files are preserved and `/tmp` is reset at each boot.
+echo, pwd, env, false, true, trap and hang, plus their `p2-*` counterparts, into
+OPFS `/bin`. Existing `/home` files are preserved and `/tmp` is reset at each boot.
 
 Requires a secure browser context, OPFS, module Workers and Chromium JSPI.
 Use the COOP/COEP headers shown in the repository's Vite configuration. This is
 a browser library; it does not provide a Node.js runtime. Only trusted WASI
 applications and one session per origin are supported; Worker boundaries do not
-enforce capability isolation. Preview 2 execution remains follow-up work.
+enforce capability isolation.
+
+## Preview 2 and component cache
+
+A Process Worker detects Core Wasm versus Component Model binaries from the
+Wasm header. It dynamically loads the bundled browser Jco 1.15.1 converter for a
+cold Component, generates JSPI bindings, and runs the standard `wasi:cli/run`
+export. The converter's Wasm assets are bundled into its lazy JS module; no CDN,
+Node.js API or server-side conversion is used at runtime. Build tools bundle this
+converter when building the library, keeping runtime npm dependencies empty.
+
+The host implements CLI/environment/stdio, I/O streams/pollables, basic OPFS
+filesystem operations, clocks, randomness and `walos:runtime@0.1.0` process/IPC/
+terminal interfaces. P1 and P2 use the same Process Manager and direct Pipe data
+paths. The shell can mix `cat | p2-cat | cat`. Unsupported interfaces fail startup;
+unsupported filesystem operations return the standard `unsupported` error.
+See [implementation notes](../../docs/implementation.md) for the exact limits.
+
+`.walos-components` in OPFS stores content-addressed conversion manifests. Keys
+include the Component SHA-256, Jco version, host cache revision and all conversion
+options. Workers write unique staging directories and publish a manifest only
+after every artifact has closed successfully. Readers verify artifact hashes;
+missing or corrupt entries are regenerated. Concurrent duplicate conversions are
+allowed. A cache write failure falls back to the in-memory result. Interrupted
+or superseded stages remain until manual clearing; there is no automatic LRU.
+
+```ts
+import { clearComponentCache } from '@walos/os';
+
+// Stop OS sessions first, then remove all persistent conversion artifacts.
+await clearComponentCache();
+```
+
+The following CSP was tested on both development and production builds (serve it
+on Worker responses as well as the document):
+
+```text
+default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self' data: ws:; style-src 'self' 'unsafe-inline'
+```
+
+`blob:` permits generated module imports, and `'wasm-unsafe-eval'` permits Wasm
+compilation. `data:` in `connect-src` permits the converter's bundled Wasm assets.
+The `ws:` connection is for Vite development HMR and can be omitted in production.
+A stricter policy that blocks these mechanisms prevents cold Component startup.
+There is no `eval` or `new Function` fallback.
