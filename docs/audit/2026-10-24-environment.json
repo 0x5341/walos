@@ -1,0 +1,45 @@
+{
+  "sourceBase": "19b02152c63fd1c77b628a6f9f6b8f8bc393de0d",
+  "sourceRevision": "d2b2d5d55483e85d57a9f8db37e523c0bda4a64a",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "node": "v24.19.0",
+  "chromium": "Chromium 154.0.8037.57 built on Debian GNU/Linux 13 (trixie)",
+  "commands": {
+    "build": "npm run check:wit && diff -ru wit/generated work/wit-generated && npm run build",
+    "fixtureTypes": "npx tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2023,DOM,DOM.Iterable,WebWorker tests/fixtures/lifecycle-harness.ts tests/fixtures/lifecycle.worker.ts",
+    "development": "CHROMIUM_PATH=/usr/bin/chromium npm test",
+    "production": "CHROMIUM_PATH=/usr/bin/chromium npm run test:production",
+    "aggregation": "npm run test:benchmark",
+    "mutation": "CHROMIUM_PATH=/usr/bin/chromium npx playwright test lifecycle.spec.ts -g \"READY races\" (dead-parent handle guard temporarily removed; restored before final validation)"
+  },
+  "results": {
+    "developmentPassed": 101,
+    "productionPassed": 13,
+    "aggregationPassed": 2,
+    "mutationExpectedFailures": 4
+  },
+  "sha256": {
+    "scripts/build-apps.mjs": "bf9956873799ab02c847b7a01d1317084110d6809ebb826084b6bb1e5d9736e3",
+    "scripts/build-p2-probe.mjs": "77da686e06bf5f6a3bb9a8ae030b77d90c53f05bc20f0cb5c417bbdd08387cfd",
+    "tests/fixtures/lifecycle-harness.ts": "3e14c95f504d2e1c9df8399c4f1aad1bd7210ea01e63fc52ed5c9c2f7037d12a",
+    "tests/fixtures/lifecycle.c": "d1799c39c542b79e9b46d30a2cc4ddc85a5fc7da5d5700b75791724625c43d99",
+    "tests/fixtures/lifecycle.worker.ts": "2f90f23549dea0023c322e1818bdf48a1275bc3146b5a43d59c62880722dccd4",
+    "tests/fixtures/lifecycle2.c": "1b4869c2ca8bc06e2e95532b133662afa3932416aac1b19dc1e9391fc16c2822",
+    "tests/fixtures/lifecycle2.wit": "05ee5467ad0aa80d04c473efdc6509706dcfdcb22d6d8bcbbb0d609cb7c087da",
+    "tests/lifecycle.spec.ts": "3fb9f7369db1b436f4fee921c4cd57d345fda2cc4279cc87431ae7adab890cfb",
+    "tests/wasip2.spec.ts": "5548ad9ca48403f61a3fae82603a6b1da227a22a9f1edd4e2e2fcb4aa73c3345",
+    "packages/os/src/internal/core.ts": "6dc24fa8dd294261b75cc8ea610e31fb1e38939d2ab7ba7994212b8a8e1038b7",
+    "packages/os/src/internal/process.worker.ts": "b5288ebb535efa6aa500421606730ffb186183fd2daf60277388930e1bc66931",
+    "public/bin/cat.wasm": "bb49516effe44e1e720606603a9157ca36ea2d316fc618f11bde3645bbaef17e",
+    "public/bin/p2-cat.wasm": "104954b303320430d3de6f3b9b63caf5673b1544161747c83ac663ffef29a061",
+    "public/bin/lifecycle-parent.wasm": "30ef2e339d1780c2167f164e673e5ec93ce6277743267c6b18713ca092a34d6c",
+    "public/bin/p2-lifecycle-parent.wasm": "8a4c856730c4483d4759fa9779fe7603c8b5858b5cf5f05cc001ada8bd69e4b8"
+  },
+  "logSHA256": {
+    "docs/audit/2026-10-24-build.txt": "1b92e206f3bbf58f13bd94535cdb40c49bb87222ae30318b85049cbb663a603d",
+    "docs/audit/2026-10-24-dev.txt": "2b934a45a0e33f86bb5fd158a7b82518c269816afd9a03278032cd5a04ac30da",
+    "docs/audit/2026-10-24-mutation.txt": "dd65b598245806b2e696038c325a715e7a017bf726ff6ad2283c43ee6d22e7e6",
+    "docs/audit/2026-10-24-production.txt": "f0c3969bdd34ede5fda89e6fca497bfd58b6b4fdf03e0912df13d5789da0cffe",
+    "docs/audit/2026-10-24-stats.txt": "bca1530d32382dbf53dfc0c70dd3c6f24113fabd52c1f12c351dfd340836e415"
+  }
+}

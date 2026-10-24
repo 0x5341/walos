@@ -8,7 +8,11 @@ completed conversions are cached in OPFS.
 
 The implementation follows the [design baseline](docs/grilled_webos_concept.md).
 See [implementation status](docs/implementation.md) for the supported WASI subset
-and remaining PoC work. Only run trusted applications. Worker boundaries do not
+and the [nine-criterion acceptance audit](docs/poc-audit.md) for reproducible
+evidence, supported features and constraints. All nine criteria pass within the
+documented Chromium PoC subset, including real P1/P2 parent/child lifecycle tests
+with explicit controls for READY ordering and failure injection.
+Only run trusted applications. Worker boundaries do not
 enforce capability isolation.
 
 ## OS library and UI

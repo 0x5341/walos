@@ -1,0 +1,105 @@
+EXPECTED FAILURE: negative control for the lifecycle race regression tests.
+Removed only the dead-parent handle guard in core.ts, then ran:
+CHROMIUM_PATH=/usr/bin/chromium npx playwright test lifecycle.spec.ts -g "READY races"
+All four cases failed (exit code 1), detecting retainedParentHandles = 1.
+The original source was restored before the final build/full test run.
+
+[2m[WebServer] [22m(node:8916) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m[plugin vite:resolve] Module "node:fs/promises" has been externalized for browser compatibility, imported by "/workspace/walos/node_modules/@bytecodealliance/jco/obj/js-component-bindgen-component.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+[2m[WebServer] [22m(node:8935) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 1 worker
+
+(node:8953) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:8953) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/lifecycle.spec.ts:62:106 › real lifecycle-parent → cat: READY races parent trap before spawn continuation (1.3s)
+(node:9093) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9093) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/lifecycle.spec.ts:62:106 › real lifecycle-parent → p2-cat: READY races parent trap before spawn continuation (3.8s)
+(node:9236) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9236) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 tests/lifecycle.spec.ts:62:106 › real p2-lifecycle-parent → cat: READY races parent trap before spawn continuation (2.7s)
+(node:9372) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9372) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  4 tests/lifecycle.spec.ts:62:106 › real p2-lifecycle-parent → p2-cat: READY races parent trap before spawn continuation (4.3s)
+
+
+  1) tests/lifecycle.spec.ts:62:106 › real lifecycle-parent → cat: READY races parent trap before spawn continuation 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m0[39m
+    Received: [31m1[39m
+
+      86 |       expect(result.ttyCloses).toEqual([1, 1]);
+      87 |       expect(result.terminations).toEqual([1, 1]);
+    > 88 |       expect(result.retainedParentHandles).toBe(0);
+         |                                            ^
+      89 |       expect(result.repliesAfterExit).toBe(0);
+      90 |       expect(result.ownedStreams).toBe(0);
+      91 |       expect(result.records).toBe(0);
+        at /workspace/walos/tests/lifecycle.spec.ts:88:44
+
+  2) tests/lifecycle.spec.ts:62:106 › real lifecycle-parent → p2-cat: READY races parent trap before spawn continuation 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m0[39m
+    Received: [31m1[39m
+
+      86 |       expect(result.ttyCloses).toEqual([1, 1]);
+      87 |       expect(result.terminations).toEqual([1, 1]);
+    > 88 |       expect(result.retainedParentHandles).toBe(0);
+         |                                            ^
+      89 |       expect(result.repliesAfterExit).toBe(0);
+      90 |       expect(result.ownedStreams).toBe(0);
+      91 |       expect(result.records).toBe(0);
+        at /workspace/walos/tests/lifecycle.spec.ts:88:44
+
+  3) tests/lifecycle.spec.ts:62:106 › real p2-lifecycle-parent → cat: READY races parent trap before spawn continuation 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m0[39m
+    Received: [31m1[39m
+
+      86 |       expect(result.ttyCloses).toEqual([1, 1]);
+      87 |       expect(result.terminations).toEqual([1, 1]);
+    > 88 |       expect(result.retainedParentHandles).toBe(0);
+         |                                            ^
+      89 |       expect(result.repliesAfterExit).toBe(0);
+      90 |       expect(result.ownedStreams).toBe(0);
+      91 |       expect(result.records).toBe(0);
+        at /workspace/walos/tests/lifecycle.spec.ts:88:44
+
+  4) tests/lifecycle.spec.ts:62:106 › real p2-lifecycle-parent → p2-cat: READY races parent trap before spawn continuation 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: [32m0[39m
+    Received: [31m1[39m
+
+      86 |       expect(result.ttyCloses).toEqual([1, 1]);
+      87 |       expect(result.terminations).toEqual([1, 1]);
+    > 88 |       expect(result.retainedParentHandles).toBe(0);
+         |                                            ^
+      89 |       expect(result.repliesAfterExit).toBe(0);
+      90 |       expect(result.ownedStreams).toBe(0);
+      91 |       expect(result.records).toBe(0);
+        at /workspace/walos/tests/lifecycle.spec.ts:88:44
+
+  4 failed
+    tests/lifecycle.spec.ts:62:106 › real lifecycle-parent → cat: READY races parent trap before spawn continuation 
+    tests/lifecycle.spec.ts:62:106 › real lifecycle-parent → p2-cat: READY races parent trap before spawn continuation 
+    tests/lifecycle.spec.ts:62:106 › real p2-lifecycle-parent → cat: READY races parent trap before spawn continuation 
+    tests/lifecycle.spec.ts:62:106 › real p2-lifecycle-parent → p2-cat: READY races parent trap before spawn continuation 

@@ -23,7 +23,7 @@ Review the commits in this order:
 | 4. Streams | Direct MessagePort DATA; 64 KiB capacity, 16 KiB chunks, cumulative ACKs, EOF/Broken Pipe, migration, foreground TTY, P2 nonblocking operations and standard pollables | Configurable UI controls for capacities |
 | 5. Shell | PATH, cwd, env, exit status, pipelines, `<`, `>`, `>>`, small literal/quote grammar | Full POSIX syntax is outside this PoC |
 | 6. WASI 0.2 | Real wasip2 commands; Process-local Jco conversion; shared P2 host adapter; persistent cache; generated-WIT spawn/IPC; CSP tests | Broader filesystem coverage and unsupported network interfaces |
-| 7. Completion | Unmodified sbase cat compiled for WASI, regression tests, reproducible P1/P2 startup/cache, Worker memory, CPU, OPFS and Pipe benchmarks with raw samples and variability | Broader validation of the remaining PoC acceptance criteria |
+| 7. Completion | Unmodified sbase cat compiled for P1/P2, regression tests, reproducible P1/P2 startup/cache, Worker memory, CPU, OPFS and Pipe benchmarks with raw samples and variability; [nine-criterion audit](poc-audit.md) | No unpassed §12 criterion within the documented Chromium PoC subset; broader conformance and silent-crash recovery remain outside that claim |
 
 Preview 2 uses standard WASI 0.2.x interfaces and the `walos:runtime@0.1.0`
 extension. No Execution Worker pool, central file server or Pipe DATA relay is
@@ -233,6 +233,15 @@ README. No `eval`/`new Function` fallback is used.
 
 ## Validation evidence
 
+The [2026-10-24 final acceptance audit](poc-audit.md) maps all nine baseline
+criteria to named tests, retained local logs, reproduction commands and the
+completed issue #4 benchmark results. All nine criteria pass within the documented
+subset; criterion 7 now also has 52 real-Worker cases spanning compiled P1/P2
+parents and children, normal/nonzero exits, traps, observable failures,
+same-turn READY/exit races and replayed terminal/late READY events. The audit
+discloses the test-only transport gates and interrupted spawn await used to force
+otherwise inaccessible orderings. Unsupported features remain listed separately.
+
 Environment: Linux x86-64, Node 24.19.0, wasi-sdk 27.0, Chromium
 154.0.8037.57, TypeScript 5.9.3, Jco 1.15.1. See README for commands; CI repeats
 WIT generation, type checking/build, browser tests and bundled production tests.
@@ -283,7 +292,7 @@ fresh-Worker reuse while blocking the converter fetch, hash-corruption recovery,
 concurrent Worker publication and idempotent public cache clearing. Both dev and
 production tests exercise the supported CSP.
 
-Current local validation: Node 24.19.0, wasi-sdk 27.0, wit-bindgen 0.46.0,
+Earlier wasip2 slice validation: Node 24.19.0, wasi-sdk 27.0, wit-bindgen 0.46.0,
 Jco 1.15.1 and system Chromium. WIT generation/diff, TypeScript/production builds,
 all 29 development browser tests and all 11 production browser tests pass.
 Packing the library, installing it in a separate consumer, consumer type checking
@@ -307,3 +316,11 @@ observable browser events, not silent renderer crashes.
 Local Issue #5 validation: app compilation, library/UI type checking and production
 bundling, WIT generation/diff, 47 development browser tests, 11 production browser
 tests and both benchmark aggregation tests pass with system Chromium.
+
+Issue #8 final local validation: WIT generation/diff, app compilation,
+library/UI and lifecycle-fixture type checks, production bundling, 101 development
+browser tests, 13 production browser tests and both benchmark aggregation tests
+pass. The four same-turn race tests also detect a temporarily removed ownership
+guard (expected failures); the runtime was restored for the final run. See the
+[audit and retained evidence](poc-audit.md) for the nine-criterion decision,
+reproduction commands, fault-injection controls and measurement limits.
