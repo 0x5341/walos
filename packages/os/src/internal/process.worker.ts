@@ -1,4 +1,4 @@
-import { Rpc, type ToProcess } from './protocol.js';
+import { Rpc, type ToProcess, type ProcessMetrics } from './protocol.js';
 import { Wasi, WasiExit } from './wasi.js';
 import { Wasi2 } from './wasi2.js';
 import { executableFormat, loadComponent } from './component.js';
@@ -24,13 +24,24 @@ scope.onmessage = async (e) => {
   try {
     if (typeof WebAssembly.Suspending !== 'function')
       throw new Error('This slice requires Chromium with JSPI support');
+    const readStart = performance.now();
     const bytes = new Uint8Array(await (await m.spec.file.getFile()).arrayBuffer());
+    const metrics: ProcessMetrics | undefined = m.measure
+      ? { readMs: performance.now() - readStart }
+      : undefined;
+    const adapterStart = performance.now();
     let run: () => Promise<unknown>;
     if (executableFormat(bytes) === 'p2') {
       const adapter = new Wasi2(m.spec, rpc);
       wasi = adapter;
       await adapter.init();
-      const component = await loadComponent(bytes, adapter.imports());
+      const loadStart = performance.now();
+      if (metrics) {
+        metrics.adapterMs = loadStart - adapterStart;
+        metrics.component = {};
+      }
+      const component = await loadComponent(bytes, adapter.imports(), metrics?.component);
+      if (metrics) metrics.loadMs = performance.now() - loadStart;
       if (typeof component.run?.run !== 'function')
         throw new Error('Expected a wasi:cli/run command component');
       run = async () => {
@@ -51,26 +62,40 @@ scope.onmessage = async (e) => {
       const adapter = new Wasi(m.spec, rpc);
       wasi = adapter;
       await adapter.init();
+      const compileStart = performance.now();
+      if (metrics) metrics.adapterMs = compileStart - adapterStart;
       const module = await WebAssembly.compile(bytes);
+      const instantiateStart = performance.now();
+      if (metrics) metrics.compileMs = instantiateStart - compileStart;
       const instance = await WebAssembly.instantiate(
         module,
         adapter.imports() as unknown as WebAssembly.Imports,
       );
+      if (metrics) metrics.instantiateMs = performance.now() - instantiateStart;
       adapter.memory = instance.exports.memory as WebAssembly.Memory;
       if (!adapter.memory || typeof instance.exports._start !== 'function')
         throw new Error('Expected a WASI Preview 1 command with memory and _start exports');
+      if (metrics) metrics.linearMemoryBytes = adapter.memory.buffer.byteLength;
       run = WebAssembly.promising(instance.exports._start);
     }
-    scope.postMessage({ type: 'ready' });
+    scope.postMessage({ type: 'ready', ...(metrics && { metrics }) });
     ready = true;
+    const runStart = performance.now();
     try {
       await run();
-      await wasi.close();
-      scope.postMessage({ type: 'exit', exit: { kind: 'exited', code: 0 } });
-    } catch (e) {
+      const runMs = performance.now() - runStart;
       await wasi.close();
       scope.postMessage({
         type: 'exit',
+        exit: { kind: 'exited', code: 0 },
+        ...(metrics && { runMs }),
+      });
+    } catch (e) {
+      const runMs = performance.now() - runStart;
+      await wasi.close();
+      scope.postMessage({
+        type: 'exit',
+        ...(metrics && { runMs }),
         exit:
           e instanceof WasiExit
             ? { kind: 'exited', code: e.code }

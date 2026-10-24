@@ -1,4 +1,5 @@
 import type { Exit, ProcessInfo } from '../types.js';
+import type { ComponentMetrics } from './component.js';
 export type { Exit } from '../types.js';
 export type CoreEvent =
   | { type: 'tty'; pid: number; direction: 'in' | 'out'; port: MessagePort }
@@ -68,10 +69,22 @@ export class RpcFailure extends Error {
 export type Reply = { type: 'reply'; id: number; value?: unknown; error?: RpcError };
 export type FromProcess =
   | Request
-  | { type: 'ready' }
-  | { type: 'exit'; exit: Exit }
+  | { type: 'ready'; metrics?: ProcessMetrics }
+  | { type: 'exit'; exit: Exit; runMs?: number }
   | { type: 'boot-error'; message: string };
-export type ToProcess = Reply | { type: 'start'; pid: number; spec: Spec } | { type: 'stop' };
+export interface ProcessMetrics {
+  readMs: number;
+  adapterMs?: number;
+  loadMs?: number;
+  compileMs?: number;
+  instantiateMs?: number;
+  linearMemoryBytes?: number;
+  component?: ComponentMetrics;
+}
+export type ToProcess =
+  | Reply
+  | { type: 'start'; pid: number; spec: Spec; measure?: boolean }
+  | { type: 'stop' };
 export const transferables = (refs: (StreamRef | null)[]) =>
   refs.flatMap((s) => (s && (s.kind === 'pipe' || s.kind === 'tty') ? [s.port] : []));
 export class Rpc {
