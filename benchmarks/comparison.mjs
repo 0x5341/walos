@@ -39,6 +39,8 @@ export async function compareEngines({
   metadata.cold =
     'Independent browser process/context/page/Worker; empty application/OPFS cache, verified miss (or disabled). OS page cache is not flushed. No translator/runtime preloading before new Worker().';
   metadata.timeoutMs = 60000;
+  metadata.warmups =
+    'Cold primes warm; one excluded integrity-checked CPU run before each retained fresh-Worker CPU sample. No I/O scenarios in engine comparison.';
   metadata.bootstrap = { iterations: 10000, seed: 0x5341, independentResampling: true };
   metadata.memory = 'CDP Runtime.getHeapUsage after READY, held Worker; not peak or browser RSS.';
   metadata.spans =
