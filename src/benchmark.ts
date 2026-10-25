@@ -106,8 +106,14 @@ export function installBenchmark(os: Walos, detailed: boolean) {
       fragments = [];
       completed = undefined;
     },
-    output(pid: number, text: string) {
-      if (active)
+    domStart(pid?: number) {
+      diagnostics.mark('ui.dom.start', { localEcho: pid === undefined, pid });
+    },
+    domEnd(pid?: number) {
+      diagnostics.mark('ui.dom.end', { localEcho: pid === undefined, pid });
+    },
+    output(pid: number | undefined, text: string) {
+      if (active && pid !== undefined)
         fragments.push({
           pid,
           text,

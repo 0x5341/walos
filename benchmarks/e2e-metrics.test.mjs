@@ -57,7 +57,8 @@ test('cross-worker causal violations and missing boundaries fail the sample', ()
     timeline: [
       event('ui.enter', 1000),
       event('shell.input', 1001),
-      event('shell.prompt', 1009),
+      event('shell.prompt', 1011, { stdoutStreamId: 2 }),
+      event('stream.write', 1008, { bytes: 4, streamId: 2 }),
       event('ui.prompt.dom', 1010),
       event('rpc.send', 1002, { op: 'foreground', requestId: 1 }),
       event('core.rpc.reply', 1004, { op: 'foreground', requestId: 1 }),

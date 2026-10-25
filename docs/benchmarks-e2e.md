@@ -83,7 +83,8 @@ import is otherwise a no-op. It is not a new public OS syscall.
    count. Marker ordering follows the prompt DATA messages. It adds no RPC wait.
 3. `Walos` holds the marker behind the same foreground/output-drain gate as the
    shell's buffered prompt. The UI correlates it with the actual DOM append
-   timestamp of the final prompt bytes, rather than the later marker receipt.
+   timestamp of the final prompt bytes (before synchronous scrolling/layout),
+   rather than the later marker receipt.
    It removes exactly the reported suffix bytes from captured shell output.
    Neither old prompt text nor `$ ` in input/output can signal completion.
 4. Each DOM output append schedules rAF; the marker identifies the callback for
@@ -122,6 +123,10 @@ Each realm records `performance.timeOrigin + performance.now()`. Original
 origins are retained. Cross-origin isolation is mandatory. The runner verifies
 both directions of UI↔shell, shell↔Core RPC and Core↔child START/READY/EXIT
 causality for every detailed sample, allowing 0.25 ms for clock quantization.
+The shell-to-UI edge uses the final nonempty stdout DATA **send** before prompt
+DOM append. The post-write marker can legitimately execute after DOM append and
+is not a valid clock-ordering bound. UI append/scroll spans, including local
+echo's synchronous layout work, are retained separately.
 Missing/incompatible clocks fail and preserve the sample; timestamps are never
 silently clamped or corrected. This checks consistency within observed message
 brackets, not exact zero clock skew. On another browser without aligned clocks,

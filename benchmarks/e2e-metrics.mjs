@@ -56,10 +56,25 @@ export function analyzeTimeline(sample) {
   }
   const shellInput = one('shell.input');
   assert(shellInput, 'Missing command-ID-correlated shell input');
+  const promptWrite = [...events]
+    .reverse()
+    .find(
+      (e) =>
+        e.name === 'stream.write' &&
+        e.pid === shellInput.pid &&
+        e.detail.bytes > 0 &&
+        e.detail.streamId === one('shell.prompt').detail.stdoutStreamId,
+    );
   edge(one('ui.enter'), shellInput, 'ui-to-shell');
-  edge(one('shell.prompt'), one('ui.prompt.dom'), 'shell-to-ui');
+  edge(promptWrite, one('ui.prompt.dom'), 'shell-to-ui');
   metrics.inputToShellMs = shellInput.at - sample.inputAt;
-  metrics.shellPromptToDomMs = sample.promptDomAt - one('shell.prompt').at;
+  metrics.shellPromptToDomMs = sample.promptDomAt - promptWrite.at;
+  for (const start of events.filter((e) => e.name === 'ui.dom.start')) {
+    const end = events.find((e) => e.name === 'ui.dom.end' && e.at >= start.at);
+    assert(end, 'Unclosed UI DOM/scroll span');
+    const key = start.detail.localEcho ? 'localEchoDomAndScrollMs' : 'outputDomAndScrollMs';
+    metrics[key] = (metrics[key] ?? 0) + end.at - start.at;
+  }
   const sends = events.filter((e) => e.name === 'rpc.send');
   for (const send of sends) {
     const receive = events.find(

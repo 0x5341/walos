@@ -183,8 +183,8 @@ export class PortStream implements Stream {
     const n = Math.min(b.length, this.writable());
     const bytes = b.slice(0, n);
     this.sent += n;
-    this.ref.port.postMessage({ type: 'data', bytes: bytes.buffer }, [bytes.buffer]);
     getTimeline()?.mark('stream.write', { streamId: this.ref.id, kind: this.ref.kind, bytes: n });
+    this.ref.port.postMessage({ type: 'data', bytes: bytes.buffer }, [bytes.buffer]);
     return n;
   }
   close() {

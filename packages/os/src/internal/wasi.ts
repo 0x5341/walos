@@ -460,7 +460,11 @@ export class Wasi {
               5: 'shell.execute.end',
             } as Record<number, string>
           )[event];
-          trace.mark(name, { value, extra });
+          trace.mark(name, {
+            value,
+            extra,
+            ...(event === 2 && { stdoutStreamId: this.streams.get(1)?.ref.id }),
+          });
           if (event === 2) {
             const ref = this.streams.get(1)?.ref;
             if (ref?.kind === 'tty')

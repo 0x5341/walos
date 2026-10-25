@@ -13,9 +13,12 @@ const benchmark =
     ? installBenchmark(os, benchmarkQuery.get('detail') !== '0')
     : undefined;
 
-const output = (text: string) => {
+const output = (text: string, pid?: number) => {
+  benchmark?.domStart(pid);
   terminal.append(document.createTextNode(text));
+  benchmark?.output(pid, text);
   terminal.scrollTop = terminal.scrollHeight;
+  benchmark?.domEnd(pid);
 };
 const renderState = () => {
   state.textContent = {
@@ -33,8 +36,7 @@ const renderState = () => {
 os.subscribe((event) => {
   switch (event.type) {
     case 'output':
-      output(event.text);
-      benchmark?.output(event.pid, event.text);
+      output(event.text, event.pid);
       break;
     case 'state':
     case 'foreground':
