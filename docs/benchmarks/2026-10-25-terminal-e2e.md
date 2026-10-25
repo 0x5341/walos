@@ -138,3 +138,8 @@ JSONは元のバイト列をgzip圧縮して保存した。隣接manifestに圧�
 検証: 開発UI回帰130 passed / 1 skipped、本番UI回帰14 passed / 1 skipped、統計テスト3件・E2E境界テスト4件、既存ベンチ30回、jscoベンチ30回が成功。スキップはjscoのcacheless動作に対応する既存条件付きテスト。修正後の本番UI回帰も再実行した。CIには全7ケース各1件の正確性スモークとartifact保存を追加し、絶対時間の閾値は設けない。
 
 改善候補はP2のprepare/loadの反復コストと、高速builtinで見える詳細計測の観測コスト。今回の計測PRではWorkerプールや実行エンジンの変更を行わない。
+
+実測に基づく後続Issue:
+
+- [#21: jsco prepare / instantiate の反復コスト](https://github.com/0x5341/walos/issues/21)
+- [#22: 高速builtinに対する詳細診断の観測コスト](https://github.com/0x5341/walos/issues/22)
