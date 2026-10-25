@@ -61,9 +61,10 @@ Each cold/warm pair uses a fresh browser process. “Cold” describes applicati
 and browser caches, not the host OS disk/page cache, which is not flushed. Reload
 reuse does not measure reopening a persistent profile after browser restart.
 The harness checks the observed cache path, rather than assuming a hit from a
-shorter duration. The process-local in-memory conversion cache cannot survive a
-Process Worker exit, so normal repeated launches exercise OPFS hits, not that
-in-memory cache.
+shorter duration. Issue #15 removes the process-local L1 conversion cache entirely;
+repeated loads and Process Worker launches use the optional OPFS artifact layer.
+Cacheless engine adapters skip hashing and OPFS and report `cache: disabled` with
+key, lookup and publication timings absent. Jco remains the benchmark default.
 
 Opt-in internal diagnostics split `readMs`, `adapterMs`, P1 `compileMs` and
 `instantiateMs`, and P2 `loadMs`. P2's `component.*` further splits content/key

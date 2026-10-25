@@ -140,7 +140,10 @@ test('persistent component cache works across Workers and regenerates corrupt ar
   const entries = await page.evaluate(async () => {
     const cache = await (
       await navigator.storage.getDirectory()
-    ).getDirectoryHandle('.walos-components');
+    )
+      .getDirectoryHandle('.walos-components')
+      .then((dir) => dir.getDirectoryHandle('schema-2'))
+      .then((dir) => dir.getDirectoryHandle('jco'));
     const names: string[] = [];
     for await (const [name] of cache.entries()) if (name.endsWith('.json')) names.push(name);
     const manifest = JSON.parse(

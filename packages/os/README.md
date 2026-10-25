@@ -84,13 +84,28 @@ paths. The shell can mix `cat | p2-cat | cat`. Unsupported interfaces fail start
 unsupported filesystem operations return the standard `unsupported` error.
 See [implementation notes](../../docs/implementation.md) for the exact limits.
 
-`.walos-components` in OPFS stores content-addressed conversion manifests. Keys
-include the Component SHA-256, Jco version, host cache revision and all conversion
-options. Workers write unique staging directories and publish a manifest only
-after every artifact has closed successfully. Readers verify artifact hashes;
-missing or corrupt entries are regenerated. Concurrent duplicate conversions are
-allowed. A cache write failure falls back to the in-memory result. Interrupted
-or superseded stages remain until manual clearing; there is no automatic LRU.
+The optional OPFS artifact cache is engine independent. Keys include the Component
+SHA-256, engine ID/version, effective options (with canonical object key ordering),
+host revision and cache schema. Entries live in
+`.walos-components/schema-2/<engine-id>/`. Engines own artifact formats and metadata;
+the shared layer supports canonical relative paths, including nested directories,
+and verifies every artifact's SHA-256 before restoring it. There is no L1 memory
+cache. An engine with `cache: null` skips cache hashing, OPFS and publication entirely;
+Jco remains the default engine. Engine selection is currently an internal adapter API.
+
+Loading and instantiation perform no artifact writes. The Process Worker sends
+READY first, starts deferred persistence, and joins it before normal EXIT (including
+nonzero exits and traps). Saving errors affect cache diagnostics, not command results.
+Key-scoped Web Locks protect readers and publishers. After verified artifact writes,
+`createWritable().close()` publishes the manifest; only then are interrupted and
+superseded stages for that key reclaimed under the same lock. Cleanup is best effort
+and runs during deferred publication, never on the startup path. Other keys are left
+alone; no automatic GC/LRU runs.
+
+The public `clearComponentCache(): Promise<void>` API is unchanged and idempotently
+removes all engines/schemas, including legacy Jco artifacts. Stop OS sessions first.
+Legacy manifests are deliberately cold misses rather than migrated; manual clearing
+reclaims them and abandoned stages for keys that are never published again.
 
 ```ts
 import { clearComponentCache } from '@walos/os';
