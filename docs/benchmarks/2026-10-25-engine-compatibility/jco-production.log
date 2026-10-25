@@ -1,0 +1,25 @@
+[2m[WebServer] [22m(node:24826) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 13 tests using 1 worker
+
+(node:24844) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:24844) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/shell.spec.ts:18:1 › WASI shell spawns a real pipeline and preserves OPFS files (2.5s)
+  ✓   2 tests/shell.spec.ts:32:1 › argv, env, cwd and exit status reach WASI commands (1.6s)
+  ✓   3 tests/shell.spec.ts:44:1 › trap and forced stop leave the shell responsive (1.8s)
+1 MiB file → pipe → file: 1892 ms
+  ✓   4 tests/shell.spec.ts:59:1 › a 1 MiB pipeline crosses the pipe capacity and startup failure keeps redirection effects (4.1s)
+  ✓   5 tests/shell.spec.ts:108:1 › WASI filesystem namespace operations use OPFS directly in the Process Worker (1.2s)
+  ✓   6 tests/wasip2.spec.ts:2:38 › upstream cat keeps stderr separate from redirected stdout (1.4s)
+  ✓   7 tests/wasip2.spec.ts:2:38 › upstream p2-cat keeps stderr separate from redirected stdout (3.2s)
+  ✓   8 tests/wasip2.spec.ts:35:1 › wasip2 commands receive argv, env, cwd and exit status (3.2s)
+  ✓   9 tests/wasip2.spec.ts:47:1 › Preview 1 and Preview 2 share pipelines, redirection and persistent OPFS files (6.8s)
+  ✓  10 tests/wasip2.spec.ts:74:1 › wasip2 filesystem operations, traps and forced stops leave the shell responsive (5.6s)
+  ✓  11 tests/wasip2.spec.ts:98:1 › a P2 parent uses generated walos WIT bindings to spawn P2/P1 children and transfer a pipe (3.9s)
+  ✓  12 tests/wasip2.spec.ts:115:1 › persistent component cache works across Workers and regenerates corrupt artifacts (4.9s)
+  ✓  13 tests/wasip2.spec.ts:149:1 › component execution works with CSP allowing Blob modules and Wasm compilation (3.0s)
+
+  13 passed (44.9s)

@@ -71,16 +71,18 @@ enforce capability isolation.
 ## Preview 2 and component cache
 
 A Process Worker detects Core Wasm versus Component Model binaries from the
-Wasm header. It dynamically loads the bundled browser Jco 1.15.1 converter for a
-cold Component, generates JSPI bindings, and runs the standard `wasi:cli/run`
-export. The converter's Wasm assets are bundled into its lazy JS module; no CDN,
-Node.js API or server-side conversion is used at runtime. Build tools bundle this
-converter when building the library, keeping runtime npm dependencies empty.
+Wasm header. By default it lazily loads jsco 0.2.0-preview.0 to parse/compile
+and instantiate a Component with JSPI, then runs `wasi:cli/run`. Jco 1.15.1 remains
+available as a baseline; polyengine 0.6.7 is experimental and currently fails
+Unicode argv compatibility. Runtime assets are bundled locally; no CDN, Node.js
+host or server-side conversion is used. Engine dependencies are version-pinned;
+the browser modules are bundled by the library build.
 
 The host implements CLI/environment/stdio, I/O streams/pollables, basic OPFS
 filesystem operations, clocks, randomness and `walos:runtime@0.1.0` process/IPC/
 terminal interfaces. P1 and P2 use the same Process Manager and direct Pipe data
-paths. The shell can mix `cat | p2-cat | cat`. Unsupported interfaces fail startup;
+paths. The shell can mix `cat | p2-cat | cat`. Unsupported non-socket interfaces fail startup;
+unreachable wasi-sdk socket imports link to trapping placeholders (no socket support);
 unsupported filesystem operations return the standard `unsupported` error.
 See [implementation notes](../../docs/implementation.md) for the exact limits.
 
@@ -91,7 +93,12 @@ host revision and cache schema. Entries live in
 the shared layer supports canonical relative paths, including nested directories,
 and verifies every artifact's SHA-256 before restoring it. There is no L1 memory
 cache. An engine with `cache: null` skips cache hashing, OPFS and publication entirely;
-Jco remains the default engine. Engine selection is currently an internal adapter API.
+jsco is the default and uses this cacheless path. Jco caches generated JS/Core
+Wasm; polyengine caches a translation envelope under its own namespace. For the
+repository application, select a build with `WALOS_COMPONENT_ENGINE=jco` (or
+`polyengine`) before `npm run build`/`npm run dev`. External embedders may define
+`__WALOS_COMPONENT_ENGINE__` at bundle time; absent a definition, jsco is used.
+This is internal configuration, not a public `Walos` constructor option.
 
 Loading and instantiation perform no artifact writes. The Process Worker sends
 READY first, starts deferred persistence, and joins it before normal EXIT (including

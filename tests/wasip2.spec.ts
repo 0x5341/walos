@@ -126,6 +126,10 @@ test('a P2 parent uses generated walos WIT bindings to spawn P2/P1 children and 
 test('persistent component cache works across Workers and regenerates corrupt artifacts', async ({
   page,
 }) => {
+  test.skip(
+    (process.env.WALOS_COMPONENT_ENGINE || 'jsco') !== 'jco',
+    'Jco-specific application cache; candidate cache coverage is in engines.spec.ts',
+  );
   await boot(page);
   expect(await command(page, 'p2-echo cold')).toContain('cold\n');
   const converter = /\/jco(?:-[\w-]+)?\.js(?:\?.*)?$/;

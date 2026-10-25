@@ -297,3 +297,7 @@ For application builds, `WALOS_COMPONENT_ENGINE=jco|polyengine|jsco npm run buil
 selects the Process Worker engine (the benchmark passes it explicitly on each
 start message). This build setting also applies to `npm run dev`. It is internal
 and does not alter the public `Walos` constructor or `clearComponentCache` API.
+
+The [2026-10-25 engine decision](benchmarks/2026-10-25-engines.md) retains all 30-trial
+results and compatibility failures. It selects jsco as the default; Jco remains
+the explicit legacy benchmark baseline.

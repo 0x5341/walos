@@ -1,0 +1,346 @@
+{
+  "config": {
+    "configFile": "/workspace/walos/playwright.config.ts",
+    "rootDir": "/workspace/walos/tests",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "reporter": [
+      [
+        "list"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "quiet": false,
+    "projects": [
+      {
+        "outputDir": "/workspace/walos/work/polyengine-dev-test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/workspace/walos/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.spec.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "shard": null,
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.56.1",
+    "workers": 1,
+    "webServer": {
+      "command": "npm run dev",
+      "url": "http://127.0.0.1:5173",
+      "reuseExistingServer": false
+    }
+  },
+  "suites": [
+    {
+      "title": "wasip2.spec.ts",
+      "file": "wasip2.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "upstream cat keeps stderr separate from redirected stdout",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2220,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-25T02:58:10.323Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "101bfc533fea5217f0e2-601521cdcd25b99fe887",
+          "file": "wasip2.spec.ts",
+          "line": 2,
+          "column": 38
+        },
+        {
+          "title": "upstream p2-cat keeps stderr separate from redirected stdout",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3605,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-25T02:58:13.068Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "101bfc533fea5217f0e2-03ec0442dc8dc4716dce",
+          "file": "wasip2.spec.ts",
+          "line": 2,
+          "column": 38
+        },
+        {
+          "title": "wasip2 commands receive argv, env, cwd and exit status",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "failed",
+                  "duration": 1770,
+                  "error": {
+                    "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"hello component こんにちは\u001b[39m\n\u001b[32m\"\u001b[39m\nReceived string:    \u001b[31m\"p2-echo \\\"hello component\\\" こんにちは\u001b[39m\n\u001b[31m/home $ \"\u001b[39m",
+                    "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"hello component こんにちは\u001b[39m\n\u001b[32m\"\u001b[39m\nReceived string:    \u001b[31m\"p2-echo \\\"hello component\\\" こんにちは\u001b[39m\n\u001b[31m/home $ \"\u001b[39m\n    at /workspace/walos/tests/wasip2.spec.ts:45:66",
+                    "location": {
+                      "file": "/workspace/walos/tests/wasip2.spec.ts",
+                      "column": 66,
+                      "line": 45
+                    },
+                    "snippet": "  43 |   await boot(page);\n  44 |   await command(page, 'cd /home');\n> 45 |   expect(await command(page, 'p2-echo \"hello component\" こんにちは')).toContain(\n     |                                                                  ^\n  46 |     'hello component こんにちは\\n',\n  47 |   );\n  48 |   await command(page, 'export P2_TEST=works');"
+                  },
+                  "errors": [
+                    {
+                      "location": {
+                        "file": "/workspace/walos/tests/wasip2.spec.ts",
+                        "column": 66,
+                        "line": 45
+                      },
+                      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"hello component こんにちは\u001b[39m\n\u001b[32m\"\u001b[39m\nReceived string:    \u001b[31m\"p2-echo \\\"hello component\\\" こんにちは\u001b[39m\n\u001b[31m/home $ \"\u001b[39m\n\n  43 |   await boot(page);\n  44 |   await command(page, 'cd /home');\n> 45 |   expect(await command(page, 'p2-echo \"hello component\" こんにちは')).toContain(\n     |                                                                  ^\n  46 |     'hello component こんにちは\\n',\n  47 |   );\n  48 |   await command(page, 'export P2_TEST=works');\n    at /workspace/walos/tests/wasip2.spec.ts:45:66"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-25T02:58:16.684Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "error-context",
+                      "contentType": "text/markdown",
+                      "path": "/workspace/walos/work/polyengine-dev-test-results/wasip2-wasip2-commands-receive-argv-env-cwd-and-exit-status/error-context.md"
+                    }
+                  ],
+                  "errorLocation": {
+                    "file": "/workspace/walos/tests/wasip2.spec.ts",
+                    "column": 66,
+                    "line": 45
+                  }
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "101bfc533fea5217f0e2-ca6a12c09186c6151eef",
+          "file": "wasip2.spec.ts",
+          "line": 35,
+          "column": 1
+        },
+        {
+          "title": "Preview 1 and Preview 2 share pipelines, redirection and persistent OPFS files",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 9810,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-25T02:58:19.126Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "101bfc533fea5217f0e2-b24652742930cee21298",
+          "file": "wasip2.spec.ts",
+          "line": 47,
+          "column": 1
+        },
+        {
+          "title": "wasip2 filesystem operations, traps and forced stops leave the shell responsive",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3704,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-25T02:58:29.176Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "101bfc533fea5217f0e2-56bb340bea599ac0b198",
+          "file": "wasip2.spec.ts",
+          "line": 74,
+          "column": 1
+        },
+        {
+          "title": "a P2 parent uses generated walos WIT bindings to spawn P2/P1 children and transfer a pipe",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4012,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-25T02:58:32.893Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "101bfc533fea5217f0e2-547da4b75cbe646b8b6f",
+          "file": "wasip2.spec.ts",
+          "line": 98,
+          "column": 1
+        },
+        {
+          "title": "component execution works with CSP allowing Blob modules and Wasm compilation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 3438,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-25T02:58:36.922Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "101bfc533fea5217f0e2-b958cd203acdcbc05618",
+          "file": "wasip2.spec.ts",
+          "line": 149,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-25T02:58:03.811Z",
+    "duration": 36753.23,
+    "expected": 6,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

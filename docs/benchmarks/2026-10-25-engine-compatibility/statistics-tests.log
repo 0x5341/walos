@@ -1,0 +1,15 @@
+
+> walos@0.1.0 test:benchmark
+> node --test benchmarks/stats.test.mjs
+
+✔ aggregation keeps outliers and uses even median, nearest-rank p95 and population deviation (1.7291ms)
+✔ summary separates scenarios and preserves sparse metric sample counts (0.357088ms)
+✔ bootstrap compares independent medians with a fixed seed, retaining outliers (62.463475ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 120.270434

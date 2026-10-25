@@ -1,0 +1,198 @@
+{
+  "jco": {
+    "passed": true,
+    "revision": "2a1c6292675fff36b6729ad088a30497a2ae099a",
+    "dirty": true,
+    "engine": "jco",
+    "startedAt": "2026-10-25T02:50:28.369Z",
+    "suites": {
+      "production": {
+        "passed": true,
+        "command": {
+          "status": 0,
+          "signal": null
+        },
+        "stats": {
+          "startTime": "2026-10-25T02:51:01.192Z",
+          "duration": 44898.471,
+          "expected": 13,
+          "skipped": 0,
+          "unexpected": 0,
+          "flaky": 0
+        },
+        "failures": [],
+        "report": "jco-production.json",
+        "log": "jco-production.log"
+      },
+      "dev": {
+        "passed": true,
+        "stats": {
+          "startTime": "2026-10-25T02:52:07.463Z",
+          "duration": 326632.293,
+          "expected": 127,
+          "skipped": 0,
+          "unexpected": 2,
+          "flaky": 0
+        },
+        "failures": [
+          {
+            "title": "real lifecycle-parent \u2192 p2-cat: nonzero, exit-first",
+            "status": "failed",
+            "error": "Error: page.evaluate: Execution context was destroyed, most likely because of a navigation."
+          },
+          {
+            "title": "real lifecycle-parent \u2192 p2-cat: nonzero, ready-first",
+            "status": "failed",
+            "error": "Error: page.evaluate: Execution context was destroyed, most likely because of a navigation."
+          }
+        ],
+        "report": "jco-dev.json",
+        "rerun": {
+          "passed": true,
+          "stats": {
+            "startTime": "2026-10-25T02:57:51.241Z",
+            "duration": 11666.119,
+            "expected": 2,
+            "skipped": 0,
+            "unexpected": 0,
+            "flaky": 0
+          },
+          "failures": [],
+          "report": "jco-dev-rerun.json"
+        },
+        "infrastructureNote": "Two cases interrupted by Vite reload during concurrent build/metadata updates. Both pass with no file updates. Original failed results retained."
+      }
+    },
+    "cacheTestPolicy": "Existing Jco cache regression included",
+    "finishedAt": "2026-10-25T02:51:46.119Z",
+    "note": "Full development suite plus production application suite.",
+    "fixtures": {
+      "p2-echo": "7be440403d2e37950ae9d1a663087d9b759c7bfb16a47972ddf37e8a28f2994d",
+      "p2-cat": "104954b303320430d3de6f3b9b63caf5673b1544161747c83ac663ffef29a061",
+      "p2-fs-probe": "7820453d1118dd459930a12d2462318364840293c24a7e1bf3baa6c63c4093c4",
+      "p2-process-probe": "cab2645d403cda2e2ae9804ba47f9015a8a5dfed2ab6516954d6d5753e823a54"
+    }
+  },
+  "polyengine": {
+    "passed": false,
+    "revision": "2a1c6292675fff36b6729ad088a30497a2ae099a",
+    "dirty": true,
+    "engine": "polyengine",
+    "startedAt": "2026-10-25T02:51:46.134Z",
+    "suites": {
+      "production": {
+        "passed": false,
+        "command": {
+          "status": 1,
+          "signal": null
+        },
+        "stats": {
+          "startTime": "2026-10-25T02:52:41.160Z",
+          "duration": 51916.56,
+          "expected": 11,
+          "skipped": 0,
+          "unexpected": 1,
+          "flaky": 0
+        },
+        "failures": [
+          {
+            "title": "wasip2 commands receive argv, env, cwd and exit status",
+            "status": "failed",
+            "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"hello component \u3053\u3093\u306b\u3061\u306f\u001b[39m\n\u001b[32m\"\u001b[39m\nReceived string:    \u001b[31m\"p2-echo \\\"hello component\\\" \u3053\u3093\u306b\u3061\u306f\u001b[39m\n\u001b[31m/home $ \"\u001b[39m"
+          }
+        ],
+        "report": "polyengine-production.json",
+        "log": "polyengine-production.log"
+      },
+      "dev": {
+        "passed": false,
+        "stats": {
+          "startTime": "2026-10-25T02:58:03.811Z",
+          "duration": 36753.23,
+          "expected": 6,
+          "skipped": 0,
+          "unexpected": 1,
+          "flaky": 0
+        },
+        "failures": [
+          {
+            "title": "wasip2 commands receive argv, env, cwd and exit status",
+            "status": "failed",
+            "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"hello component \u3053\u3093\u306b\u3061\u306f\u001b[39m\n\u001b[32m\"\u001b[39m\nReceived string:    \u001b[31m\"p2-echo \\\"hello component\\\" \u3053\u3093\u306b\u3061\u306f\u001b[39m\n\u001b[31m/home $ \"\u001b[39m"
+          }
+        ],
+        "report": "polyengine-dev.json"
+      }
+    },
+    "cacheTestPolicy": "Jco-specific application-cache assertion excluded; engine-specific cache/disabled tests in engines.spec.ts included in dev suite",
+    "finishedAt": "2026-10-25T02:53:33.161Z",
+    "note": "Focused WASI P2 dev suite, not full suite; ineligible because Unicode argv traps. Original may_leave violation reproduced with p2-echo \u3053\u3093\u306b\u3061\u306f.",
+    "fixtures": {
+      "p2-echo": "7be440403d2e37950ae9d1a663087d9b759c7bfb16a47972ddf37e8a28f2994d",
+      "p2-cat": "104954b303320430d3de6f3b9b63caf5673b1544161747c83ac663ffef29a061",
+      "p2-fs-probe": "7820453d1118dd459930a12d2462318364840293c24a7e1bf3baa6c63c4093c4",
+      "p2-process-probe": "cab2645d403cda2e2ae9804ba47f9015a8a5dfed2ab6516954d6d5753e823a54"
+    }
+  },
+  "jsco": {
+    "passed": true,
+    "revision": "2a1c6292675fff36b6729ad088a30497a2ae099a",
+    "dirty": true,
+    "engine": "jsco",
+    "startedAt": "2026-10-25T02:53:33.182Z",
+    "suites": {
+      "production": {
+        "passed": true,
+        "command": {
+          "status": 0,
+          "signal": null
+        },
+        "stats": {
+          "startTime": "2026-10-25T02:54:36.155Z",
+          "duration": 48081.438,
+          "expected": 12,
+          "skipped": 0,
+          "unexpected": 0,
+          "flaky": 0
+        },
+        "failures": [],
+        "report": "jsco-production.json",
+        "log": "jsco-production.log"
+      },
+      "dev": {
+        "passed": true,
+        "stats": {
+          "startTime": "2026-10-25T02:47:25.919Z",
+          "duration": 152107.215,
+          "expected": 128,
+          "skipped": 0,
+          "unexpected": 0,
+          "flaky": 0
+        },
+        "failures": [],
+        "report": "jsco-dev.json"
+      }
+    },
+    "cacheTestPolicy": "Jco-specific application-cache assertion excluded; engine-specific cache/disabled tests in engines.spec.ts included in dev suite",
+    "finishedAt": "2026-10-25T02:55:24.324Z",
+    "note": "Full development suite plus production application suite.",
+    "fixtures": {
+      "p2-echo": "7be440403d2e37950ae9d1a663087d9b759c7bfb16a47972ddf37e8a28f2994d",
+      "p2-cat": "104954b303320430d3de6f3b9b63caf5673b1544161747c83ac663ffef29a061",
+      "p2-fs-probe": "7820453d1118dd459930a12d2462318364840293c24a7e1bf3baa6c63c4093c4",
+      "p2-process-probe": "cab2645d403cda2e2ae9804ba47f9015a8a5dfed2ab6516954d6d5753e823a54"
+    },
+    "postSelectionValidation": {
+      "build": "passed",
+      "production": {
+        "passed": 12,
+        "skipped": 1,
+        "log": "2026-10-25-engine-compatibility/selected-default-production.log"
+      },
+      "statisticsTests": {
+        "passed": 3,
+        "log": "2026-10-25-engine-compatibility/statistics-tests.log"
+      }
+    }
+  }
+}

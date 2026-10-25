@@ -6,7 +6,8 @@ export type EngineId = 'jco' | 'polyengine' | 'jsco';
 export const engineVersions = { jco: '1.15.1', polyengine: '0.6.7', jsco: '0.2.0-preview.0' };
 declare const __WALOS_COMPONENT_ENGINE__: string | undefined;
 export function defaultEngine(): EngineId {
-  const id = typeof __WALOS_COMPONENT_ENGINE__ === 'undefined' ? 'jco' : __WALOS_COMPONENT_ENGINE__;
+  const id =
+    typeof __WALOS_COMPONENT_ENGINE__ === 'undefined' ? 'jsco' : __WALOS_COMPONENT_ENGINE__;
   if (id !== 'jco' && id !== 'polyengine' && id !== 'jsco')
     throw new Error(`Unknown engine: ${id}`);
   return id;
