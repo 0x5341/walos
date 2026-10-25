@@ -1,12 +1,18 @@
 import { ProcessManager } from './core.js';
+import { configureTimeline, getTimeline } from './diagnostics.js';
 const scope = self as unknown as DedicatedWorkerGlobalScope;
 let disposed = false;
 const manager = new ProcessManager((e, ports = []) => scope.postMessage(e, ports));
 scope.onmessage = async (e) => {
   const m = e.data;
   if (disposed) return;
+  if (m.type === 'diagnostics') {
+    scope.postMessage({ type: 'diagnostics', events: getTimeline()?.drain() ?? [] });
+    return;
+  }
   if (m.type === 'boot')
     try {
+      if (m.spec.diagnostics) configureTimeline(m.spec.diagnostics, -1);
       const pid = await manager.spawn(m.spec, null);
       if (disposed) return;
       manager.focus(pid);

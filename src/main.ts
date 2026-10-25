@@ -1,11 +1,17 @@
 import './style.css';
 import { Walos } from '@walos/os';
+import { installBenchmark } from './benchmark';
 
 const terminal = document.querySelector<HTMLPreElement>('#terminal')!;
 const input = document.querySelector<HTMLInputElement>('#input')!;
 const state = document.querySelector('#state')!;
 const processes = document.querySelector('#processes')!;
 const os = new Walos();
+const benchmarkQuery = new URLSearchParams(location.search);
+const benchmark =
+  benchmarkQuery.get('benchmark') === 'e2e'
+    ? installBenchmark(os, benchmarkQuery.get('detail') !== '0')
+    : undefined;
 
 const output = (text: string) => {
   terminal.append(document.createTextNode(text));
@@ -28,6 +34,7 @@ os.subscribe((event) => {
   switch (event.type) {
     case 'output':
       output(event.text);
+      benchmark?.output(event.pid, event.text);
       break;
     case 'state':
     case 'foreground':
@@ -44,7 +51,8 @@ os.subscribe((event) => {
       output(`\n${event.error.message}\n`);
       break;
     case 'exit':
-      console.info('process exit', event);
+      if (benchmark) benchmark.exit(event.pid, event.exit, event.durationMs);
+      else console.info('process exit', event);
       break;
   }
 });
@@ -58,6 +66,7 @@ document.addEventListener('keydown', (event) => {
 });
 input.addEventListener('keydown', (event) => {
   if (event.key !== 'Enter') return;
+  benchmark?.begin(input.value);
   event.preventDefault();
   const line = input.value + '\n';
   input.value = '';

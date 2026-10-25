@@ -1,4 +1,5 @@
 import { FileStream, IoError } from './streams.js';
+import { traceOperation } from './diagnostics.js';
 export interface Descriptor {
   file?: FileSystemFileHandle;
   dir?: FileSystemDirectoryHandle;
@@ -41,7 +42,10 @@ export class Filesystem {
       } else if (part && part !== '.') parts.push(part);
     }
     let dir = b.dir;
-    for (const part of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(part);
+    for (const part of parts.slice(0, -1)) {
+      const parent = dir;
+      dir = await traceOperation('getDirectoryHandle', part, () => parent.getDirectoryHandle(part));
+    }
     return { parent: dir, name: parts.at(-1) ?? '', path: normalize(parts.join('/'), b.path) };
   }
   async open(base: number, path: string, flags: number, rights: bigint, fdflags: number) {
@@ -49,19 +53,25 @@ export class Filesystem {
     let d: Descriptor;
     if (flags & 2 || !resolved.name) {
       const dir = resolved.name
-        ? await resolved.parent.getDirectoryHandle(resolved.name)
+        ? await traceOperation('getDirectoryHandle', resolved.path, () =>
+            resolved.parent.getDirectoryHandle(resolved.name),
+          )
         : resolved.parent;
       d = { dir, path: resolved.path };
     } else {
       if (flags & 4) {
         try {
-          await resolved.parent.getFileHandle(resolved.name);
+          await traceOperation('getFileHandle', resolved.path, () =>
+            resolved.parent.getFileHandle(resolved.name),
+          );
           throw new IoError(20, 'already exists');
         } catch (e) {
           if (!(e instanceof DOMException && e.name === 'NotFoundError')) throw e;
         }
       }
-      const file = await resolved.parent.getFileHandle(resolved.name, { create: !!(flags & 1) });
+      const file = await traceOperation('getFileHandle', resolved.path, () =>
+        resolved.parent.getFileHandle(resolved.name, { create: !!(flags & 1) }),
+      );
       const write = !!(rights & 64n);
       const stream = await new FileStream({
         kind: 'file',

@@ -1,8 +1,10 @@
 import type { Exit, ProcessInfo } from '../types.js';
 import type { EngineId } from './component-engines.js';
 import type { ComponentMetrics } from './component.js';
+import { getTimeline, type DiagnosticConfig, type TimelineEvent } from './diagnostics.js';
 export type { Exit } from '../types.js';
 export type CoreEvent =
+  | { type: 'diagnostics'; events: TimelineEvent[] }
   | { type: 'tty'; pid: number; direction: 'in' | 'out'; port: MessagePort }
   | { type: 'tty-close'; pid: number; abnormal: boolean }
   | { type: 'foreground'; input: number | null; pids: number[] }
@@ -38,6 +40,7 @@ export type StreamRef =
       append: boolean;
     };
 export interface Spec {
+  diagnostics?: DiagnosticConfig;
   file: FileSystemFileHandle;
   cwd: FileSystemDirectoryHandle;
   cwdPath: string;
@@ -54,7 +57,7 @@ export type Operation =
   | { op: 'pipe' }
   | { op: 'stream-close'; streamId: number }
   | { op: 'foreground'; pids: number[]; input: number | null };
-export type Request = Operation & { type: 'request'; id: number };
+export type Request = Operation & { type: 'request'; id: number; commandId?: number };
 export type RpcError = {
   kind: 'invalid-resource' | 'startup' | 'timeout' | 'cancelled' | 'internal';
   message: string;
@@ -70,8 +73,14 @@ export class RpcFailure extends Error {
 export type Reply = { type: 'reply'; id: number; value?: unknown; error?: RpcError };
 export type FromProcess =
   | Request
-  | { type: 'ready'; metrics?: ProcessMetrics }
-  | { type: 'exit'; exit: Exit; runMs?: number; component?: ComponentMetrics }
+  | { type: 'ready'; metrics?: ProcessMetrics; events?: TimelineEvent[] }
+  | {
+      type: 'exit';
+      exit: Exit;
+      runMs?: number;
+      component?: ComponentMetrics;
+      events?: TimelineEvent[];
+    }
   | { type: 'boot-error'; message: string };
 export interface ProcessMetrics {
   readMs: number;
@@ -98,6 +107,8 @@ export class Rpc {
   constructor(private send: (r: Request, ports: Transferable[]) => void) {}
   call(op: Operation, ports: Transferable[] = []): Promise<any> {
     const id = this.next++;
+    const trace = getTimeline();
+    trace?.mark('rpc.send', { op: op.op, requestId: id });
     return new Promise((resolve, reject) => {
       const timer = setTimeout(
         () => {
@@ -115,7 +126,15 @@ export class Rpc {
       );
       this.pending.set(id, { resolve, reject, timer });
       try {
-        this.send({ ...op, type: 'request', id } as Request, ports);
+        this.send(
+          {
+            ...op,
+            type: 'request',
+            id,
+            ...(trace && { commandId: trace.config.commandId }),
+          } as Request,
+          ports,
+        );
       } catch (e) {
         clearTimeout(timer);
         this.pending.delete(id);
@@ -124,6 +143,7 @@ export class Rpc {
     });
   }
   receive(r: Reply) {
+    getTimeline()?.mark('rpc.reply', { requestId: r.id });
     const p = this.pending.get(r.id);
     if (!p) return;
     clearTimeout(p.timer);

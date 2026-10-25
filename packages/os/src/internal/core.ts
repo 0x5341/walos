@@ -1,5 +1,6 @@
 import type { CoreEvent, Exit, FromProcess, Request, Spec, StreamRef } from './protocol.js';
 import { transferables, RpcFailure } from './protocol.js';
+import { getTimeline } from './diagnostics.js';
 interface RecordEntry {
   pid: number;
   parent: number | null;
@@ -23,6 +24,9 @@ export interface CoreEvents {
 }
 // Only control traffic reaches this manager. File bytes never enter the Core.
 export class ProcessManager {
+  private mark(r: RecordEntry, name: string, detail?: Record<string, unknown>) {
+    getTimeline()?.mark(name, detail, r.spec.diagnostics?.commandId ?? 0, r.pid);
+  }
   private nextPid = 1;
   private nextStream = 1;
   private records = new Map<number, RecordEntry>();
@@ -79,8 +83,11 @@ export class ProcessManager {
       ),
     };
     this.records.set(pid, r);
+    this.mark(r, 'core.spawn', { parent, requestId: spawnRequest, argv: spec.argv });
     try {
+      this.mark(r, 'core.worker.create');
       const worker = (r.worker = this.makeWorker());
+      this.mark(r, 'core.worker.created');
       const p = parent === null ? undefined : this.records.get(parent);
       spec.stdio = spec.stdio.map((s, i) => {
         if (s) {
@@ -115,7 +122,11 @@ export class ProcessManager {
       };
       worker.onmessageerror = () =>
         this.finish(pid, { kind: 'trap', message: 'worker message error' });
-      worker.postMessage({ type: 'start', pid, spec }, transferables(spec.stdio));
+      this.mark(r, 'core.start.send');
+      worker.postMessage(
+        { type: 'start', pid, spec, ...(spec.diagnostics?.detailed && { measure: true }) },
+        transferables(spec.stdio),
+      );
       r.transferred = true;
       this.publish();
     } catch (e) {
@@ -130,7 +141,9 @@ export class ProcessManager {
   }
   private message(r: RecordEntry, m: FromProcess) {
     if (r.state === 'EXITED') return;
+    if ('events' in m && m.events) getTimeline()?.events.push(...m.events);
     if (m.type === 'ready') {
+      this.mark(r, 'core.ready.receive');
       if (r.state !== 'STARTING') return;
       clearTimeout(r.timer);
       for (const s of r.spec.stdio)
@@ -141,16 +154,21 @@ export class ProcessManager {
       r.state = 'RUNNING';
       r.resolve(r.pid);
       this.publish();
-    } else if (m.type === 'exit') this.finish(r.pid, m.exit);
-    else if (m.type === 'boot-error') this.finish(r.pid, { kind: 'trap', message: m.message });
+    } else if (m.type === 'exit') {
+      this.mark(r, 'core.exit.receive');
+      this.finish(r.pid, m.exit);
+    } else if (m.type === 'boot-error') this.finish(r.pid, { kind: 'trap', message: m.message });
     else if (m.type === 'request') void this.request(r, m);
   }
   private async request(r: RecordEntry, m: Request) {
+    if (m.commandId !== undefined && r.spec.diagnostics) r.spec.diagnostics.commandId = m.commandId;
+    this.mark(r, 'core.rpc.receive', { op: m.op, requestId: m.id });
     let value: unknown;
     let ports: Transferable[] = [];
     try {
       switch (m.op) {
         case 'spawn':
+          if (r.spec.diagnostics) m.spec.diagnostics = { ...r.spec.diagnostics };
           value = await this.spawn(m.spec, r.pid, m.id);
           if (r.state !== 'EXITED') r.handles.add(value as number);
           break;
@@ -206,6 +224,7 @@ export class ProcessManager {
           this.focus(m.input === 0 ? r.pid : m.input);
           break;
       }
+      this.mark(r, 'core.rpc.reply', { op: m.op, requestId: m.id });
       this.send(r, { type: 'reply', id: m.id, value }, ports);
     } catch (e) {
       if (r.state !== 'EXITED')
@@ -278,6 +297,8 @@ export class ProcessManager {
   private finish(pid: number, exit: Exit) {
     const r = this.records.get(pid);
     if (!r || r.state === 'EXITED') return;
+    if (getTimeline()?.config.detailed)
+      this.mark(r, 'core.finish', { exit, durationMs: performance.now() - r.started });
     const starting = r.state === 'STARTING';
     r.state = 'EXITED';
     r.exit = exit;

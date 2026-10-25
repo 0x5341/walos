@@ -18,6 +18,8 @@
     "test:production": "WALOS_TEST_BUILD=1 playwright test",
     "build:os": "npm run build --workspace @walos/os",
     "benchmark": "npm run build:os && node benchmarks/build.mjs && tsc --noEmit -p benchmarks/tsconfig.json && node benchmarks/run.mjs",
+    "benchmark:e2e": "npm run build && node benchmarks/e2e.mjs",
+    "test:benchmark:e2e": "node --test benchmarks/e2e-metrics.test.mjs",
     "test:benchmark": "node --test benchmarks/stats.test.mjs",
     "test:engines": "node scripts/test-engines.mjs"
   },

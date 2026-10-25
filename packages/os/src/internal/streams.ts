@@ -1,4 +1,5 @@
 import { RpcFailure, type StreamRef } from './protocol.js';
+import { getTimeline, traceOperation } from './diagnostics.js';
 export class IoError extends Error {
   constructor(
     public errno: number,
@@ -75,6 +76,10 @@ export class PortStream implements Stream {
         return;
       }
       const b = new Uint8Array(m.bytes);
+      if (m.commandId !== undefined && getTimeline()) {
+        getTimeline()!.config.commandId = m.commandId;
+        getTimeline()!.mark('shell.input.port');
+      }
       this.available += b.length;
       if (this.ref.kind === 'pipe' && this.available > this.ref.capacity) {
         this.fail('pipe capacity exceeded');
@@ -92,8 +97,10 @@ export class PortStream implements Stream {
         return;
       }
       this.ack = m.consumed;
-    } else if (m.type === 'close') this.eof = true;
-    else if (m.type === 'broken') this.error = new IoError(64, 'broken pipe');
+    } else if (m.type === 'close') {
+      getTimeline()?.mark('stream.eof', { streamId: this.ref.id, kind: this.ref.kind });
+      this.eof = true;
+    } else if (m.type === 'broken') this.error = new IoError(64, 'broken pipe');
     else {
       this.fail('invalid pipe message');
       return;
@@ -160,6 +167,11 @@ export class PortStream implements Stream {
     // Every completed read ACKs promptly; this also releases a writer after small reads.
     if (bytes.length && this.ref.kind === 'pipe')
       this.ref.port.postMessage({ type: 'ack', consumed: this.consumed });
+    getTimeline()?.mark('stream.read', {
+      streamId: this.ref.id,
+      kind: this.ref.kind,
+      bytes: bytes.length,
+    });
     return bytes;
   }
   async write(b: Uint8Array) {
@@ -172,10 +184,12 @@ export class PortStream implements Stream {
     const bytes = b.slice(0, n);
     this.sent += n;
     this.ref.port.postMessage({ type: 'data', bytes: bytes.buffer }, [bytes.buffer]);
+    getTimeline()?.mark('stream.write', { streamId: this.ref.id, kind: this.ref.kind, bytes: n });
     return n;
   }
   close() {
     if (this.closed) return;
+    getTimeline()?.mark('stream.close', { streamId: this.ref.id, kind: this.ref.kind });
     this.ref.port.postMessage({ type: this.ref.direction === 'in' ? 'broken' : 'close' });
     this.closed = true;
     this.wake();
@@ -257,8 +271,12 @@ export class FileStream implements Stream {
   async read(n: number) {
     if (this.access && this.ref.direction === 'in') return this.readNow(n);
     if (this.closed || this.ref.direction !== 'in') throw new IoError(8, 'not readable');
-    const f = await this.ref.file.getFile();
-    const b = new Uint8Array(await f.slice(this.ref.position, this.ref.position + n).arrayBuffer());
+    const f = await traceOperation('getFile', this.ref.file.name, () => this.ref.file.getFile());
+    const b = new Uint8Array(
+      await traceOperation('arrayBuffer', this.ref.file.name, () =>
+        f.slice(this.ref.position, this.ref.position + n).arrayBuffer(),
+      ),
+    );
     this.ref.position += b.length;
     return b;
   }

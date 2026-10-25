@@ -1,6 +1,7 @@
 import { Filesystem } from './fs.js';
 import { connect, FileStream, IoError, ioError, type Stream } from './streams.js';
 import { Rpc, transferables, type Spec, type StreamRef } from './protocol.js';
+import { getTimeline } from './diagnostics.js';
 export class WasiExit {
   constructor(public code: number) {}
 }
@@ -214,7 +215,14 @@ export class Wasi {
           fdflags: number,
           out: number,
         ) => {
-          const result = await this.fs.open(fd, this.str(p, n), flags, rights, fdflags);
+          const path = this.str(p, n);
+          getTimeline()?.mark('opfs.open.start', { path });
+          let result: number;
+          try {
+            result = await this.fs.open(fd, path, flags, rights, fdflags);
+          } finally {
+            getTimeline()?.mark('opfs.open.end', { path });
+          }
           this.u32(out, result);
           return 0;
         },
@@ -436,7 +444,37 @@ export class Wasi {
         return 0;
       }),
     };
-    return { wasi_snapshot_preview1: wasi, webos_v1: webos };
+    return {
+      wasi_snapshot_preview1: wasi,
+      webos_v1: webos,
+      walos_diagnostics: {
+        mark: (event: number, value: number, extra: number) => {
+          const trace = getTimeline();
+          if (!trace) return;
+          const name = (
+            {
+              1: 'shell.input',
+              2: 'shell.prompt',
+              3: 'shell.prepare.start',
+              4: 'shell.prepare.end',
+              5: 'shell.execute.end',
+            } as Record<number, string>
+          )[event];
+          trace.mark(name, { value, extra });
+          if (event === 2) {
+            const ref = this.streams.get(1)?.ref;
+            if (ref?.kind === 'tty')
+              ref.port.postMessage({
+                type: 'diagnostic-prompt',
+                commandId: trace.config.commandId,
+                status: value,
+                promptBytes: extra,
+                events: trace.drain(),
+              });
+          }
+        },
+      },
+    };
   }
   private stat(out: number, type: number, file?: File) {
     this.bytes(out, 64).fill(0);

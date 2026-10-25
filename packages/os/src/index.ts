@@ -1,6 +1,11 @@
 export { clearComponentCache } from './internal/component.js';
 import { bootstrap } from './internal/bootstrap.js';
 import type { CoreEvent } from './internal/protocol.js';
+import {
+  sessionDiagnostics,
+  type SessionDiagnostics,
+  type PromptMarker,
+} from './internal/diagnostics.js';
 import type { Foreground, ProcessInfo, WalosEvent, WalosOptions, WalosState } from './types.js';
 export type {
   Exit,
@@ -13,6 +18,8 @@ export type {
 
 /** One browser OS session. No DOM elements or UI framework are required. */
 export class Walos {
+  private diagnostics?: SessionDiagnostics;
+  private promptMarker?: PromptMarker;
   private worker: Worker | null = null;
   private listeners = new Set<(event: WalosEvent) => void>();
   private inputs = new Map<number, MessagePort>();
@@ -60,9 +67,13 @@ export class Walos {
   }
 
   private async start(): Promise<void> {
+    this.diagnostics = sessionDiagnostics(this);
     this.setState('booting');
     try {
+      this.diagnostics?.mark('ui.bootstrap.start');
       const spec = await bootstrap(this.options.binUrl ?? '/bin/', this.abort.signal);
+      this.diagnostics?.mark('ui.bootstrap.end');
+      if (this.diagnostics) spec.diagnostics = { ...this.diagnostics.config };
       this.abort.signal.throwIfAborted();
       const worker = (this.worker = new Worker(
         new URL('./internal/core.worker.js', import.meta.url),
@@ -71,6 +82,7 @@ export class Walos {
         },
       ));
       worker.onmessage = (event: MessageEvent<CoreEvent>) => this.receive(event.data);
+      if (this.diagnostics) this.diagnostics.send = (message) => worker.postMessage(message);
       worker.onerror = (event) => {
         event.preventDefault();
         this.fail(new Error(event.message || 'Core worker failed'));
@@ -96,7 +108,15 @@ export class Walos {
     if (!port) return false;
     if (pid === this.shellPid) this.commandPending = true;
     const bytes = this.encoder.encode(text);
-    port.postMessage({ type: 'data', bytes: bytes.buffer }, [bytes.buffer]);
+    this.diagnostics?.mark('ui.writeInput', { pid });
+    port.postMessage(
+      {
+        type: 'data',
+        bytes: bytes.buffer,
+        ...(this.diagnostics && { commandId: this.diagnostics.config.commandId }),
+      },
+      [bytes.buffer],
+    );
     return true;
   }
 
@@ -192,8 +212,26 @@ export class Walos {
     this.drainingGroup = [];
     if (this.shellPid !== null) this.output(this.shellPid, this.shellOutput);
     this.shellOutput = '';
+    this.flushPrompt();
+  }
+  private flushPrompt(): void {
+    if (
+      !this.promptMarker ||
+      this.state !== 'running' ||
+      this.commandPending ||
+      this.drainingGroup.some((pid) => this.outputs.has(pid))
+    )
+      return;
+    const marker = this.promptMarker;
+    this.promptMarker = undefined;
+    this.diagnostics?.events.push(...marker.events);
+    this.diagnostics?.onPrompt?.(marker);
   }
   private receive(message: CoreEvent): void {
+    if (message.type === 'diagnostics') {
+      this.diagnostics?.collected(message.events);
+      return;
+    }
     if (message.type === 'disposed') {
       this.resolveDispose?.();
       return;
@@ -205,6 +243,7 @@ export class Walos {
         this.setState('running');
         this.resolveBoot?.();
         this.clearBoot();
+        this.flushPrompt();
         break;
       case 'tty': {
         if (this.shellPid === null) this.shellPid = message.pid;
@@ -220,7 +259,16 @@ export class Walos {
           if (this.state === 'disposed' || this.state === 'failed') return;
           if (event.data.type === 'data')
             this.processOutput(message.pid, decoder.decode(event.data.bytes, { stream: true }));
-          else if (event.data.type === 'close') {
+          else if (
+            event.data.type === 'diagnostic-prompt' &&
+            this.diagnostics &&
+            message.pid === this.shellPid
+          ) {
+            if (this.promptMarker) throw new Error('Overlapping diagnostic prompts');
+            this.promptMarker = event.data;
+            this.flushPrompt();
+          } else if (event.data.type === 'close') {
+            this.diagnostics?.mark('ui.tty.close', { pid: message.pid });
             this.processOutput(message.pid, decoder.decode());
             message.port.close();
             group.delete(message.port);
@@ -232,6 +280,7 @@ export class Walos {
         break;
       }
       case 'foreground':
+        this.diagnostics?.mark('ui.foreground', { input: message.input, pids: message.pids });
         if (message.input === this.shellPid && this.commandPending) {
           this.drainingGroup = this.foreground.pids;
           this.commandPending = false;
@@ -260,6 +309,11 @@ export class Walos {
         }
         break;
       case 'exit':
+        this.diagnostics?.mark('ui.exit.receive', {
+          pid: message.pid,
+          exit: message.exit,
+          durationMs: message.durationMs,
+        });
         if (message.pid === this.shellPid && this.state === 'running') this.setState('stopped');
         this.emit(message);
         break;

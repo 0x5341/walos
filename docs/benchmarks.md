@@ -1,5 +1,9 @@
 # Reproducible PoC benchmarks
 
+For the actual terminal’s Enter-to-prompt latency and Shell/Core/Worker/UI
+timeline, see [Terminal E2E benchmarks](benchmarks-e2e.md). `startupMs` below
+continues to describe only the standalone Worker READY boundary.
+
 This implements [issue #4](https://github.com/0x5341/walos/issues/4), baseline
 §12 criterion 9 and the performance portion of Slice 7. It measures the actual
 P1/P2 Process Worker loader, plus the OPFS FileStream and cross-Worker Pipe

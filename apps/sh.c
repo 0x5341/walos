@@ -9,6 +9,9 @@
 #include <unistd.h>
 #define MAX_ARGS 64
 #define MAX_CMDS 16
+/* Private benchmark import. The host is a no-op outside diagnostic sessions. */
+__attribute__((import_module("walos_diagnostics"), import_name("mark")))
+void diagnostic_mark(int event, int value, int extra);
 struct command {
   char *argv[MAX_ARGS];
   int argc;
@@ -268,9 +271,11 @@ static int execute(char *line) {
         break;
       }
     }
+    diagnostic_mark(3, i, 0);
     int exe = find_exe(c->argv[0]), cwd = open(".", O_RDONLY | O_DIRECTORY);
     char json[32768];
     int n = options(json, sizeof(json), c);
+    diagnostic_mark(4, i, 0);
     int err = exe < 0 || cwd < 0 || n < 0
                   ? 1
                   : os_spawn(exe, cwd, json, n, in, out, -1, &handles[i]);
@@ -331,10 +336,13 @@ int main(void) {
   printf("walos · WASI Preview 1\n");
   for (;;) {
     char cwd[PATH_MAX];
-    printf("%s $ ", getcwd(cwd, sizeof(cwd)) ? cwd : "?");
+    int prompt_bytes = printf("%s $ ", getcwd(cwd, sizeof(cwd)) ? cwd : "?");
+    diagnostic_mark(2, status, prompt_bytes);
     if (getline(&line, &cap, stdin) < 0)
       break;
+    diagnostic_mark(1, 0, 0);
     execute(line);
+    diagnostic_mark(5, status, 0);
     os_foreground(NULL, 0, 0);
   }
   free(line);
