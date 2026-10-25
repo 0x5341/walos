@@ -63,8 +63,9 @@ echo, pwd, env, false, true, trap and hang, plus their `p2-*` counterparts, into
 OPFS `/bin`. Existing `/home` files are preserved and `/tmp` is reset at each boot.
 
 Requires a secure browser context, OPFS, module Workers and Chromium JSPI.
-Use the COOP/COEP headers shown in the repository's Vite configuration. This is
-a browser library; it does not provide a Node.js runtime. Only trusted WASI
+The default runtime works without COOP/COEP headers, as verified by the Pages
+smoke test; the Vite development server enables them for isolated testing. This
+is a browser library; it does not provide a Node.js runtime. Only trusted WASI
 applications and one session per origin are supported; Worker boundaries do not
 enforce capability isolation.
 
