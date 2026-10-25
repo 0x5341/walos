@@ -117,7 +117,11 @@ async function launch(format: 'p1' | 'p2', mode: 'startup' | 'cpu' | 'hold') {
         const exit = await exited.promise;
         if (exit.exit.kind !== 'exited' || exit.exit.code !== 0)
           throw new Error(JSON.stringify(exit));
-        return { runMs: exit.runMs, stdout: await text };
+        return {
+          runMs: exit.runMs,
+          stdout: await text,
+          ...(exit.component && { component: exit.component }),
+        };
       } finally {
         clearTimeout(timeout);
         worker.terminate();

@@ -70,10 +70,11 @@ export type Reply = { type: 'reply'; id: number; value?: unknown; error?: RpcErr
 export type FromProcess =
   | Request
   | { type: 'ready'; metrics?: ProcessMetrics }
-  | { type: 'exit'; exit: Exit; runMs?: number }
+  | { type: 'exit'; exit: Exit; runMs?: number; component?: ComponentMetrics }
   | { type: 'boot-error'; message: string };
 export interface ProcessMetrics {
   readMs: number;
+  readyAtMs?: number;
   adapterMs?: number;
   loadMs?: number;
   compileMs?: number;

@@ -324,3 +324,14 @@ pass. The four same-turn race tests also detect a temporarily removed ownership
 guard (expected failures); the runtime was restored for the final run. See the
 [audit and retained evidence](poc-audit.md) for the nine-criterion decision,
 reproduction commands, fault-injection controls and measurement limits.
+
+Issue #14 separates P2 conversion/instantiation from OPFS publication. The loader
+returns the live Component and an idempotent `persist()` operation; the Process
+Worker starts the latter only after posting READY and joins it before EXIT,
+including nonzero exit and trap paths. Cache write failures stay independent of
+execution failures. Staging artifacts are read back and hash-checked before atomic
+manifest publication; interrupted/invalid entries regenerate on the next launch.
+The existing supervisor stop/force-termination policy is unchanged. Opt-in final
+publication metrics are delivered at EXIT; READY retains startup-only metrics.
+See [benchmark methodology](benchmarks.md) and the Issue #14 comparison report for
+the measurement boundaries and abrupt-stop/orphan-stage limitations.
