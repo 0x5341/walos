@@ -1,3 +1,4 @@
+import type { EngineId } from '../packages/os/dist/internal/component-engines.js';
 import { clearComponentCache } from '../packages/os/dist/internal/component.js';
 import { PortStream } from '../packages/os/dist/internal/streams.js';
 import type { FromProcess, Spec, StreamRef } from '../packages/os/dist/internal/protocol.js';
@@ -35,7 +36,11 @@ let active:
       finish: () => Promise<unknown>;
     }
   | undefined;
-async function launch(format: 'p1' | 'p2', mode: 'startup' | 'cpu' | 'hold') {
+async function launch(
+  format: 'p1' | 'p2',
+  mode: 'startup' | 'cpu' | 'hold',
+  engine: EngineId = 'jco',
+) {
   if (active) throw new Error('Only one process measurement may run at a time');
   const root = await navigator.storage.getDirectory();
   const dir = await root.getDirectoryHandle('benchmark');
@@ -87,6 +92,7 @@ async function launch(format: 'p1' | 'p2', mode: 'startup' | 'cpu' | 'hold') {
       result += decoder.decode(bytes, { stream: true });
     }
   })();
+  void text.catch(() => {});
   const start = performance.now();
   const worker = new Worker(
     new URL('../packages/os/dist/internal/process.worker.js', import.meta.url),
@@ -131,7 +137,7 @@ async function launch(format: 'p1' | 'p2', mode: 'startup' | 'cpu' | 'hold') {
       }
     },
   };
-  worker.postMessage({ type: 'start', pid: 1, spec, measure: true }, ports);
+  worker.postMessage({ type: 'start', pid: 1, spec, measure: true, engine }, ports);
   try {
     return await ready.promise;
   } catch (error) {

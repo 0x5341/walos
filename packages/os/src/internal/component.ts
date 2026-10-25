@@ -1,10 +1,13 @@
 import { hostRevision, openArtifactCache, type PublicationMetrics } from './component-cache.js';
 import type { ComponentEngine } from './component-engine.js';
-import { jcoEngine } from './component-jco.js';
+import { selectEngine, defaultEngine, type EngineId } from './component-engines.js';
 export { clearComponentCache } from './component-cache.js';
 
 /** Opt-in diagnostics; cacheless engines leave key/lookup/publication spans absent. */
 export interface ComponentMetrics extends PublicationMetrics {
+  engineLoadMs?: number;
+  transformMs?: number;
+  prepareMs?: number;
   cache?: 'opfs' | 'miss' | 'disabled';
   keyMs?: number;
   lookupMs?: number;
@@ -21,12 +24,13 @@ export function executableFormat(bytes: Uint8Array): 'p1' | 'p2' {
 }
 
 /** No retained conversion map. Each load reads OPFS or prepares a fresh result. */
-export function loadComponent(
+export async function loadComponent(
   bytes: Uint8Array,
   imports: Record<string, unknown>,
   metrics?: ComponentMetrics,
+  engineId: EngineId = defaultEngine(),
 ) {
-  return loadComponentWithEngine(bytes, imports, jcoEngine, metrics);
+  return loadComponentWithEngine(bytes, imports, await selectEngine(engineId, metrics), metrics);
 }
 
 export async function loadComponentWithEngine<T>(
@@ -50,7 +54,7 @@ export async function loadComponentWithEngine<T>(
     const artifact = await cache.read();
     if (artifact) {
       try {
-        result = engine.cache.restore(artifact);
+        result = engine.cache.restore(artifact, bytes);
       } catch {
         /* Engine format changed/corrupt. */
       }

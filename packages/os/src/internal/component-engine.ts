@@ -11,7 +11,7 @@ export interface ComponentEngine<T> {
   options: Json;
   cache: {
     encode: (prepared: T) => Artifact;
-    restore: (artifact: Artifact) => T;
+    restore: (artifact: Artifact, bytes: Uint8Array) => T;
   } | null;
   prepare: (bytes: Uint8Array, metrics?: ComponentMetrics) => Promise<T>;
   instantiate: (prepared: T, imports: Record<string, unknown>) => Promise<ComponentInstance>;

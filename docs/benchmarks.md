@@ -221,3 +221,79 @@ executable SHA-256 hashes, timestamps and the base Git revision/dirty flag. Host
 CPU counts/memory may exceed a container's quota. The dirty flag marks the issue
 implementation being measured before commit; retain the source alongside these
 results when reproducing them.
+
+## Component engine comparison (Issues #13 / #16)
+
+The comparison mode retains the original P1/OPFS/Pipe benchmark when `--engines`
+is omitted. With `--engines`, it measures only the shared P2 fixture and writes
+**schema 3**, grouped by engine and scenario. Every engine runs in a new browser
+process/context for every trial; trial blocks rotate engine order. Measurements
+are sequential. Cold startup includes lazy engine loading and initialization.
+No runtime or translator is preloaded by the page. The component SHA-256 is shared
+by all engines and saved with the build revision, dirty state, environment,
+chronological execution order, timestamps and production asset inventory.
+
+```sh
+# Generate application fixtures for compatibility tests (not startup timing).
+bash scripts/setup-wit-bindgen.sh
+npm run build:apps
+CHROMIUM_PATH=/usr/bin/chromium npm run test:engines
+# Experimental engine failures are retained and this command exits nonzero.
+CHROMIUM_PATH=/usr/bin/chromium npm run benchmark -- \
+  --engines jco,polyengine,jsco --trials 30 \
+  --compatibility work/benchmarks/compatibility.json \
+  --output work/benchmarks/engine-comparison.json
+```
+
+`test:engines` records the existing development and production suites separately.
+`--engines jco,jsco` or `--mode dev|production` can limit a diagnostic run;
+only a result covering both suites is marked eligible for compatibility.
+The Jco-specific application-cache assertion is omitted for other engines;
+`engines.spec.ts` checks the actual polyengine plan cache (including corruption,
+reload and write failures) and jsco's absence of cache artifacts. Other cache
+regressions explicitly exercise Jco. Runtime, stream, OPFS and lifecycle tests
+continue to use the selected application engine.
+
+Polyengine 0.6.7 uses the existing engine-neutral atomic OPFS layer to store its
+translation envelope, including any adapters, under its own namespace. Original
+Component bytes are reattached when restoring the envelope and its hash is
+verified by the runtime. Publication starts after READY and is joined before EXIT.
+jsco 0.2.0-preview.0 directly parses/compiles the Component; it has no persistent
+conversion artifact and skips cache hashing, lookup and publication. Both use the
+same `Wasi2` host. The boundary adapts versioned interface names, WIT results,
+variants, resource destructors and suspension conventions. wasi-sdk includes
+unreachable socket imports that Jco eliminates; the direct runtimes link these
+to trapping placeholders. This does not add socket support. Unknown non-socket
+interfaces still fail linking. All runtime assets are bundled locally. The jsco
+browser build excludes its unused Node-only CLI/server entry points.
+
+The runner verifies cache miss/disabled on cold/warm-miss and hit on warm/reload
+for engines that cache. It joins deferred publication before warm launches and
+checks CPU stdout against an independent checksum. jsco's cache-hit/reload
+scenarios are absent, not fake zero-duration measurements. Engine/translator
+load, transform (where applicable), direct parse/compile, lookup, publication and
+instantiation have distinct fields. Jco's existing `converterLoadMs` and
+`convertMs` correspond to engine load and transform; `loadMs` encloses those spans.
+Do not add nested spans. Missing transform timings mean not applicable or skipped.
+
+All success samples contribute to median, nearest-rank p95, min/max, mean and
+population standard deviation. Failures and timeouts remain in the JSON and
+Markdown; they are not performance samples and are never zero-filled. The
+comparison uses `1 - median(candidate) / median(jco)` with 10,000 independent
+bootstrap resamples (seed `0x5341`) and a percentile 95% interval. Adoption requires
+at least 30 successful cold samples for both engines, no observed scenario
+failures, mandatory compatibility, improvement >=5%, and interval lower bound >0.
+The fastest eligible cold median wins; otherwise Jco is retained. Without a
+compatibility file the report cannot recommend adoption. Intermediate JSON is
+saved after every engine trial and decisions remain provisional until completion.
+
+CPU `runMs` is elapsed execution time including host calls, not a per-thread CPU
+counter. Memory is CDP Worker JS heap after READY, not RSS, peak memory or total
+Wasm memory. The asset inventory includes the entire multi-engine build (raw and
+gzip bytes with SHA-256), so it must not be mistaken for bytes fetched by a single
+engine. OS page caches are not flushed. These limitations apply to the results.
+
+For application builds, `WALOS_COMPONENT_ENGINE=jco|polyengine|jsco npm run build`
+selects the Process Worker engine (the benchmark passes it explicitly on each
+start message). This build setting also applies to `npm run dev`. It is internal
+and does not alter the public `Walos` constructor or `clearComponentCache` API.

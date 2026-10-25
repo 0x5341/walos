@@ -53,7 +53,7 @@ scope.onmessage = async (e) => {
         metrics.adapterMs = loadStart - adapterStart;
         metrics.component = {};
       }
-      const loaded = await loadComponent(bytes, adapter.imports(), metrics?.component);
+      const loaded = await loadComponent(bytes, adapter.imports(), metrics?.component, m.engine);
       const { component } = loaded;
       persist = loaded.persist;
       if (metrics) metrics.loadMs = performance.now() - loadStart;
