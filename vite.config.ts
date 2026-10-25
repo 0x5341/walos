@@ -1,5 +1,8 @@
 import { defineConfig } from 'vite';
 export default defineConfig({
+  define: {
+    __WALOS_COMPONENT_ENGINE__: JSON.stringify(process.env.WALOS_COMPONENT_ENGINE || 'jsco'),
+  },
   worker: { format: 'es' },
   server: {
     headers: {

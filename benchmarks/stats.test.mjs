@@ -36,3 +36,19 @@ test('summary separates scenarios and preserves sparse metric sample counts', ()
   assert.equal(summary.hit['component.cache'], undefined);
   assert.equal(summary.hit.trial, undefined);
 });
+
+test('bootstrap compares independent medians with a fixed seed, retaining outliers', async () => {
+  const { bootstrapImprovement } = await import('./stats.mjs');
+  assert.deepEqual(bootstrapImprovement([100, 100, 100], [40, 40, 40]), {
+    improvement: 0.6,
+    lower: 0.6,
+    upper: 0.6,
+    iterations: 10000,
+    seed: 0x5341,
+  });
+  const a = bootstrapImprovement([90, 100, 110, 200], [80, 85, 90, 100]);
+  assert.deepEqual(a, bootstrapImprovement([90, 100, 110, 200], [80, 85, 90, 100]));
+  assert(a.lower < a.improvement && a.upper > a.improvement);
+  assert(bootstrapImprovement([100], [200]).upper < 0);
+  assert.throws(() => bootstrapImprovement([], [100]));
+});

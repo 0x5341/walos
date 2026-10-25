@@ -43,3 +43,29 @@ export function flatten(metrics, prefix = '') {
     }),
   );
 }
+
+/** Independent bootstrap of the ratio of medians, with reproducible PRNG. */
+export function bootstrapImprovement(baseline, candidate, iterations = 10000, seed = 0x5341) {
+  statistics(baseline);
+  statistics(candidate);
+  let state = seed >>> 0;
+  const random = () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 4294967296;
+  };
+  const draw = (values) =>
+    statistics(
+      Array.from({ length: values.length }, () => values[Math.floor(random() * values.length)]),
+    ).median;
+  const estimates = Array.from(
+    { length: iterations },
+    () => 1 - draw(candidate) / draw(baseline),
+  ).sort((a, b) => a - b);
+  return {
+    improvement: 1 - statistics(candidate).median / statistics(baseline).median,
+    lower: estimates[Math.floor(iterations * 0.025)],
+    upper: estimates[Math.ceil(iterations * 0.975) - 1],
+    iterations,
+    seed,
+  };
+}

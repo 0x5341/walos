@@ -1,0 +1,51 @@
+[2m[WebServer] [22m(node:26995) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 12 tests using 1 worker
+
+(node:27013) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:27013) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/shell.spec.ts:18:1 › WASI shell spawns a real pipeline and preserves OPFS files (3.4s)
+  ✓   2 tests/shell.spec.ts:32:1 › argv, env, cwd and exit status reach WASI commands (2.7s)
+  ✓   3 tests/shell.spec.ts:44:1 › trap and forced stop leave the shell responsive (2.6s)
+1 MiB file → pipe → file: 2968 ms
+  ✓   4 tests/shell.spec.ts:59:1 › a 1 MiB pipeline crosses the pipe capacity and startup failure keeps redirection effects (5.7s)
+  ✓   5 tests/shell.spec.ts:108:1 › WASI filesystem namespace operations use OPFS directly in the Process Worker (2.2s)
+  ✓   6 tests/wasip2.spec.ts:2:38 › upstream cat keeps stderr separate from redirected stdout (2.3s)
+  ✓   7 tests/wasip2.spec.ts:2:38 › upstream p2-cat keeps stderr separate from redirected stdout (3.3s)
+  ✘   8 tests/wasip2.spec.ts:35:1 › wasip2 commands receive argv, env, cwd and exit status (3.0s)
+(node:27809) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:27809) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   9 tests/wasip2.spec.ts:47:1 › Preview 1 and Preview 2 share pipelines, redirection and persistent OPFS files (9.2s)
+  ✓  10 tests/wasip2.spec.ts:74:1 › wasip2 filesystem operations, traps and forced stops leave the shell responsive (5.2s)
+  ✓  11 tests/wasip2.spec.ts:98:1 › a P2 parent uses generated walos WIT bindings to spawn P2/P1 children and transfer a pipe (3.7s)
+  ✓  12 tests/wasip2.spec.ts:149:1 › component execution works with CSP allowing Blob modules and Wasm compilation (3.8s)
+
+
+  1) tests/wasip2.spec.ts:35:1 › wasip2 commands receive argv, env, cwd and exit status ────────────
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mtoContain[2m([22m[32mexpected[39m[2m) // indexOf[22m
+
+    Expected substring: [32m"hello component こんにちは[39m
+    [32m"[39m
+    Received string:    [31m"p2-echo \"hello component\" こんにちは[39m
+    [31m/home $ "[39m
+
+      43 |   await boot(page);
+      44 |   await command(page, 'cd /home');
+    > 45 |   expect(await command(page, 'p2-echo "hello component" こんにちは')).toContain(
+         |                                                                  ^
+      46 |     'hello component こんにちは\n',
+      47 |   );
+      48 |   await command(page, 'export P2_TEST=works');
+        at /workspace/walos/tests/wasip2.spec.ts:45:66
+
+    Error Context: test-results/wasip2-wasip2-commands-receive-argv-env-cwd-and-exit-status/error-context.md
+
+  1 failed
+    tests/wasip2.spec.ts:35:1 › wasip2 commands receive argv, env, cwd and exit status ─────────────
+  11 passed (51.9s)

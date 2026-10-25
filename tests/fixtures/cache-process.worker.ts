@@ -14,7 +14,7 @@ FileSystemDirectoryHandle.prototype.getDirectoryHandle = function (name, options
 };
 const writable = FileSystemFileHandle.prototype.createWritable;
 FileSystemFileHandle.prototype.createWritable = async function (options) {
-  const artifact = this.name === 'command.js';
+  const artifact = this.name === 'command.js' || this.name === 'envelope.json';
   const manifest = /^[a-f0-9]{64}\.json$/.test(this.name);
   if ((mode === 'fail-artifact' && artifact) || (mode === 'fail-manifest' && manifest))
     throw new DOMException('injected cache quota failure', 'QuotaExceededError');

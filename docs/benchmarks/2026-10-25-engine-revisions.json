@@ -1,0 +1,20 @@
+{
+  "reason": "Unpublished commit email metadata was changed to the verified GitHub no-reply identity after GH007. Each mapped commit has an identical source tree; benchmark samples and original measured revision values remain unchanged.",
+  "commits": [
+    {
+      "originalCommit": "7b27cb16546ae1f2ee383a124c0453256e394509",
+      "publishedCommit": "b4e13377ae92d0ce51c9ad5c8c3f4f880e70a171",
+      "tree": "c8ffbb87ff020d8dc6d0cf5a6151f344d96bb553"
+    },
+    {
+      "originalCommit": "da7a02adcf8070723d90a652ad659b1f7775dd69",
+      "publishedCommit": "a7bbe013603344060f743c85acd0ccead9811b38",
+      "tree": "22dac97a1a1f98a5f05988e63ab6620be8e3a6be"
+    },
+    {
+      "originalCommit": "827f932ddd120faa6df9d7f3d028ac06573e9c52",
+      "publishedCommit": "1d17e37cc0120ae817104bcf16a06e3aa9c5fa36",
+      "tree": "9e523482b86ca6e751a01c37a248e07bc7251c91"
+    }
+  ]
+}

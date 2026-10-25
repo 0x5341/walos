@@ -10,7 +10,7 @@ Review the commits in this order:
 
 1. WIT extension rename: `webos:runtime` → `walos:runtime`; regenerated declarations.
 2. Shared nonblocking stream operations and standard P2 pollables.
-3. Browser Jco packaging, Process-local conversion, OPFS cache and manual clearing.
+3. Browser engine packaging, direct jsco execution and optional OPFS artifact caching.
 4. P2 filesystem/process adapter, executable detection and bundled wasip2 commands.
 5. Generated-WIT C fixture, browser integration tests, CSP/cache tests and CI.
 6. Updated support status and reproducible hosting/build instructions.
@@ -22,7 +22,7 @@ Review the commits in this order:
 | 3. spawn/wait | Descriptor-based spawn, local process resources, one-shot wait, drop, stop, parent normal/abnormal distinction, explicit cancel | Full generated C bindings and richer P1 error payloads |
 | 4. Streams | Direct MessagePort DATA; 64 KiB capacity, 16 KiB chunks, cumulative ACKs, EOF/Broken Pipe, migration, foreground TTY, P2 nonblocking operations and standard pollables | Configurable UI controls for capacities |
 | 5. Shell | PATH, cwd, env, exit status, pipelines, `<`, `>`, `>>`, small literal/quote grammar | Full POSIX syntax is outside this PoC |
-| 6. WASI 0.2 | Real wasip2 commands; Process-local Jco conversion; shared P2 host adapter; persistent cache; generated-WIT spawn/IPC; CSP tests | Broader filesystem coverage and unsupported network interfaces |
+| 6. WASI 0.2 | Real wasip2 commands; switchable jsco/Jco/polyengine; shared P2 host adapter; persistent cache; generated-WIT spawn/IPC; CSP tests | Broader filesystem coverage and unsupported network interfaces |
 | 7. Completion | Unmodified sbase cat compiled for P1/P2, regression tests, reproducible P1/P2 startup/cache, Worker memory, CPU, OPFS and Pipe benchmarks with raw samples and variability; [nine-criterion audit](poc-audit.md) | No unpassed §12 criterion within the documented Chromium PoC subset; broader conformance and silent-crash recovery remain outside that claim |
 
 Preview 2 uses standard WASI 0.2.x interfaces and the `walos:runtime@0.1.0`
@@ -167,7 +167,7 @@ streams are supported; O_RDWR is not a supported portability target yet.
 ## Preview 2 adapter and supported subset
 
 The Wasm header selects the P1 Core Wasm or P2 Component loader. In the P2 path,
-the Process Worker prepares stdio, loads or converts the Component with Jco
+the Process Worker prepares stdio, loads the Component with the selected engine (jsco by default)
 1.15.1, instantiates its JSPI bindings, validates `wasi:cli/run`, then sends READY.
 Conversion, import or initial resource failures are startup errors. After READY,
 `run` success/failure maps to exit 0/1, standard CLI exit maps to 0/1, Wasm traps
@@ -207,8 +207,8 @@ libc otherwise starts at `/`. Preopen calls return fresh owned resources.
 
 ## Component conversion, cache and CSP
 
-The library build bundles Jco's browser converter and Wasm assets into a lazy
-module. The production converter is about 9.8 MB before compression and is loaded
+The library build bundles jsco (the default), polyengine and Jco into separate
+lazy browser modules. Jco's converter and Wasm assets are bundled into its module. The production converter is about 9.8 MB before compression and is loaded
 only on a cold conversion. The Process Worker performs conversion; the main
 thread and Core do not convert Components. The only execution engine is the
 browser's WebAssembly runtime.
@@ -218,8 +218,11 @@ an optional artifact codec. `component-jco.ts` owns Jco's `command.js`/Core Wasm
 and imports/exports metadata. The common `component-cache.ts` layer handles opaque
 JSON metadata and canonical relative artifact paths; it does not impose a Jco layout.
 `loadComponentWithEngine` exercises the same loading path for persistent and
-cacheless adapters. Jco remains the default; alternate production engines and the
-comparative selection benchmark belong to Issue #16.
+cacheless adapters. jsco is the default after the Issue #16 compatibility and
+cold-start comparison. Jco remains a baseline, and polyengine is experimental
+because Unicode argv triggers a `may_leave` trap. See the
+[30-trial engine report](benchmarks/2026-10-25-engines.md). Engine-specific result,
+resource and suspension conventions are adapted around the shared `Wasi2` host.
 
 Cache keys include Component SHA-256, engine ID/version, canonical effective options,
 host revision and schema version. OPFS namespaces are

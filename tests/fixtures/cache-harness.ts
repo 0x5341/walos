@@ -1,3 +1,4 @@
+import type { EngineId } from '../../packages/os/dist/internal/component-engines.js';
 import { clearComponentCache } from '../../packages/os/dist/index.js';
 import type { FromProcess } from '../../packages/os/dist/internal/protocol.js';
 
@@ -20,7 +21,7 @@ export async function prepare() {
   await writer.write(await (await fetch('/bin/p2-true.wasm')).arrayBuffer());
   await writer.close();
 }
-export async function launch(cacheTest = '', command = 'p2-true') {
+export async function launch(cacheTest = '', command = 'p2-true', engine: EngineId = 'jco') {
   const root = await navigator.storage.getDirectory();
   const ready = deferred<Extract<FromProcess, { type: 'ready' }>>();
   const exit = deferred<Extract<FromProcess, { type: 'exit' }>>();
@@ -59,6 +60,7 @@ export async function launch(cacheTest = '', command = 'p2-true') {
     pid: 1,
     measure: true,
     cacheTest,
+    engine,
     spec: {
       file: await root.getFileHandle('cache-test-true'),
       cwd: root,
@@ -77,28 +79,31 @@ export async function launch(cacheTest = '', command = 'p2-true') {
     terminate,
   };
 }
-export async function entries() {
+export async function entries(engine = 'jco') {
   const dir = await (
     await navigator.storage.getDirectory()
   )
     .getDirectoryHandle('.walos-components')
     .then((dir) => dir.getDirectoryHandle('schema-2'))
-    .then((dir) => dir.getDirectoryHandle('jco'));
+    .then((dir) => dir.getDirectoryHandle(engine));
   const names: string[] = [];
   for await (const [name] of dir.entries()) names.push(name);
   return names;
 }
-export async function corrupt() {
+export async function corrupt(engine = 'jco') {
   const cache = await (
     await navigator.storage.getDirectory()
   )
     .getDirectoryHandle('.walos-components')
     .then((dir) => dir.getDirectoryHandle('schema-2'))
-    .then((dir) => dir.getDirectoryHandle('jco'));
-  const name = (await entries()).find((n) => n.endsWith('.json'))!;
+    .then((dir) => dir.getDirectoryHandle(engine));
+  const name = (await entries(engine)).find((n) => n.endsWith('.json'))!;
   const manifest = JSON.parse(await (await (await cache.getFileHandle(name)).getFile()).text());
   const stage = await cache.getDirectoryHandle(manifest.directory);
-  const writer = await (await stage.getFileHandle('command.js')).createWritable();
+  let dir = stage;
+  const parts = manifest.files[0].name.split('/');
+  for (const part of parts.slice(0, -1)) dir = await dir.getDirectoryHandle(part);
+  const writer = await (await dir.getFileHandle(parts.at(-1)!)).createWritable();
   await writer.write('corrupt cached glue');
   await writer.close();
 }
@@ -116,7 +121,9 @@ export async function stopWhilePublishing() {
       const post = worker.postMessage.bind(worker);
       worker.postMessage = (message, transfer: Transferable[] | StructuredSerializeOptions = []) =>
         post(
-          message.type === 'start' ? { ...message, cacheTest: 'hold-manifest' } : message,
+          message.type === 'start'
+            ? { ...message, engine: 'jco', cacheTest: 'hold-manifest' }
+            : message,
           Array.isArray(transfer) ? transfer : transfer.transfer || [],
         );
       worker.addEventListener('message', ({ data }) => {

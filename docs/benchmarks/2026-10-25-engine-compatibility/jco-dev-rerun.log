@@ -1,0 +1,18 @@
+[2m[WebServer] [22m(node:34491) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m[plugin vite:resolve] Module "fs/promises" has been externalized for browser compatibility, imported by "/workspace/walos/node_modules/@pavelsavara/jsco/index.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+[2m[WebServer] [22m[plugin vite:resolve] Module "node:fs/promises" has been externalized for browser compatibility, imported by "/workspace/walos/node_modules/@polyengine/translator/esm/mod.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+[2m[WebServer] [22m[plugin vite:resolve] Module "node:fs/promises" has been externalized for browser compatibility, imported by "/workspace/walos/node_modules/@bytecodealliance/jco/obj/js-component-bindgen-component.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+[2m[WebServer] [22m(node:34510) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:34528) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:34528) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/lifecycle.spec.ts:11:247 › real lifecycle-parent → p2-cat: nonzero, exit-first (2.7s)
+  ✓  2 tests/lifecycle.spec.ts:11:247 › real lifecycle-parent → p2-cat: nonzero, ready-first (2.3s)
+
+  2 passed (11.7s)

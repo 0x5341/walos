@@ -1,0 +1,58 @@
+
+> walos@0.1.0 build
+> npm run build:apps && npm run check && vite build
+
+
+> walos@0.1.0 build:apps
+> node scripts/build-apps.mjs
+
+Generating "work/process-probe-bindings/process_probe.c"
+Generating "work/process-probe-bindings/process_probe.h"
+Generating "work/process-probe-bindings/process_probe_component_type.o"
+Generating "work/lifecycle-probe-bindings/lifecycle_probe.c"
+Generating "work/lifecycle-probe-bindings/lifecycle_probe.h"
+Generating "work/lifecycle-probe-bindings/lifecycle_probe_component_type.o"
+
+> walos@0.1.0 check
+> npm run build:os && tsc --noEmit
+
+
+> walos@0.1.0 build:os
+> npm run build --workspace @walos/os
+
+
+> @walos/os@0.1.0 build
+> tsc -p tsconfig.json && vite build --config vite.jco.config.ts
+
+vite v7.1.12 building for production...
+transforming...
+[plugin vite:resolve] Module "fs/promises" has been externalized for browser compatibility, imported by "/workspace/walos/node_modules/@pavelsavara/jsco/index.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+[plugin vite:resolve] Module "node:fs/promises" has been externalized for browser compatibility, imported by "/workspace/walos/node_modules/@polyengine/translator/esm/mod.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+[plugin vite:resolve] Module "node:fs/promises" has been externalized for browser compatibility, imported by "/workspace/walos/node_modules/@bytecodealliance/jco/obj/js-component-bindgen-component.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+✓ 83 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/internal/__vite-browser-external-DYxpcVy9.js      0.04 kB │ gzip:     0.06 kB
+dist/internal/shim_asset_deno-lp2JsvFj.js              0.21 kB │ gzip:     0.16 kB
+dist/internal/engine-host-D3pgBAk7.js                  5.98 kB │ gzip:     2.08 kB
+dist/internal/component-jsco.js                      159.03 kB │ gzip:    34.49 kB
+dist/internal/component-polyengine.js              2,833.21 kB │ gzip:   832.67 kB
+dist/internal/jco.js                               9,832.25 kB │ gzip: 3,229.20 kB
+✓ built in 2.46s
+vite v7.1.12 building for production...
+transforming...
+✓ 18 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/assets/__vite-browser-external-DYxpcVy9-BIHI7g3E.js      0.03 kB
+dist/assets/shim_asset_deno-lp2JsvFj-knLoWZKI.js              0.20 kB
+dist/index.html                                               1.92 kB │ gzip: 0.86 kB
+dist/assets/engine-host-D3pgBAk7-BdL4TIOx.js                  4.25 kB
+dist/assets/core.worker-BXXsaHHV.js                           7.69 kB
+dist/assets/process.worker-DUuJBekV.js                       41.91 kB
+dist/assets/component-jsco-CS0cR-7W.js                      111.01 kB
+dist/assets/component-polyengine-DPwd6Df-.js              2,695.36 kB
+dist/assets/jco-Tw507MpK.js                               9,790.66 kB
+dist/assets/index-D955m6Q4.css                                1.93 kB │ gzip: 0.87 kB
+dist/assets/index-DTLUY8lR.js                                 9.50 kB │ gzip: 3.42 kB
+✓ built in 3.36s

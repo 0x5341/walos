@@ -19,7 +19,12 @@ self.onmessage = async ({ data: file }: MessageEvent<FileSystemFileHandle>) => {
   try {
     await adapter.init();
     const bytes = new Uint8Array(await (await file.getFile()).arrayBuffer());
-    const { component: command, persist } = await loadComponent(bytes, adapter.imports());
+    const { component: command, persist } = await loadComponent(
+      bytes,
+      adapter.imports(),
+      undefined,
+      'jco',
+    );
     const publication = persist();
     await command.run.run();
     await adapter.close();

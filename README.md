@@ -3,8 +3,10 @@
 A browser Web OS proof of concept. A WASI Preview 1 shell starts Preview 1
 Core Wasm commands and Preview 2 (`wasip2`) Components in Dedicated Workers,
 persists files in OPFS, and connects pipelines with bounded, direct MessagePort
-streams. Components are converted with Jco inside their own Process Worker;
-completed conversions are cached in OPFS.
+streams. Components run directly with jsco inside their own Process Worker.
+Jco remains available as a baseline; the experimental polyengine adapter caches
+translation plans in OPFS. See the [engine comparison](docs/benchmarks/2026-10-25-engines.md)
+for measurements and the compatibility-based selection.
 
 The implementation follows the [design baseline](docs/grilled_webos_concept.md).
 See [implementation status](docs/implementation.md) for the supported WASI subset
@@ -42,7 +44,7 @@ the library before using it; no UI internals are imported by the OS package.
 
 ## Run
 
-Requires Node.js 22.12+, a current desktop Chromium browser with JSPI,
+Requires Node.js 22.14+, a current desktop Chromium browser with JSPI,
 wasi-sdk 27 and wit-bindgen 0.46.0.
 The setup scripts download the checksum-pinned Linux x86-64 tools. On another
 platform install the matching tools and set `WASI_SDK_PATH` to the SDK directory
@@ -122,5 +124,5 @@ interfaces used by the bundled SDK components are connected to the OS host.
 Networking, symlinks, hard links, timestamp mutation and directory rename remain
 unsupported. Standard Preview 2 command exits carry success/failure (0/1).
 
-Conversion needs CSP permission for Blob modules and Wasm compilation. See the
+The optional Jco conversion path needs CSP permission for Blob modules and Wasm compilation. See the
 [library hosting notes](packages/os/README.md) for the tested policy and cache API.
