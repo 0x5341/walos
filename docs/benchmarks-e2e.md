@@ -1,5 +1,9 @@
 # Terminal command E2E latency
 
+The [2026-10-25 measured report](benchmarks/2026-10-25-terminal-e2e.md) includes
+30-trial production/headed/development runs, ON/OFF overhead, Worker comparisons
+and all raw samples.
+
 [Issue #20](https://github.com/0x5341/walos/issues/20) measures the workbench's
 real Enter → `Walos.writeInput` → P1 shell → OPFS → Core → Process Worker →
 EXIT/wait → foreground restoration → TTY drain → prompt DOM path. The existing
@@ -176,8 +180,11 @@ node benchmarks/e2e.mjs --trials 1 --warmups 0 --details on \
 ```
 
 Load the trace in Chrome DevTools Performance (or a compatible trace viewer).
-Correlate the raw command timeline's epoch timestamps and Worker pids/argv with
-Worker startup, module fetch/compile, filesystem and task scheduling. Trace
+Use command order, the recorded epoch timestamps, argv and Worker URLs to inspect
+startup, module fetch/compile, filesystem and task scheduling. Walos pids are
+logical OS identifiers, not Chrome process/thread IDs; do not equate them. Browser
+trace timestamps may use a different clock domain, so establish their offset
+before an exact timestamp comparison. Trace
 capture changes timings; traced samples are explicitly labelled and must never
 be pooled with the normal run. Reproduce a large outlier with the same revision,
 assets, browser, engine, cache state and command order before attributing it.
