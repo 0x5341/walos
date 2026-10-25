@@ -170,7 +170,10 @@ export async function runLifecycle(scenario: Scenario) {
       );
     if (['normal', 'nonzero', 'trap'].includes(scenario.reason))
       await until(
-        () => (outputs.get(parentPid) || '').includes('audit-parent-'),
+        // puts may deliver the line and newline as separate terminal messages.
+        () =>
+          outputs.get(parentPid) ===
+          (scenario.order === 'ready-first' ? 'audit-parent-ready\n' : 'audit-parent-failed\n'),
         'compiled parent output',
       );
     // Allow the pending spawn reply/cleanup continuations to settle before checking leaks.

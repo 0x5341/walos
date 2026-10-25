@@ -80,7 +80,10 @@ export async function launch(cacheTest = '', command = 'p2-true') {
 export async function entries() {
   const dir = await (
     await navigator.storage.getDirectory()
-  ).getDirectoryHandle('.walos-components');
+  )
+    .getDirectoryHandle('.walos-components')
+    .then((dir) => dir.getDirectoryHandle('schema-2'))
+    .then((dir) => dir.getDirectoryHandle('jco'));
   const names: string[] = [];
   for await (const [name] of dir.entries()) names.push(name);
   return names;
@@ -88,7 +91,10 @@ export async function entries() {
 export async function corrupt() {
   const cache = await (
     await navigator.storage.getDirectory()
-  ).getDirectoryHandle('.walos-components');
+  )
+    .getDirectoryHandle('.walos-components')
+    .then((dir) => dir.getDirectoryHandle('schema-2'))
+    .then((dir) => dir.getDirectoryHandle('jco'));
   const name = (await entries()).find((n) => n.endsWith('.json'))!;
   const manifest = JSON.parse(await (await (await cache.getFileHandle(name)).getFile()).text());
   const stage = await cache.getDirectoryHandle(manifest.directory);

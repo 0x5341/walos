@@ -26,13 +26,17 @@ test('concurrent Process converters publish complete cache entries and the publi
         worker.postMessage(file);
       });
     await Promise.all([run(), run()]);
-    const cache = await root.getDirectoryHandle('.walos-components');
+    const cache = await (
+      await (await root.getDirectoryHandle('.walos-components')).getDirectoryHandle('schema-2')
+    ).getDirectoryHandle('jco');
     const manifests: string[] = [];
     for await (const [name] of cache.entries()) if (name.endsWith('.json')) manifests.push(name);
     const manifest = JSON.parse(
       await (await (await cache.getFileHandle(manifests[0])).getFile()).text(),
     );
     const artifacts = await cache.getDirectoryHandle(manifest.directory);
+    const stages: string[] = [];
+    for await (const [name] of cache.entries()) if (name.includes('-stage-')) stages.push(name);
     const sizes = await Promise.all(
       manifest.files.map(
         async ({ name }: { name: string }) =>
@@ -47,9 +51,14 @@ test('concurrent Process converters publish complete cache entries and the publi
     } catch (error) {
       removed = error instanceof DOMException && error.name === 'NotFoundError';
     }
-    return { manifests: manifests.length, complete: sizes.every((n) => n > 0), removed };
+    return {
+      manifests: manifests.length,
+      stages: stages.length,
+      complete: sizes.every((n) => n > 0),
+      removed,
+    };
   });
-  expect(result).toEqual({ manifests: 1, complete: true, removed: true });
+  expect(result).toEqual({ manifests: 1, stages: 1, complete: true, removed: true });
 });
 
 test('READY precedes deferred publication and immediate EXIT joins it; restart and reload hit OPFS', async ({
@@ -171,9 +180,17 @@ for (const mode of ['hold-artifact', 'hold-manifest'])
       const ready = await next.ready;
       const exit = await next.exit;
       const warm = await h.launch();
-      return { events, ready, exit, warm: await warm.ready, warmExit: await warm.exit };
+      return {
+        events,
+        ready,
+        exit,
+        warm: await warm.ready,
+        warmExit: await warm.exit,
+        stages: (await h.entries()).filter((name) => name.includes('-stage-')).length,
+      };
     }, mode);
     expect(result.events).toEqual(['ready', 'cache-write-blocked']);
+    expect(result.stages).toBe(1);
     expect(result.ready.metrics?.component?.cache).toBe('miss');
     expect(result.exit.component?.publishStatus).toBe('saved');
     expect(result.exit.exit).toEqual({ kind: 'exited', code: 0 });

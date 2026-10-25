@@ -213,16 +213,37 @@ only on a cold conversion. The Process Worker performs conversion; the main
 thread and Core do not convert Components. The only execution engine is the
 browser's WebAssembly runtime.
 
-Cache keys include the Component SHA-256, converter version, host cache revision
-and all Jco options, including exact JSPI import/export selectors. Each Worker
-keeps an in-memory promise/result cache and accesses `.walos-components` in OPFS.
-A unique staging directory holds JS and Core Wasm artifacts. Publishing the
-manifest with `createWritable().close()` happens after every artifact is closed.
-Concurrent duplicate conversions are allowed; either completed manifest can win.
-Readers validate manifest shape and SHA-256 hashes. Incomplete/corrupt entries are
-regenerated. Cache quota/write errors leave execution using the in-memory result.
-Partial/superseded staging directories are reclaimed by the exported
-`clearComponentCache()` API; automatic LRU and a central cache manager are absent.
+`component-engine.ts` defines the internal engine adapter: prepare, instantiate and
+an optional artifact codec. `component-jco.ts` owns Jco's `command.js`/Core Wasm layout
+and imports/exports metadata. The common `component-cache.ts` layer handles opaque
+JSON metadata and canonical relative artifact paths; it does not impose a Jco layout.
+`loadComponentWithEngine` exercises the same loading path for persistent and
+cacheless adapters. Jco remains the default; alternate production engines and the
+comparative selection benchmark belong to Issue #16.
+
+Cache keys include Component SHA-256, engine ID/version, canonical effective options,
+host revision and schema version. OPFS namespaces are
+`.walos-components/schema-2/<engine-id>/`. No L1 memory/promise cache remains. Every
+load checks persistent artifacts or prepares a new result. An adapter with `cache:
+null` skips cache keys, OPFS and manifests; nonapplicable timing fields stay absent.
+`keyMs` measures hashing/identity construction; `lookupMs` includes OPFS opening,
+lock wait, validation and engine metadata restoration. Jco's `converterLoadMs`,
+`convertMs`, `instantiateMs` and deferred publication metrics retain their meanings.
+
+Readers verify manifest identity/schema, safe unique file paths and SHA-256 hashes
+before engine restoration. Writers use unique key-prefixed staging directories,
+verify stored bytes, and publish the manifest only after all artifacts are complete.
+READY precedes artifact writes; EXIT joins publication, as in Issue #14. Key-scoped
+Web Locks serialize publication and protect active readers from stage cleanup.
+Duplicate conversions are allowed. Failed publications remove only their own stage;
+a successful publication reclaims old/abandoned stages for that key after publishing,
+under the same lock. Termination releases the lock; the next publication regenerates
+and reclaims partial stages. Cleanup failure leaves a valid cache hit. There is no
+startup GC/LRU. Cache quota/write errors leave execution using the prepared result.
+
+`clearComponentCache()` retains its public signature, clears all engine namespaces
+and old schemas, and requires stopped OS sessions. Legacy Jco manifests are ignored,
+not migrated; clear the cache manually to reclaim them and never-revisited keys.
 
 Generated JS is loaded through a temporary Blob module URL, which is revoked
 after instantiation. Core Wasm bytes are supplied explicitly to Jco's generated

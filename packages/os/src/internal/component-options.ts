@@ -58,4 +58,4 @@ export const componentOptions = {
     },
   },
 };
-export const converterVersion = 'jco-1.15.1/walos-1';
+export const converterVersion = '1.15.1';
