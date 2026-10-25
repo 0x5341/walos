@@ -16,6 +16,7 @@
     "check:wit": "jco types wit -o work/wit-generated",
     "format": "prettier --write src packages/os/src packages/os/*.json tests scripts benchmarks *.ts *.json index.html",
     "test:production": "WALOS_TEST_BUILD=1 playwright test",
+    "test:pages": "node scripts/test-pages.mjs",
     "build:os": "npm run build --workspace @walos/os",
     "benchmark": "npm run build:os && node benchmarks/build.mjs && tsc --noEmit -p benchmarks/tsconfig.json && node benchmarks/run.mjs",
     "test:benchmark": "node --test benchmarks/stats.test.mjs",

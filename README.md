@@ -88,6 +88,21 @@ literal substring filtering on stdin; `sort` sorts stdin lines in memory.
 `cat` is the upstream Linux/Unix-oriented sbase implementation, rebuilt for WASI;
 [source, revision and license](apps/vendor/sbase/README.md) are included.
 
+## GitHub Pages demo
+
+The [demo](https://0x5341.github.io/walos/) is built and deployed by
+`.github/workflows/pages.yml`. In the repository's **Settings → Pages**, select
+**GitHub Actions** as the build and deployment source before the first deployment.
+Merging to `main` builds the WASI commands and OS library, then publishes `dist`
+to the `github-pages` environment. The workflow can also be run manually on
+`main`. Pull requests build the same Pages artifact without deploying it.
+
+The build uses relative asset and command URLs so it works at `/walos/` as well
+as an origin root. Pages serves the demo over HTTPS; a current desktop Chromium
+with JSPI is still required. Pages does not provide the development server's
+COOP/COEP headers. The default jsco runtime uses dedicated Workers and
+MessagePort streams without requiring cross-origin isolation.
+
 ## Validate
 
 ```sh
@@ -96,14 +111,17 @@ npm run check:wit
 npm run build
 npm test
 npm run test:production
+npm run test:pages
 ```
 
-For a system Chromium, set `CHROMIUM_PATH=/path/to/chromium` for either test
+For a system Chromium, set `CHROMIUM_PATH=/path/to/chromium` for any browser test
 command. Tests use isolated browser contexts. The suite covers real WASI
 pipelines, persistence, redirection, cwd/argv/env, a 1 MiB transfer, namespace
 operations, traps and termination; separate browser tests exercise OPFS locks,
 pipe protocol errors/migration, and deterministic process lifecycle races.
 Production tests exercise the bundled Worker assets.
+The Pages smoke test serves `dist` below `/walos/` without COOP/COEP headers and
+checks P1/P2 commands, a mixed pipeline and persistence across reloads.
 
 Run `npm run benchmark -- --trials 5` for the P1/P2 startup, conversion cache,
 Worker memory, CPU, OPFS and Pipe benchmarks. See the

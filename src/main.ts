@@ -5,7 +5,7 @@ const terminal = document.querySelector<HTMLPreElement>('#terminal')!;
 const input = document.querySelector<HTMLInputElement>('#input')!;
 const state = document.querySelector('#state')!;
 const processes = document.querySelector('#processes')!;
-const os = new Walos();
+const os = new Walos({ binUrl: './bin/' });
 
 const output = (text: string) => {
   terminal.append(document.createTextNode(text));
