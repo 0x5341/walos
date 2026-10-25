@@ -110,6 +110,19 @@ async function launch(page, format, mode = 'startup', expectedCache) {
 }
 const finish = (page) => page.evaluate(() => window.bench.finish());
 const clear = (page) => page.evaluate(() => window.bench.clearCache());
+async function completeStartup(page, ready) {
+  const exit = await finish(page);
+  if (ready.component?.cache === 'miss') {
+    assert.equal(ready.component.publishStatus, 'pending');
+    assert.equal(ready.component.publishMs, undefined, 'Publication must not precede READY');
+    assert.equal(exit.component?.publishStatus, 'saved', 'Deferred cache save did not complete');
+    assert(exit.component.publishStartedAtMs >= ready.readyAtMs);
+    assert(exit.component.publishCompletedAtMs >= exit.component.publishStartedAtMs);
+  }
+  // startupMs stays the page's original READY receipt; publication is collected
+  // separately at EXIT, never added to loadMs/startupMs or CPU runMs.
+  return { ...ready, ...(exit.component && { component: exit.component }) };
+}
 try {
   for (const format of ['p1', 'p2']) {
     for (let trial = 1; trial <= trials; trial++) {
@@ -124,22 +137,18 @@ try {
           'Benchmark requires cross-origin isolation',
         );
         const cold = await launch(page, format, 'startup', format === 'p2' ? 'miss' : undefined);
-        await finish(page);
-        record(`${format}/startup-cold`, trial, cold);
+        record(`${format}/startup-cold`, trial, await completeStartup(page, cold));
         const warm = await launch(page, format, 'startup', format === 'p2' ? 'opfs' : undefined);
-        await finish(page);
-        record(`${format}/startup-warm`, trial, warm);
+        record(`${format}/startup-warm`, trial, await completeStartup(page, warm));
         if (format === 'p2') {
           await page.reload();
           await page.waitForFunction(() => Boolean(window.bench));
           await page.evaluate(() => window.bench.prepare());
           const reused = await launch(page, format, 'startup', 'opfs');
-          await finish(page);
-          record('p2/startup-opfs-reload', trial, reused);
+          record('p2/startup-opfs-reload', trial, await completeStartup(page, reused));
           await clear(page);
           const miss = await launch(page, format, 'startup', 'miss');
-          await finish(page);
-          record('p2/startup-warm-miss', trial, miss);
+          record('p2/startup-warm-miss', trial, await completeStartup(page, miss));
         }
         // One excluded CPU warmup before each retained fresh-Worker CPU trial.
         await launch(page, format, 'cpu');
@@ -194,7 +203,14 @@ try {
   }
   const summary = summarize(samples);
   metadata.finishedAt = new Date().toISOString();
-  const result = { schemaVersion: 1, metadata, samples, summary };
+  const publications = samples.filter((s) => s['component.publishStatus']);
+  const publication = {
+    attempted: publications.length,
+    saved: publications.filter((s) => s['component.publishStatus'] === 'saved').length,
+    failed: publications.filter((s) => s['component.publishStatus'] === 'failed').length,
+    unavailable: publications.filter((s) => s['component.publishStatus'] === 'unavailable').length,
+  };
+  const result = { schemaVersion: 2, metadata, samples, summary, publication };
   await mkdir(dirname(output), { recursive: true });
   await writeFile(output, JSON.stringify(result, null, 2) + '\n');
   const rows = [
@@ -202,6 +218,7 @@ try {
     '',
     `Chromium ${metadata.chromium}; Node ${metadata.node}; wasi-sdk ${metadata.wasiSdk}; Jco ${metadata.jco}.`,
     `${trials} retained trials per scenario. Durations in ms; memory in bytes; throughput in MiB/s.`,
+    `Deferred startup publications: ${publication.saved}/${publication.attempted} saved; ${publication.failed} failed; ${publication.unavailable} unavailable.`,
     '',
     '| Scenario | Metric | N | Median | Min | Max | Mean | p95 | Stddev |',
     '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',

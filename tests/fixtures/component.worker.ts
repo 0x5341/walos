@@ -19,9 +19,11 @@ self.onmessage = async ({ data: file }: MessageEvent<FileSystemFileHandle>) => {
   try {
     await adapter.init();
     const bytes = new Uint8Array(await (await file.getFile()).arrayBuffer());
-    const command = await loadComponent(bytes, adapter.imports());
+    const { component: command, persist } = await loadComponent(bytes, adapter.imports());
+    const publication = persist();
     await command.run.run();
     await adapter.close();
+    await publication;
     self.postMessage({ ok: true });
   } catch (error) {
     self.postMessage({ error: String(error) });

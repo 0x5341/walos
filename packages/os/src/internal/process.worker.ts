@@ -33,16 +33,17 @@ scope.onmessage = async (e) => {
   }
   if (m.type !== 'start') return;
   let ready = false;
+  let publication: Promise<void> | undefined;
+  let metrics: ProcessMetrics | undefined;
   try {
     if (typeof WebAssembly.Suspending !== 'function')
       throw new Error('This slice requires Chromium with JSPI support');
     const readStart = performance.now();
     const bytes = new Uint8Array(await (await m.spec.file.getFile()).arrayBuffer());
-    const metrics: ProcessMetrics | undefined = m.measure
-      ? { readMs: performance.now() - readStart }
-      : undefined;
+    metrics = m.measure ? { readMs: performance.now() - readStart } : undefined;
     const adapterStart = performance.now();
     let run: () => Promise<unknown>;
+    let persist: (() => Promise<void>) | undefined;
     if (executableFormat(bytes) === 'p2') {
       const adapter = new Wasi2(m.spec, rpc);
       wasi = adapter;
@@ -52,7 +53,9 @@ scope.onmessage = async (e) => {
         metrics.adapterMs = loadStart - adapterStart;
         metrics.component = {};
       }
-      const component = await loadComponent(bytes, adapter.imports(), metrics?.component);
+      const loaded = await loadComponent(bytes, adapter.imports(), metrics?.component);
+      const { component } = loaded;
+      persist = loaded.persist;
       if (metrics) metrics.loadMs = performance.now() - loadStart;
       if (typeof component.run?.run !== 'function')
         throw new Error('Expected a wasi:cli/run command component');
@@ -90,24 +93,30 @@ scope.onmessage = async (e) => {
       if (metrics) metrics.linearMemoryBytes = adapter.memory.buffer.byteLength;
       run = WebAssembly.promising(instance.exports._start);
     }
+    if (metrics) metrics.readyAtMs = performance.now();
     scope.postMessage({ type: 'ready', ...(metrics && { metrics }) });
     ready = true;
+    publication = persist?.();
     const runStart = performance.now();
     try {
       await run();
       const runMs = performance.now() - runStart;
       await wasi.close();
+      // Core terminates this Worker on EXIT. Even an immediate command must
+      // finish its deferred atomic publication before reporting normal exit.
+      await publication;
       scope.postMessage({
         type: 'exit',
         exit: { kind: 'exited', code: 0 },
-        ...(metrics && { runMs }),
+        ...(metrics && { runMs, component: metrics.component }),
       });
     } catch (e) {
       const runMs = performance.now() - runStart;
       await wasi.close();
+      await publication;
       scope.postMessage({
         type: 'exit',
-        ...(metrics && { runMs }),
+        ...(metrics && { runMs, component: metrics.component }),
         exit:
           e instanceof WasiExit
             ? { kind: 'exited', code: e.code }
@@ -116,9 +125,14 @@ scope.onmessage = async (e) => {
     }
   } catch (e) {
     await wasi?.close();
+    await publication;
     scope.postMessage(
       ready
-        ? { type: 'exit', exit: { kind: 'trap', message: String(e) } }
+        ? {
+            type: 'exit',
+            exit: { kind: 'trap', message: String(e) },
+            ...(metrics?.component && { component: metrics.component }),
+          }
         : { type: 'boot-error', message: String(e) },
     );
   }

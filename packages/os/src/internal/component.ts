@@ -2,7 +2,11 @@ import { componentOptions, converterVersion } from './component-options.js';
 import type { Converted } from './jco.js';
 
 const cacheDirectory = '.walos-components';
-const memory = new Map<string, Promise<Converted>>();
+interface PreparedComponent {
+  result: Converted;
+  persist: () => Promise<PublicationMetrics>;
+}
+const memory = new Map<string, Promise<PreparedComponent>>();
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 /** Opt-in diagnostics for the benchmark harness; all durations are milliseconds. */
@@ -13,8 +17,17 @@ export interface ComponentMetrics {
   converterLoadMs?: number;
   convertMs?: number;
   publishMs?: number;
+  publishStatus?: 'pending' | 'saved' | 'failed' | 'unavailable';
+  /** Worker performance.now() timestamps, separate from READY/load spans. */
+  publishStartedAtMs?: number;
+  publishCompletedAtMs?: number;
+  publishError?: string;
   instantiateMs?: number;
 }
+type PublicationMetrics = Pick<
+  ComponentMetrics,
+  'publishMs' | 'publishStatus' | 'publishStartedAtMs' | 'publishCompletedAtMs' | 'publishError'
+>;
 const digest = async (bytes: Uint8Array) =>
   Array.from(
     new Uint8Array(await crypto.subtle.digest('SHA-256', bytes as Uint8Array<ArrayBuffer>)),
@@ -43,7 +56,7 @@ const write = async (dir: FileSystemDirectoryHandle, name: string, data: Uint8Ar
     await writer.write(typeof data === 'string' ? data : (data as Uint8Array<ArrayBuffer>));
     await writer.close();
   } catch (error) {
-    await writer.abort();
+    await writer.abort().catch(() => {});
     throw error;
   }
 };
@@ -83,7 +96,7 @@ async function convertComponent(
   bytes: Uint8Array,
   key: string,
   metrics?: ComponentMetrics,
-): Promise<Converted> {
+): Promise<PreparedComponent> {
   const lookupStart = performance.now();
   let cache: FileSystemDirectoryHandle | undefined;
   try {
@@ -95,7 +108,7 @@ async function convertComponent(
       metrics.cache = 'opfs';
       metrics.lookupMs = performance.now() - lookupStart;
     }
-    return result;
+    return { result, persist: async () => ({}) };
   } catch {
     /* Missing/corrupt/unavailable caches are regenerated locally. */
   }
@@ -108,8 +121,24 @@ async function convertComponent(
   const convertStart = performance.now();
   if (metrics) metrics.converterLoadMs = convertStart - loadStart;
   const result = await convert(bytes, componentOptions);
-  const publishStart = performance.now();
-  if (metrics) metrics.convertMs = publishStart - convertStart;
+  if (metrics) {
+    metrics.convertMs = performance.now() - convertStart;
+    metrics.publishStatus = 'pending';
+  }
+  // Merely loading/instantiating must not start any artifact writes. The owner
+  // explicitly starts persistence after READY and joins it before sending EXIT.
+  let publication: Promise<PublicationMetrics> | undefined;
+  const persist = () => (publication ??= publish(cache, key, result));
+  return { result, persist };
+}
+async function publish(
+  cache: FileSystemDirectoryHandle | undefined,
+  key: string,
+  result: Converted,
+): Promise<PublicationMetrics> {
+  const publishStartedAtMs = performance.now();
+  let publishStatus: PublicationMetrics['publishStatus'] = 'unavailable';
+  let publishError: string | undefined;
   if (cache) {
     let stage: string | undefined;
     try {
@@ -119,7 +148,12 @@ async function convertComponent(
       for (const [name, data] of result.files) {
         if (!validName(name)) throw new Error(`Unexpected Jco output: ${name}`);
         await write(dir, name, data);
-        files.push({ name, hash: await digest(data) });
+        const hash = await digest(data);
+        const stored = new Uint8Array(
+          await (await (await dir.getFileHandle(name)).getFile()).arrayBuffer(),
+        );
+        if ((await digest(stored)) !== hash) throw new Error('Incomplete component cache write');
+        files.push({ name, hash });
       }
       // createWritable.close publishes the reference only after every artifact is complete.
       // Concurrent workers use different staging directories; either complete result is valid.
@@ -134,13 +168,25 @@ async function convertComponent(
           exports: result.exports,
         } satisfies Manifest),
       );
+      publishStatus = 'saved';
     } catch (error) {
+      publishStatus = 'failed';
+      publishError = String(error);
       console.debug('Component cache write skipped', error);
       if (stage) await cache.removeEntry(stage, { recursive: true }).catch(() => {});
     }
+  } else {
+    publishError = 'OPFS component cache unavailable';
+    console.debug('Component cache write skipped', publishError);
   }
-  if (metrics) metrics.publishMs = performance.now() - publishStart;
-  return result;
+  const publishCompletedAtMs = performance.now();
+  return {
+    publishStatus,
+    publishStartedAtMs,
+    publishCompletedAtMs,
+    publishMs: publishCompletedAtMs - publishStartedAtMs,
+    ...(publishError && { publishError }),
+  };
 }
 export async function loadComponent(
   bytes: Uint8Array,
@@ -158,13 +204,14 @@ export async function loadComponent(
     pending = convertComponent(bytes, key, metrics);
     memory.set(key, pending);
   } else if (metrics) metrics.cache = 'memory';
-  let result: Converted;
+  let prepared: PreparedComponent;
   try {
-    result = await pending;
+    prepared = await pending;
   } catch (error) {
     memory.delete(key);
     throw error;
   }
+  const { result } = prepared;
   const instantiateStart = performance.now();
   for (const name of result.imports)
     if (!(name in imports)) throw new Error(`Unsupported component import: ${name}`);
@@ -174,11 +221,19 @@ export async function loadComponent(
   const url = URL.createObjectURL(new Blob([decoder.decode(glue)], { type: 'text/javascript' }));
   try {
     const { instantiate } = await import(/* @vite-ignore */ url);
-    return await instantiate((name: string) => {
+    const component = await instantiate((name: string) => {
       const core = files.get(name);
       if (!core || !name.endsWith('.wasm')) throw new Error(`Missing component module: ${name}`);
       return WebAssembly.compile(core as Uint8Array<ArrayBuffer>);
     }, imports);
+    return {
+      component,
+      // Idempotent even for overlapping loads sharing the in-memory conversion.
+      persist: async () => {
+        const publication = await prepared.persist();
+        if (metrics) Object.assign(metrics, publication);
+      },
+    };
   } finally {
     URL.revokeObjectURL(url);
     if (metrics) metrics.instantiateMs = performance.now() - instantiateStart;

@@ -67,13 +67,55 @@ in-memory cache.
 
 Opt-in internal diagnostics split `readMs`, `adapterMs`, P1 `compileMs` and
 `instantiateMs`, and P2 `loadMs`. P2's `component.*` further splits content/key
-hashing, validated OPFS lookup, converter module loading, Jco conversion, cache
-publication and generated-module import/compilation/instantiation. These are
+hashing, validated OPFS lookup, converter module loading, Jco conversion and
+generated-module import/compilation/instantiation. Deferred cache publication is
+reported separately at EXIT. These are
 nested spans: **do not add `loadMs` to its component subspans**. Missing conversion
 spans on cache hits mean the work was skipped, not that it took zero time. Worker
 module startup, scheduling and READY transport explain the remaining startup
 time. `converterLoadMs` includes lazy converter initialization/import; Jco may
 initialize more state during `convertMs`. These are elapsed times, not CPU time.
+
+## Deferred publication (Issue #14, schema version 2)
+
+On a conversion miss, the Process Worker instantiates from the in-memory result,
+posts READY, then explicitly starts `persist()`. Normal return, nonzero exit and
+Wasm traps all close WASI resources and join this promise before posting EXIT;
+the Core can then terminate the Worker without losing a short command's cache.
+Persistence failures are logged and measured independently and do not change the
+command's exit status. This can delay EXIT/`wait()` even though READY is earlier.
+
+READY carries `component.publishStatus: pending` on a miss and omits `publishMs`.
+EXIT supplies the final component snapshot: `publishStatus` is `saved`, `failed`
+or `unavailable`, plus `publishMs`, `publishStartedAtMs`, `publishCompletedAtMs`
+and, on failure, `publishError`. The timestamps and top-level `readyAtMs` are in
+that Worker's `performance.now()` clock, not page time or UTC. A cache hit has no
+publication spans/status. The runner merges EXIT's component snapshot into each
+startup sample, while preserving the original READY-based `startupMs`, `loadMs`
+and `instantiateMs`. Do not add publication spans to startup or CPU `runMs`.
+`publication` in the JSON and the Markdown publication counts cover the retained
+startup misses (cold and warm-miss); memory probes are not included in that count.
+Older schema-1 runs published before instantiation and included `publishMs` at READY.
+
+Every artifact is written to a unique staging directory, closed, read back and
+SHA-256 checked before the manifest is atomically published with writable close.
+A save failure removes its staging directory best-effort. Supervisor stop retains
+the existing 150 ms grace period: a blocked save can be forcibly terminated.
+Unreferenced staging directories or invalid/empty manifests from interrupted writes
+are never executed; the next launch validates the manifest and all hashes, then
+regenerates on a miss/corruption. Abrupt termination can leave orphan stages until
+`clearComponentCache()` removes the directory; this change adds no garbage collector.
+The public clear API still requires stopped OS sessions.
+
+`tests/component.spec.ts` gates real OPFS writable closes in the actual Process
+Worker, injects quota/unavailable-storage failures and corrupt write/read data,
+and covers immediate success/nonzero/trap exits, fresh-Worker and page reload
+hits, concurrent publication, raw termination during artifact/manifest writes and
+supervisor stop escalation. These fault controls are confined to test fixtures.
+
+The [30-trial before/after report](benchmarks/2026-10-25-deferred.md) retains
+production measurements and completion rates for this stage. It does not select
+an alternative Component engine; Issue #13 stages #15 and #16 remain separate.
 
 ## CPU
 
