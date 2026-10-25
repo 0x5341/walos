@@ -322,3 +322,5 @@ Full raw samples, chronological order, timestamps, binary SHA-256, asset invento
 engineLoadMs includes lazy adapter/runtime and translator initialization; transformMs is translation, prepareMs is direct parse/compile (jsco); converterLoadMs/convertMs are legacy Jco engineLoad/transform equivalents. publishMs is after READY, joined before EXIT. loadMs encloses these spans: do not sum nested intervals. Absent transformMs/convertMs means not applicable, never zero-filled.
 
 CDP Runtime.getHeapUsage after READY, held Worker; not peak or browser RSS.
+
+The recorded benchmark revision `da7a02adcf8070723d90a652ad659b1f7775dd69` has the same source tree as published revision `a7bbe013603344060f743c85acd0ccead9811b38`. Unpublished commit email metadata was changed for GitHub email privacy; the original measured revision and samples are preserved. See the [revision map](2026-10-25-engine-revisions.json).

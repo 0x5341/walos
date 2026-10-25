@@ -48,7 +48,8 @@
         "adapterRevision": "walos-1",
         "sourceRevision": "da7a02adcf8070723d90a652ad659b1f7775dd69",
         "dirty": false,
-        "cache": "opfs"
+        "cache": "opfs",
+        "publishedSourceRevision": "a7bbe013603344060f743c85acd0ccead9811b38"
       },
       {
         "id": "polyengine",
@@ -56,7 +57,8 @@
         "adapterRevision": "walos-1",
         "sourceRevision": "da7a02adcf8070723d90a652ad659b1f7775dd69",
         "dirty": false,
-        "cache": "opfs"
+        "cache": "opfs",
+        "publishedSourceRevision": "a7bbe013603344060f743c85acd0ccead9811b38"
       },
       {
         "id": "jsco",
@@ -64,7 +66,8 @@
         "adapterRevision": "walos-1",
         "sourceRevision": "da7a02adcf8070723d90a652ad659b1f7775dd69",
         "dirty": false,
-        "cache": "disabled"
+        "cache": "disabled",
+        "publishedSourceRevision": "a7bbe013603344060f743c85acd0ccead9811b38"
       }
     ],
     "build": {
@@ -595,7 +598,10 @@
         "engine": "polyengine",
         "startedAt": "2026-10-25T03:03:40.191Z"
       }
-    ]
+    ],
+    "publishedSourceRevision": "a7bbe013603344060f743c85acd0ccead9811b38",
+    "sourceTree": "22dac97a1a1f98a5f05988e63ab6620be8e3a6be",
+    "revisionNote": "Unpublished commit email metadata was changed to the verified GitHub no-reply identity after GH007. Each mapped commit has an identical source tree; benchmark samples and original measured revision values remain unchanged."
   },
   "compatibility": {
     "jco": {
@@ -635,12 +641,12 @@
           },
           "failures": [
             {
-              "title": "real lifecycle-parent → p2-cat: nonzero, exit-first",
+              "title": "real lifecycle-parent \u2192 p2-cat: nonzero, exit-first",
               "status": "failed",
               "error": "Error: page.evaluate: Execution context was destroyed, most likely because of a navigation."
             },
             {
-              "title": "real lifecycle-parent → p2-cat: nonzero, ready-first",
+              "title": "real lifecycle-parent \u2192 p2-cat: nonzero, ready-first",
               "status": "failed",
               "error": "Error: page.evaluate: Execution context was destroyed, most likely because of a navigation."
             }
@@ -697,7 +703,7 @@
             {
               "title": "wasip2 commands receive argv, env, cwd and exit status",
               "status": "failed",
-              "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"hello component こんにちは\u001b[39m\n\u001b[32m\"\u001b[39m\nReceived string:    \u001b[31m\"p2-echo \\\"hello component\\\" こんにちは\u001b[39m\n\u001b[31m/home $ \"\u001b[39m"
+              "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"hello component \u3053\u3093\u306b\u3061\u306f\u001b[39m\n\u001b[32m\"\u001b[39m\nReceived string:    \u001b[31m\"p2-echo \\\"hello component\\\" \u3053\u3093\u306b\u3061\u306f\u001b[39m\n\u001b[31m/home $ \"\u001b[39m"
             }
           ],
           "report": "polyengine-production.json",
@@ -717,7 +723,7 @@
             {
               "title": "wasip2 commands receive argv, env, cwd and exit status",
               "status": "failed",
-              "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"hello component こんにちは\u001b[39m\n\u001b[32m\"\u001b[39m\nReceived string:    \u001b[31m\"p2-echo \\\"hello component\\\" こんにちは\u001b[39m\n\u001b[31m/home $ \"\u001b[39m"
+              "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoContain\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // indexOf\u001b[22m\n\nExpected substring: \u001b[32m\"hello component \u3053\u3093\u306b\u3061\u306f\u001b[39m\n\u001b[32m\"\u001b[39m\nReceived string:    \u001b[31m\"p2-echo \\\"hello component\\\" \u3053\u3093\u306b\u3061\u306f\u001b[39m\n\u001b[31m/home $ \"\u001b[39m"
             }
           ],
           "report": "polyengine-dev.json"
@@ -725,7 +731,7 @@
       },
       "cacheTestPolicy": "Jco-specific application-cache assertion excluded; engine-specific cache/disabled tests in engines.spec.ts included in dev suite",
       "finishedAt": "2026-10-25T02:53:33.161Z",
-      "note": "Focused WASI P2 dev suite, not full suite; ineligible because Unicode argv traps. Original may_leave violation reproduced with p2-echo こんにちは.",
+      "note": "Focused WASI P2 dev suite, not full suite; ineligible because Unicode argv traps. Original may_leave violation reproduced with p2-echo \u3053\u3093\u306b\u3061\u306f.",
       "fixtures": {
         "p2-echo": "7be440403d2e37950ae9d1a663087d9b759c7bfb16a47972ddf37e8a28f2994d",
         "p2-cat": "104954b303320430d3de6f3b9b63caf5673b1544161747c83ac663ffef29a061",
