@@ -140,7 +140,9 @@ READY. The Node runner attaches CDP to that Worker target and calls
 `Runtime.getHeapUsage`, then releases stdin, verifies exit 0 and terminates the
 Worker. P1 gets a loaded sample; P2 gets separate cache-miss and OPFS-hit samples
 in fresh Workers. Converter/module initialization can remain resident in the
-miss case. No GC is forced, and these are snapshots, not peak measurements.
+miss case. With deferred publication, a miss probe can overlap cache writes and
+temporary artifact buffers; it is not a post-publication steady-state sample.
+No GC is forced, and these are snapshots, not peak measurements.
 
 | Metric | Available meaning / limitation |
 | --- | --- |
