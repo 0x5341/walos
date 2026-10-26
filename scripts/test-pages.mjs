@@ -45,9 +45,9 @@ try {
   });
   await page.goto(`http://127.0.0.1:${server.address().port}${prefix}`);
   assert.equal(await page.evaluate(() => crossOriginIsolated), false);
-  await expect(page.getByRole('log')).toContainText('Empty OS ready.', { timeout: 30000 });
+  await expect(page.getByRole('log')).toContainText('walos · WASI Preview 1', { timeout: 30000 });
   await expect(page.locator('#processes')).toContainText('Host');
-  await expect(page.getByLabel('Terminal input')).toBeDisabled();
+  await expect(page.getByLabel('Terminal input')).toBeEnabled();
   await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory();
     const writer = await (
@@ -57,7 +57,7 @@ try {
     await writer.close();
   });
   await page.reload();
-  await expect(page.getByRole('log')).toContainText('Empty OS ready.');
+  await expect(page.getByRole('log')).toContainText('walos · WASI Preview 1');
   assert.equal(
     await page.evaluate(async () => {
       const root = await navigator.storage.getDirectory();
@@ -67,7 +67,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    'Pages smoke test passed: subpath assets, empty Host initialization, reload persistence.',
+    'Pages smoke test passed: subpath assets, explicit Shell installation, reload persistence.',
   );
 } finally {
   await browser?.close();

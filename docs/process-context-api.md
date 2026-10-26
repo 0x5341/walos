@@ -1,6 +1,6 @@
 # ProcessContext 公開API・Resource/Process意味論（Issue #26）
 
-> **状態: 承認済みの設計仕様。#27〜#31 の実装を反映中。** 2026-10-26の設計インタビューを反映する。
+> **状態: v0.2.0公開契約。実装・移行の詳細はprocess-context-migration.mdを参照。** 2026-10-26の設計インタビューを反映する。
 > 現在の `main` の公開APIやWITを説明する文書ではない。型・ABI・Worker・Demoの実装は後続Issueで段階的に移行する。
 >
 > Parent: [#25](https://github.com/0x5341/walos/issues/25) / Contract: [#26](https://github.com/0x5341/walos/issues/26)
@@ -27,7 +27,7 @@ Walosを、同梱Shellの自動起動・文字列Terminalを前提としたAPI�
 ```ts
 import { Walos } from '@walos/os';
 
-// 新APIの設計例。現行のmainではまだ利用できない。
+// v0.2.0 API
 await using os = await Walos.create({
   env: { PWD: '/', PATH: '/bin' },
   argv: [],

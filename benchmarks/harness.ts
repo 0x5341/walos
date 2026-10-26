@@ -1,5 +1,3 @@
-import type { EngineId } from '../packages/os/dist/internal/component-engines.js';
-import { clearComponentCache } from '../packages/os/dist/internal/component.js';
 import { PortStream } from '../packages/os/dist/internal/streams.js';
 import type { FromProcess, Spec, StreamRef } from '../packages/os/dist/internal/protocol.js';
 
@@ -36,11 +34,7 @@ let active:
       finish: () => Promise<unknown>;
     }
   | undefined;
-async function launch(
-  format: 'p1' | 'p2',
-  mode: 'startup' | 'cpu' | 'hold',
-  engine: EngineId = 'jco',
-) {
+async function launch(format: 'p1' | 'p2', mode: 'startup' | 'cpu' | 'hold') {
   if (active) throw new Error('Only one process measurement may run at a time');
   const root = await navigator.storage.getDirectory();
   const dir = await root.getDirectoryHandle('benchmark');
@@ -137,7 +131,7 @@ async function launch(
       }
     },
   };
-  worker.postMessage({ type: 'start', pid: 1, spec, measure: true, engine }, ports);
+  worker.postMessage({ type: 'start', pid: 1, spec, measure: true }, ports);
   try {
     return await ready.promise;
   } catch (error) {
@@ -205,7 +199,6 @@ async function pipe(size: number) {
 }
 (window as any).bench = {
   prepare,
-  clearCache: clearComponentCache,
   launch,
   finish: () => {
     if (!active) throw new Error('No active measurement');

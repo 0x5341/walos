@@ -1,5 +1,4 @@
 import type { Exit, ProcessInfo } from '../types.js';
-import type { EngineId } from './component-engines.js';
 import type { ComponentMetrics } from './component.js';
 export type { Exit } from '../types.js';
 export type CoreEvent =
@@ -83,7 +82,7 @@ export interface ProcessMetrics {
 }
 export type ToProcess =
   | Reply
-  | { type: 'start'; pid: number; spec: Spec; measure?: boolean; engine?: EngineId }
+  | { type: 'start'; pid: number; spec: Spec; measure?: boolean }
   | { type: 'stop' };
 export const transferables = (refs: (StreamRef | null)[]) =>
   refs.flatMap((s) => (s && (s.kind === 'pipe' || s.kind === 'tty') ? [s.port] : []));

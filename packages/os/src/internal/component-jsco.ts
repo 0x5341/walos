@@ -1,21 +1,16 @@
 import { createComponent } from '@pavelsavara/jsco';
-import type { ComponentEngine } from './component-engine.js';
-import { jscoImports } from './engine-host.js';
-
-type Prepared = Awaited<ReturnType<typeof createComponent>>;
-export const jsco: ComponentEngine<Prepared> = {
-  id: 'jsco',
-  version: '0.2.0-preview.0/walos-1',
-  options: { noJspi: false, validateTypes: true },
-  // jsco parses/compiles directly; it has no serializable conversion artifact.
-  cache: null,
-  async prepare(bytes, metrics) {
-    const start = performance.now();
-    const result = await createComponent(bytes, { noJspi: false, validateTypes: true });
-    if (metrics) metrics.prepareMs = performance.now() - start;
-    return result;
-  },
-  async instantiate(prepared, imports) {
+import { jscoImports } from './jsco-host.js';
+import type { ComponentMetrics } from './component.js';
+export async function loadJsco(
+  bytes: Uint8Array,
+  imports: Record<string, unknown>,
+  metrics?: ComponentMetrics,
+) {
+  const start = performance.now();
+  const prepared = await createComponent(bytes, { noJspi: false, validateTypes: true });
+  if (metrics) metrics.prepareMs = performance.now() - start;
+  const instantiateStart = performance.now();
+  try {
     const instance = await prepared.instantiate(jscoImports(imports, prepared.imports()));
     const run = Object.entries(instance.exports).find(([name]) =>
       /^wasi:cli\/run@0\.2\.\d+$/.test(name),
@@ -31,5 +26,7 @@ export const jsco: ComponentEngine<Prepared> = {
         },
       },
     };
-  },
-};
+  } finally {
+    if (metrics) metrics.instantiateMs = performance.now() - instantiateStart;
+  }
+}

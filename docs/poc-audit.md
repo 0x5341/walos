@@ -1,3 +1,5 @@
+> Historical pre-integration reference. Current v0.2 behavior and verification: [ProcessContext migration](process-context-migration.md). Old engine/cache/foreground instructions below are historical only.
+
 # PoC acceptance audit — issue #8
 
 Audit date: 2026-10-24. Baseline: [§12](grilled_webos_concept.md#12-pocの合格基準).

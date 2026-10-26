@@ -1,3 +1,5 @@
+> Historical pre-integration reference. Current v0.2 behavior and verification: [ProcessContext migration](process-context-migration.md). Old engine/cache/foreground instructions below are historical only.
+
 # Reproducible PoC benchmarks
 
 This implements [issue #4](https://github.com/0x5341/walos/issues/4), baseline

@@ -1,4 +1,4 @@
-# ProcessContext implementation (#27–#31)
+# ProcessContext implementation (#27–#31, #33, #35–#38)
 
 This implements the public contract in [process-context-api.md](process-context-api.md).
 `@walos/os` is version 0.2.0. Its constructor is private; `Walos.create()` completes
@@ -52,24 +52,12 @@ accepts 0–16 MiB per request; negative/oversized requests return `invalid`. In
 random/seed do not depend on Web Crypto. Host failures expose `ServiceError` with a
 stable code, message and optional cause; adapters translate to P1 errno/P2 variants.
 
-## Integration boundaries
+## Integration
 
-- The necessary ABI integration also removes the P1 foreground import/cwd spawn
-  argument and the custom WIT terminal interface/cwd argument, regenerates WIT types
-  for `walos:runtime@0.2.0`, and rebuilds the C fixtures. Standard WASI terminal
-  interfaces remain. #36's broader migration documentation can build on this.
-- No PWD resolution occurs in spawn/Worker initialization. The P1 compatibility
-  constructor and P2 initial-cwd consumer can fail *inside Wasm* if they use an invalid
-  PWD. Separate cwd-free fixtures verify missing/invalid PWD and empty argv. Detailed
-  wasi-libc cwd behavior remains #37.
-- No execution-runtime abstraction or capability model is added. Existing engine/cache
-  code and its regressions remain until #35. Full comparative performance work remains
-  #38; the measurements below cover this change's main paths.
-- The demo now shows empty Host initialization; the interactive shell/UI migration is
-  #33. Its historic shell forwarding behavior is not guaranteed. Command regression
-  tests now invoke the Host directly. Production tests independently bundle the public
-  API and exercise bundled Core/Process workers; Pages verifies subpath initialization
-  and preservation of user data without requiring cross-origin isolation.
+See [migration details](process-context-migration.md) for the v0.2 ABI, lazy PWD
+bridge and Shell/consumer ownership. P2 execution now uses only jsco, with no
+runtime selector or Component cache. The demo explicitly installs and spawns the
+Shell with byte pipes; no implicit foreground input forwarding is provided.
 
 ## Verification
 
@@ -77,7 +65,7 @@ stable code, message and optional cause; adapters translate to P1 errno/P2 varia
   and negative checks for removed/forbidden public interfaces.
 - `npm run build:apps`: actual P1/P2 binaries plus generated v0.2.0 WIT fixtures.
 - `npm test`: Host lifecycle/streams/filesystem/services and existing actual-worker
-  READY/EXIT, parent failure, peer disappearance, OPFS locking and engine regressions.
+  READY/EXIT, parent failure, peer disappearance, OPFS locking and jsco regressions.
 - `npm run test:production`, `npm run test:pages`: built-worker and Pages smoke checks.
 - `npm run check:wit` and `diff -ru wit/generated work/wit-generated`.
 - `npm run test:benchmark` and the reproducible browser benchmark, with a fixed SDK,

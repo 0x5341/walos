@@ -17,6 +17,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # The OS package must build/pack before any SDK or demo commands exist.
+      - run: npm run build:os && npm pack --workspace @walos/os --dry-run
       - run: bash scripts/setup-sdk.sh
       - run: bash scripts/setup-wit-bindgen.sh
       - run: npx playwright install --with-deps chromium

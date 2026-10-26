@@ -20,7 +20,6 @@
     "build:os": "npm run build --workspace @walos/os",
     "benchmark": "npm run build:os && node benchmarks/build.mjs && tsc --noEmit -p benchmarks/tsconfig.json && node benchmarks/run.mjs",
     "test:benchmark": "node --test benchmarks/stats.test.mjs",
-    "test:engines": "node scripts/test-engines.mjs",
     "check:public": "tsc -p tests/tsconfig.public.json"
   },
   "devDependencies": {

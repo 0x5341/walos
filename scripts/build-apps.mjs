@@ -40,6 +40,7 @@ cc(
   ],
   ['-Iapps/vendor/sbase'],
 );
+cc('cwd-probe', ['tests/fixtures/cwd.c']);
 cc('fs-probe', ['tests/fixtures/filesystem.c']);
 cc('lifecycle-parent', ['tests/fixtures/lifecycle.c']);
 
@@ -86,5 +87,6 @@ execFileSync(
   ],
   { stdio: 'inherit' },
 );
+cc2('p2-cwd-probe', ['tests/fixtures/cwd.c'], ['-DWALOS_P2']);
 cc2('p2-fs-probe', ['tests/fixtures/filesystem.c']);
 await import('./build-p2-probe.mjs');
