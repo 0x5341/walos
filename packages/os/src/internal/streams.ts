@@ -1,3 +1,4 @@
+import { ServiceError } from '../types.js';
 import { RpcFailure, type StreamRef } from './protocol.js';
 export class IoError extends Error {
   constructor(
@@ -11,20 +12,48 @@ export const ioError = (e: unknown): IoError =>
   e instanceof IoError
     ? e
     : new IoError(
-        e instanceof DOMException
-          ? ({
-              NotFoundError: 44,
-              NotAllowedError: 2,
-              NoModificationAllowedError: 10,
-              InvalidModificationError: 29,
-              QuotaExceededError: 51,
-              TypeMismatchError: 54,
-            }[e.name] ?? 29)
-          : e instanceof RpcFailure
-            ? { 'invalid-resource': 8, startup: 29, timeout: 73, cancelled: 11, internal: 29 }[
-                e.kind
-              ]
-            : 29,
+        e instanceof ServiceError
+          ? ((
+              {
+                'invalid-resource': 8,
+                'already-consumed': 8,
+                closed: 8,
+                'broken-pipe': 64,
+                access: 2,
+                busy: 10,
+                exist: 20,
+                invalid: 28,
+                'no-entry': 44,
+                quota: 51,
+                unsupported: 52,
+                'not-directory': 54,
+                'is-directory': 31,
+                'not-empty': 55,
+                'not-permitted': 76,
+                overflow: 61,
+                timeout: 73,
+                cancelled: 11,
+              } as Record<string, number>
+            )[e.code] ?? 29)
+          : e instanceof DOMException
+            ? ({
+                NotFoundError: 44,
+                NotAllowedError: 2,
+                NoModificationAllowedError: 10,
+                InvalidModificationError: 29,
+                QuotaExceededError: 51,
+                TypeMismatchError: 54,
+              }[e.name] ?? 29)
+            : e instanceof RpcFailure
+              ? {
+                  'invalid-resource': 8,
+                  'already-consumed': 8,
+                  startup: 29,
+                  timeout: 73,
+                  cancelled: 11,
+                  internal: 29,
+                }[e.kind]
+              : 29,
         String(e),
       );
 export interface Stream {
@@ -229,11 +258,22 @@ class NullStream implements Stream {
 export class FileStream implements Stream {
   private access?: FileSystemSyncAccessHandle;
   private closed = false;
+  private writer?: FileSystemWritableFileStream;
   constructor(public ref: Extract<StreamRef, { kind: 'file' }>) {}
   async open(syncRead = false) {
     if (syncRead && this.ref.direction === 'in')
       this.access = await this.ref.file.createSyncAccessHandle({ mode: 'read-only' });
-    if (this.ref.direction === 'out') this.access = await this.ref.file.createSyncAccessHandle();
+    if (this.ref.direction === 'out') {
+      if (this.ref.file.createSyncAccessHandle)
+        this.access = await this.ref.file.createSyncAccessHandle();
+      else {
+        this.writer = await this.ref.file.createWritable({
+          keepExistingData: true,
+          mode: 'exclusive',
+        } as FileSystemCreateWritableOptions);
+        if (this.ref.append) this.ref.position = (await this.ref.file.getFile()).size;
+      }
+    }
     return this;
   }
   onReady(_listener: () => void) {
@@ -247,15 +287,14 @@ export class FileStream implements Stream {
     return 65536;
   }
   readNow(n: number) {
-    if (this.closed || this.ref.direction !== 'in' || !this.access)
-      throw new IoError(8, 'not readable');
+    if (this.closed || !this.access) throw new IoError(8, 'not readable');
     const bytes = new Uint8Array(n);
     const count = this.access.read(bytes, { at: this.ref.position });
     this.ref.position += count;
     return bytes.subarray(0, count);
   }
   async read(n: number) {
-    if (this.access && this.ref.direction === 'in') return this.readNow(n);
+    if (this.access) return this.readNow(n);
     if (this.closed || this.ref.direction !== 'in') throw new IoError(8, 'not readable');
     const f = await this.ref.file.getFile();
     const b = new Uint8Array(await f.slice(this.ref.position, this.ref.position + n).arrayBuffer());
@@ -263,6 +302,16 @@ export class FileStream implements Stream {
     return b;
   }
   async write(b: Uint8Array) {
+    if (this.writer) {
+      if (this.closed) throw new IoError(8, 'closed stream');
+      await this.writer.write({
+        type: 'write',
+        position: this.ref.position,
+        data: b as Uint8Array<ArrayBuffer>,
+      });
+      this.ref.position += b.length;
+      return b.length;
+    }
     return this.writeNow(b);
   }
   writeNow(b: Uint8Array) {
@@ -272,7 +321,11 @@ export class FileStream implements Stream {
     this.ref.position += n;
     return n;
   }
-  truncate(n: number) {
+  async truncate(n: number) {
+    if (this.writer) {
+      await this.writer.truncate(n);
+      return;
+    }
     if (!this.access) throw new IoError(8, 'not writable');
     this.access.truncate(n);
   }
@@ -289,8 +342,27 @@ export class FileStream implements Stream {
       this.access = undefined;
     }
   }
-  gone() {
+  async flushAsync() {
+    this.flush();
+    if (this.writer) {
+      const writer = this.writer;
+      this.writer = undefined;
+      await writer.close();
+      if (!this.closed)
+        this.writer = await this.ref.file.createWritable({
+          keepExistingData: true,
+          mode: 'exclusive',
+        } as FileSystemCreateWritableOptions);
+    }
+  }
+  async finish() {
     this.close();
+    const writer = this.writer;
+    this.writer = undefined;
+    await writer?.close();
+  }
+  gone() {
+    void this.finish();
   }
   detach() {
     this.close();

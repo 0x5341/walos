@@ -1,194 +1,145 @@
-import { test, expect, type Page } from '@playwright/test';
-
-type WorkerCounts = { created: number; terminated: number };
-
-// Chromium can retain a terminated Worker's DevTools target, so page.workers()
-// is not a reliable count of running threads. Observe the actual browser API
-// calls instead; native Workers still execute all WASI work in these tests.
+import { test, expect } from '@playwright/test';
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    const counts = { created: 0, terminated: 0 };
-    Object.defineProperty(window, '__walosWorkerCounts', { value: counts });
-    const NativeWorker = window.Worker;
-    window.Worker = class extends NativeWorker {
+  await page.goto('/tests/fixtures/library.html');
+});
+for (const failure of ['construct', 'send', 'error', 'messageerror'] as const)
+  test(`create rolls back partial initialization after ${failure}`, async ({ page }) => {
+    const result = await page.evaluate(async (failure) => {
+      const { Walos } = await import('/packages/os/dist/index.js');
+      let created = 0,
+        terminated = 0;
+      const NativeWorker = Worker;
+      const original = navigator.storage.getDirectory.bind(navigator.storage);
+      let storageCalls = 0;
+      navigator.storage.getDirectory = async () => {
+        storageCalls++;
+        return original();
+      };
+      (window as any).Worker = class {
+        onerror: any;
+        onmessageerror: any;
+        onmessage: any;
+        constructor() {
+          if (failure === 'construct')
+            throw new DOMException('injected construction', 'SecurityError');
+          created++;
+        }
+        postMessage() {
+          if (failure === 'send') throw new Error('injected send');
+          queueMicrotask(() =>
+            failure === 'error'
+              ? this.onerror({ preventDefault() {}, message: 'injected worker error' })
+              : this.onmessageerror({}),
+          );
+        }
+        terminate() {
+          terminated++;
+        }
+      };
+      const error = await Walos.create().then(
+        () => null,
+        (e: any) => ({ code: e.code, name: e.name }),
+      );
+      (window as any).Worker = NativeWorker;
+      navigator.storage.getDirectory = original;
+      const os = await Walos.create();
+      const processes = os.processes.length;
+      await os.dispose();
+      return { error, created, terminated, storageCalls, processes };
+    }, failure);
+    expect(result.error?.name).toBe('ServiceError');
+    expect(result.created).toBe(failure === 'construct' ? 0 : 1);
+    expect(result.terminated).toBe(result.created);
+    expect(result.storageCalls).toBe(1);
+    expect(result.processes).toBe(1);
+  });
+test('Core loss rejects outstanding RPCs, invalidates Host resources, and releases the Worker', async ({
+  page,
+}) => {
+  const result = await page.evaluate(async () => {
+    const { Walos, install } = await import('/tests/fixtures/host-harness.ts');
+    const NativeWorker = Worker;
+    let core: Worker | undefined;
+    let terminated = 0;
+    (window as any).Worker = class extends NativeWorker {
       constructor(url: string | URL, options?: WorkerOptions) {
         super(url, options);
-        counts.created++;
+        core = this;
       }
       terminate() {
-        counts.terminated++;
+        terminated++;
         super.terminate();
       }
     };
-  });
-});
-
-async function expectWorkerCounts(page: Page, expected: WorkerCounts) {
-  expect(
-    await page.evaluate(
-      () => (window as unknown as { __walosWorkerCounts: WorkerCounts }).__walosWorkerCounts,
-    ),
-  ).toEqual(expected);
-}
-
-test('public package runs real WASI pipelines without the workbench UI', async ({ page }) => {
-  await page.goto('/tests/fixtures/library.html');
-  const result = await page.evaluate(async () => {
-    const { Walos } = await import('/packages/os/dist/index.js');
-    const os = new Walos({ binUrl: new URL('/bin', location.href) });
-    let output = '';
-    const states: string[] = [];
-    os.subscribe((event) => {
-      if (event.type === 'output') output += event.text;
-      if (event.type === 'state') states.push(event.state);
-    });
-    const until = async (predicate: () => boolean) => {
-      const deadline = Date.now() + 10000;
-      while (!predicate()) {
-        if (Date.now() > deadline) throw new Error(`Timed out: ${output}`);
-        await new Promise((resolve) => setTimeout(resolve, 10));
-      }
-    };
-    const beforeBoot = os.writeInput('echo ignored\n');
-    await os.boot();
-    await until(() => output.endsWith('/ $ '));
-    const initialProcesses = os.processes;
-    const run = async (line: string) => {
-      output = '';
-      if (!os.writeInput(line + '\n')) throw new Error('No foreground input');
-      await until(() => output.endsWith(' $ '));
-      return output;
-    };
-    await run('cd /home');
-    const pipeline = await run('cat README.md | grep TODO | sort');
-    const unicode = await run('echo こんにちは');
-    await run('echo library-file > library.txt');
-    const file = await run('cat library.txt');
-    let duplicateBoot = '';
-    try {
-      await os.boot();
-    } catch (error) {
-      duplicateBoot = String(error);
-    }
-    await os.dispose();
-    await os.dispose();
-    return {
-      beforeBoot,
-      states,
-      initialProcesses,
-      pipeline,
-      unicode,
-      file,
-      duplicateBoot,
-      disposed: os.state,
-      inputAfterDispose: os.writeInput('echo ignored\n'),
-      processesAfterDispose: os.processes,
-      domChildren: document.body.children.length,
-    };
-  });
-  expect(result.beforeBoot).toBe(false);
-  expect(result.states).toEqual(['booting', 'running', 'disposed']);
-  expect(result.initialProcesses).toEqual([
-    { pid: 1, parent: null, state: 'RUNNING', argv: ['/bin/sh'] },
-  ]);
-  expect(result.pipeline).toBe('TODO apple\nTODO zebra\n/home $ ');
-  expect(result.unicode).toBe('こんにちは\n/home $ ');
-  expect(result.file).toBe('library-file\n/home $ ');
-  expect(result.duplicateBoot).toContain('Cannot boot');
-  expect(result.disposed).toBe('disposed');
-  expect(result.inputAfterDispose).toBe(false);
-  expect(result.processesAfterDispose).toEqual([]);
-  expect(result.domChildren).toBe(0);
-  await expectWorkerCounts(page, { created: 1, terminated: 1 });
-});
-
-test('library interrupts a foreground process and disposes an active session', async ({ page }) => {
-  await page.goto('/tests/fixtures/library.html');
-  const result = await page.evaluate(async () => {
-    const { Walos } = await import('/packages/os/dist/index.js');
-    const os = new Walos();
-    let output = '';
-    const exits: string[] = [];
-    os.subscribe((event) => {
-      if (event.type === 'output') output += event.text;
-      if (event.type === 'exit') exits.push(event.exit.kind);
-    });
-    const until = async (predicate: () => boolean) => {
-      const deadline = Date.now() + 10000;
-      while (!predicate()) {
-        if (Date.now() > deadline) throw new Error('Timed out waiting for the OS');
-        await new Promise((resolve) => setTimeout(resolve, 10));
-      }
-    };
-    await os.boot();
-    await until(() => output.endsWith('/ $ '));
-    output = '';
-    os.writeInput('hang\n');
-    await until(() => os.foreground.pids.length > 0);
-    os.interrupt();
-    await until(() => output.endsWith('/ $ '));
-    output = '';
-    os.writeInput('hang\n');
-    os.interrupt();
-    await until(() => output.endsWith('/ $ '));
-    os.writeInput('hang\n');
-    await until(() => os.foreground.pids.length > 0);
-    await os.dispose();
-    return { exits, state: os.state, foreground: os.foreground, processes: os.processes };
-  });
-  expect(result.exits).toContain('terminated');
-  expect(result.state).toBe('disposed');
-  expect(result.foreground).toEqual({ input: null, pids: [] });
-  expect(result.processes).toEqual([]);
-  await expectWorkerCounts(page, { created: 1, terminated: 1 });
-});
-
-test('boot rejects and reports one error when command assets are unavailable', async ({ page }) => {
-  await page.route('**/missing-bin/**', (route) => route.fulfill({ status: 404, body: 'missing' }));
-  await page.goto('/tests/fixtures/library.html');
-  const result = await page.evaluate(async () => {
-    const { Walos } = await import('/packages/os/dist/index.js');
-    const os = new Walos({ binUrl: '/missing-bin/' });
+    const os = await Walos.create();
+    const h = os.getHostProcess();
     const errors: string[] = [];
-    os.subscribe((event) => {
-      if (event.type === 'error') errors.push(event.error.message);
+    os.subscribe((e) => {
+      if (e.type === 'error') errors.push(e.error.code);
     });
-    const rejection = await os.boot().then(
+    const exe = await install(h, 'hang');
+    const child = await h.process.spawn(exe, ['hang'], [{ key: 'PWD', value: '/' }]);
+    const pending = child.wait().catch((e: any) => e.code);
+    core!.onerror!(new ErrorEvent('error', { message: 'injected Core loss', cancelable: true }));
+    const code = await pending;
+    const state = os.state;
+    let invalid = '';
+    try {
+      h.fs.getDirectories();
+    } catch (e: any) {
+      invalid = e.code;
+    }
+    const disposal = await os.dispose().then(
       () => '',
-      (error: Error) => error.message,
+      (e: any) => e.code,
     );
-    const failedState = os.state;
-    const input = os.writeInput('echo ignored\n');
-    await os.dispose();
-    return { errors, rejection, failedState, input, finalState: os.state };
+    (window as any).Worker = NativeWorker;
+    return { code, state, invalid, errors, terminated, disposal };
   });
-  expect(result.errors).toHaveLength(1);
-  expect(result.errors[0]).toContain('Missing sh.wasm');
-  expect(result.rejection).toBe(result.errors[0]);
-  expect(result.failedState).toBe('failed');
-  expect(result.input).toBe(false);
-  expect(result.finalState).toBe('disposed');
-  await expectWorkerCounts(page, { created: 0, terminated: 0 });
+  expect(result).toEqual({
+    code: 'internal',
+    state: 'failed',
+    invalid: 'invalid-resource',
+    errors: ['internal'],
+    terminated: 1,
+    disposal: 'internal',
+  });
+});
+test('disposal wakes a pending pipe read, pipe write and poll without a peer', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { Walos } = await import('/tests/fixtures/host-harness.ts');
+    const os = await Walos.create();
+    const h = os.getHostProcess();
+    const [reader, writer] = await h.io.createPipe();
+    const [empty, unused] = await h.io.createPipe();
+    for (let i = 0; i < 4; i++) {
+      writer.checkWrite();
+      await writer.write(new Uint8Array(16384));
+    }
+    const poll = writer.subscribe();
+    const blocked = poll.block().catch((e: any) => e.code);
+    const read = empty.blockingRead(1n).catch((e: any) => e.code);
+    await os.dispose();
+    return { blocked: await blocked, read: await read };
+  });
+  expect(result.blocked).toBe('invalid-resource');
+  expect(['closed', 'invalid-resource']).toContain(result.read);
 });
 
-test('dispose cancels an in-flight bootstrap without starting a Worker', async ({ page }) => {
-  await page.route('**/bin/sh.wasm', () => {});
-  await page.goto('/tests/fixtures/library.html');
+test('dispose is reentrant from a state listener and acknowledges the same completion', async ({
+  page,
+}) => {
   const result = await page.evaluate(async () => {
     const { Walos } = await import('/packages/os/dist/index.js');
-    const os = new Walos();
-    const events: string[] = [];
-    os.subscribe((event) => events.push(event.type));
-    const boot = os.boot().then(
-      () => false,
-      () => true,
-    );
-    await new Promise((resolve) => setTimeout(resolve, 30));
-    await os.dispose();
-    return { rejected: await boot, state: os.state, events };
+    const os = await Walos.create();
+    let nested: Promise<void> | undefined;
+    os.subscribe((event) => {
+      if (event.type === 'state' && event.state === 'disposed') nested = os.dispose();
+    });
+    const disposal = os.dispose();
+    const same = disposal === nested;
+    await disposal;
+    return { same, state: os.state };
   });
-  expect(result.rejected).toBe(true);
-  expect(result.state).toBe('disposed');
-  expect(result.events).not.toContain('error');
-  await expectWorkerCounts(page, { created: 0, terminated: 0 });
+  expect(result).toEqual({ same: true, state: 'disposed' });
 });

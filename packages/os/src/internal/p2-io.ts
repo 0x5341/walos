@@ -21,6 +21,7 @@ const length = (n: bigint) => Number(n > 65536n ? 65536n : n);
 /** A level-triggered view of one source. Polling never installs extra ports. */
 export class Pollable {
   private dropped = false;
+  private watchers = new Map<() => void, () => void>();
   constructor(
     private isReady: () => boolean = () => true,
     private listen: (wake: () => void) => () => void = () => () => {},
@@ -30,13 +31,28 @@ export class Pollable {
     return this.isReady();
   }
   watch(wake: () => void) {
-    return this.listen(wake);
+    if (this.dropped) {
+      wake();
+      return () => {};
+    }
+    const notify = () => wake();
+    const remove = this.listen(notify);
+    this.watchers.set(notify, remove);
+    return () => {
+      remove();
+      this.watchers.delete(notify);
+    };
   }
   block() {
     return poll([this]).then(() => {});
   }
   [Symbol.dispose]() {
     this.dropped = true;
+    for (const [wake, remove] of [...this.watchers]) {
+      remove();
+      wake();
+    }
+    this.watchers.clear();
   }
 }
 export async function poll(list: Pollable[]): Promise<Uint32Array> {
@@ -44,10 +60,16 @@ export async function poll(list: Pollable[]): Promise<Uint32Array> {
   const ready = () => list.flatMap((p, i) => (p.ready() ? [i] : []));
   let indices = ready();
   if (indices.length) return new Uint32Array(indices);
-  await new Promise<void>((resolve) => {
+  await new Promise<void>((resolve, reject) => {
     const removers: (() => void)[] = [];
     const check = () => {
-      indices = ready();
+      try {
+        indices = ready();
+      } catch (error) {
+        for (const remove of removers) remove();
+        reject(error);
+        return;
+      }
       if (!indices.length) return;
       for (const remove of removers) remove();
       resolve();
@@ -132,7 +154,14 @@ export class InputStream extends StreamResource {
   }
   async blockingRead(len: bigint) {
     this.check();
-    if (len !== 0n) await this.subscribe().block();
+    if (len !== 0n) {
+      const p = this.subscribe();
+      try {
+        await p.block();
+      } finally {
+        p[Symbol.dispose]();
+      }
+    }
     return this.read(len);
   }
   skip(len: bigint) {

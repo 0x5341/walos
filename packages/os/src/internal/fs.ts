@@ -45,6 +45,7 @@ export class Filesystem {
     return { parent: dir, name: parts.at(-1) ?? '', path: normalize(parts.join('/'), b.path) };
   }
   async open(base: number, path: string, flags: number, rights: bigint, fdflags: number) {
+    if (flags & 8 && !(rights & 64n)) throw new IoError(28, 'truncate requires write');
     const resolved = await this.resolve(base, path);
     let d: Descriptor;
     if (flags & 2 || !resolved.name) {
@@ -61,7 +62,20 @@ export class Filesystem {
           if (!(e instanceof DOMException && e.name === 'NotFoundError')) throw e;
         }
       }
-      const file = await resolved.parent.getFileHandle(resolved.name, { create: !!(flags & 1) });
+      let file: FileSystemFileHandle;
+      try {
+        file = await resolved.parent.getFileHandle(resolved.name, { create: !!(flags & 1) });
+      } catch (error) {
+        if (
+          !(error instanceof DOMException && error.name === 'TypeMismatchError') ||
+          flags & (1 | 8)
+        )
+          throw error;
+        const dir = await resolved.parent.getDirectoryHandle(resolved.name);
+        const fd = this.next++;
+        this.descriptors.set(fd, { dir, path: resolved.path });
+        return fd;
+      }
       const write = !!(rights & 64n);
       const stream = await new FileStream({
         kind: 'file',
@@ -71,7 +85,12 @@ export class Filesystem {
         position: 0,
         append: !!(fdflags & 1),
       }).open();
-      if (flags & 8) stream.truncate(0);
+      try {
+        if (flags & 8) await stream.truncate(0);
+      } catch (error) {
+        stream.close();
+        throw error;
+      }
       d = { file, path: resolved.path, stream };
     }
     const fd = this.next++;

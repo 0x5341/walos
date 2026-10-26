@@ -19,34 +19,8 @@ import {
 } from './p2-io.js';
 import { Descriptor, DirectoryEntryStream, P2Filesystem, filesystemErrorCode } from './p2-fs.js';
 import { WasiExit } from './wasi.js';
+import { createRandom, environment, wallClock, monotonicClock } from './services.js';
 
-const randomBytes = (len: bigint) => {
-  if (len > 16_777_216n) throw new Error('Random request exceeds host allocation limit');
-  const bytes = new Uint8Array(Number(len));
-  for (let i = 0; i < bytes.length; i += 65536)
-    crypto.getRandomValues(bytes.subarray(i, i + 65536));
-  return bytes;
-};
-const randomU64 = () => new DataView(randomBytes(8n).buffer).getBigUint64(0, true);
-const now = () => BigInt(Math.floor(performance.now() * 1e6));
-const timer = (instant: bigint) =>
-  new Pollable(
-    () => now() >= instant,
-    (wake) => {
-      let id: ReturnType<typeof setTimeout>;
-      const schedule = () => {
-        id = setTimeout(
-          () => {
-            if (now() >= instant) wake();
-            else schedule();
-          },
-          Math.min(2147483647, Math.max(0, Number((instant - now()) / 1000000n) + 1)),
-        );
-      };
-      schedule();
-      return () => clearTimeout(id);
-    },
-  );
 class TerminalInput {
   [Symbol.dispose]() {}
 }
@@ -79,13 +53,14 @@ export class ChildProcess {
     if (!this.live) return;
     this.live = false;
     this.release();
-    if (!this.consumed) void this.rpc.call({ op: 'drop', pid: this.processId }).catch(() => {});
+    void this.rpc.call({ op: 'drop', pid: this.processId }).catch(() => {});
   }
 }
 
 /** Preview 2 resources are local objects; only handles and control RPC cross the Core. */
 export class Wasi2 {
   stopping = false;
+  private random = createRandom();
   private streams = new Set<StreamResource>();
   private children = new Set<ChildProcess>();
   private stdio: { stream: Stream; shared: SharedStream }[] = [];
@@ -106,10 +81,11 @@ export class Wasi2 {
   async init() {
     const root = await navigator.storage.getDirectory();
     this.fs = new P2Filesystem(
-      new Filesystem(root, this.spec.cwd, this.spec.cwdPath),
+      new Filesystem(root, this.spec.cwd ?? root, this.spec.cwdPath ?? '/'),
       this.track,
       this.release,
     );
+    if (!this.spec.cwd) this.fs.fs.descriptors.delete(4);
     for (let i = 0; i < 3; i++) {
       const stream = await connect(this.spec.stdio[i]!, true);
       this.stdio.push({ stream, shared: { resources: new Set(), moved: false } });
@@ -129,7 +105,6 @@ export class Wasi2 {
   }
   private async spawn(
     executable: Descriptor,
-    cwd: Descriptor,
     argv: string[],
     env: { key: string; value: string }[],
     stdin?: InputStream,
@@ -153,16 +128,12 @@ export class Wasi2 {
         throw { tag: 'invalid-stream' };
       if (
         !this.fs.descriptors.has(executable) ||
-        !this.fs.descriptors.has(cwd) ||
         !executable.data.file ||
-        !executable.getFlags().read ||
-        !cwd.data.dir
+        !executable.getFlags().read
       )
         throw { tag: 'invalid-descriptor' };
       const spec: Spec = {
         file: executable.data.file,
-        cwd: cwd.data.dir,
-        cwdPath: cwd.data.path,
         argv: [...argv],
         env: Object.fromEntries(env.map(({ key, value }) => [key, value])),
         stdio: refs,
@@ -200,8 +171,11 @@ export class Wasi2 {
     const imports: Record<string, any> = {
       'wasi:cli/environment': {
         getArguments: () => [...this.spec.argv],
-        getEnvironment: () => Object.entries(this.spec.env),
-        initialCwd: () => this.spec.cwdPath,
+        getEnvironment: () =>
+          environment(this.spec.env)
+            .entries()
+            .map(({ key, value }) => [key, value]),
+        initialCwd: () => this.spec.env.PWD,
       },
       'wasi:cli/exit': {
         exit: (status: { tag: string }) => {
@@ -227,25 +201,17 @@ export class Wasi2 {
       'wasi:io/poll': { Pollable, poll },
       'wasi:filesystem/types': { Descriptor, DirectoryEntryStream, filesystemErrorCode },
       'wasi:filesystem/preopens': { getDirectories: () => this.fs.preopens() },
-      'wasi:clocks/wall-clock': {
-        now: () => ({
-          seconds: BigInt(Math.floor(Date.now() / 1000)),
-          nanoseconds: (Date.now() % 1000) * 1000000,
-        }),
-        resolution: () => ({ seconds: 0n, nanoseconds: 1000000 }),
+      'wasi:clocks/wall-clock': { ...wallClock },
+      'wasi:clocks/monotonic-clock': { ...monotonicClock },
+      'wasi:random/random': {
+        getRandomBytes: this.random.getRandomBytes,
+        getRandomU64: this.random.getRandomU64,
       },
-      'wasi:clocks/monotonic-clock': {
-        now,
-        resolution: () => 1000000n,
-        subscribeInstant: timer,
-        subscribeDuration: (duration: bigint) => timer(now() + duration),
-      },
-      'wasi:random/random': { getRandomBytes: randomBytes, getRandomU64: randomU64 },
       'wasi:random/insecure': {
-        getInsecureRandomBytes: randomBytes,
-        getInsecureRandomU64: randomU64,
+        getInsecureRandomBytes: this.random.getInsecureRandomBytes,
+        getInsecureRandomU64: this.random.getInsecureRandomU64,
       },
-      'wasi:random/insecure-seed': { insecureSeed: () => [randomU64(), randomU64()] },
+      'wasi:random/insecure-seed': { insecureSeed: this.random.insecureSeed },
       'walos:runtime/process': { ChildProcess, spawn: this.spawn.bind(this) },
       'walos:runtime/ipc': {
         createPipe: async () => {
@@ -255,18 +221,6 @@ export class Wasi2 {
           this.track(input);
           this.track(output);
           return [input, output];
-        },
-      },
-      'walos:runtime/terminal': {
-        setForeground: async (children: ChildProcess[], input?: ChildProcess) => {
-          await this.rpc.call({
-            op: 'foreground',
-            pids: children.map((p) => p.pid()),
-            input: input?.pid() ?? null,
-          });
-        },
-        restoreShellInput: async () => {
-          await this.rpc.call({ op: 'foreground', pids: [], input: 0 });
         },
       },
     };

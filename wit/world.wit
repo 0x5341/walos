@@ -1,4 +1,4 @@
-package walos:runtime@0.1.0;
+package walos:runtime@0.2.0;
 
 interface process {
     use wasi:filesystem/types@0.2.0.{descriptor};
@@ -14,7 +14,6 @@ interface process {
     }
     spawn: func(
         executable: borrow<descriptor>,
-        cwd: borrow<descriptor>,
         argv: list<string>,
         env: list<environment-entry>,
         stdin: option<input-stream>,
@@ -26,13 +25,7 @@ interface ipc {
     use wasi:io/streams@0.2.0.{input-stream, output-stream};
     create-pipe: func() -> tuple<input-stream, output-stream>;
 }
-interface terminal {
-    use process.{child-process};
-    set-foreground: func(children: list<borrow<child-process>>, input: option<borrow<child-process>>);
-    restore-shell-input: func();
-}
 world command {
     import process;
     import ipc;
-    import terminal;
 }

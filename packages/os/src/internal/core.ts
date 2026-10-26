@@ -4,7 +4,7 @@ interface RecordEntry {
   pid: number;
   parent: number | null;
   worker: Worker | null;
-  spec: Spec;
+  spec: Pick<Spec, 'argv' | 'env' | 'stdio'>;
   state: 'STARTING' | 'RUNNING' | 'EXITED';
   exit?: Exit;
   ready: Promise<number>;
@@ -17,6 +17,8 @@ interface RecordEntry {
   started: number;
   transferred: boolean;
   spawnRequest?: number;
+  hostSend?: (message: unknown, ports?: Transferable[]) => void;
+  retained: boolean;
 }
 export interface CoreEvents {
   (event: CoreEvent, ports?: Transferable[]): void;
@@ -30,26 +32,50 @@ export class ProcessManager {
     number,
     { pid: number; peer?: number; gone?: boolean; state: 'preparing' | 'connected' }
   >();
-  private foreground: number[] = [];
-  private inputOwner: number | null = null;
-  private controller: number | null = null;
-  focus(pid: number | null) {
-    if (this.controller === null && pid !== null) this.controller = pid;
-    this.inputOwner = pid;
-    this.emit({ type: 'foreground', input: pid, pids: [...this.foreground] });
-  }
   constructor(
     private emit: CoreEvents,
     private makeWorker = () =>
       new Worker(new URL('./process.worker.js', import.meta.url), { type: 'module' }),
     private timeout = 15_000,
   ) {}
-  private tty(pid: number, direction: 'in' | 'out'): StreamRef {
-    const c = new MessageChannel();
-    const id = this.nextStream++;
-    this.emit({ type: 'tty', pid, direction, port: c.port1 }, [c.port1]);
-    this.owners.set(id, { pid, state: 'preparing' });
-    return { kind: 'tty', id, direction, port: c.port2, capacity: 0 };
+  registerHost(
+    argv: string[],
+    env: Record<string, string>,
+    send: (message: unknown, ports?: Transferable[]) => void,
+  ) {
+    if ([...this.records.values()].some((r) => r.hostSend))
+      throw new RpcFailure('invalid-resource', 'Host already registered');
+    const pid = this.nextPid++;
+    const r: RecordEntry = {
+      pid,
+      parent: null,
+      worker: null,
+      spec: {
+        argv: [...argv],
+        env: { ...env },
+        stdio: [0, 1, 2].map((i) => ({ kind: 'null', id: 0, direction: i === 0 ? 'in' : 'out' })),
+      },
+      state: 'RUNNING',
+      ready: Promise.resolve(pid),
+      resolve: () => {},
+      reject: () => {},
+      claimed: false,
+      handles: new Set(),
+      started: performance.now(),
+      transferred: true,
+      timer: 0 as unknown as ReturnType<typeof setTimeout>,
+      hostSend: send,
+      retained: false,
+    };
+    this.records.set(pid, r);
+    this.publish();
+    return pid;
+  }
+  hostRequest(pid: number, request: Request) {
+    const r = this.records.get(pid);
+    if (!r?.hostSend || r.state !== 'RUNNING')
+      throw new RpcFailure('invalid-resource', 'Host is unavailable');
+    void this.request(r, request);
   }
   spawn(spec: Spec, parent: number | null, spawnRequest?: number): Promise<number> {
     const pid = this.nextPid++;
@@ -73,12 +99,14 @@ export class ProcessManager {
       started: performance.now(),
       transferred: false,
       spawnRequest,
+      retained: true,
       timer: setTimeout(
         () => this.finish(pid, { kind: 'terminated', message: 'startup timeout' }),
         this.timeout,
       ),
     };
     this.records.set(pid, r);
+    if (parent !== null) this.records.get(parent)?.handles.add(pid);
     try {
       const worker = (r.worker = this.makeWorker());
       const p = parent === null ? undefined : this.records.get(parent);
@@ -100,13 +128,12 @@ export class ProcessManager {
           return s;
         }
         const inherited = p?.spec.stdio[i];
-        if (!p || inherited?.kind === 'tty') return this.tty(pid, i === 0 ? 'in' : 'out');
-        if (inherited?.kind === 'null') {
+        if (!p || inherited?.kind === 'null') {
           const id = this.nextStream++;
           this.owners.set(id, { pid, state: 'preparing' });
           return { kind: 'null', id, direction: i === 0 ? 'in' : 'out' };
         }
-        throw new Error('only TTY and Null can be inherited');
+        throw new RpcFailure('invalid-resource', 'only Null stdio can be inherited');
       });
       worker.onmessage = (e) => this.message(r, e.data as FromProcess);
       worker.onerror = (e) => {
@@ -152,22 +179,21 @@ export class ProcessManager {
       switch (m.op) {
         case 'spawn':
           value = await this.spawn(m.spec, r.pid, m.id);
-          if (r.state !== 'EXITED') r.handles.add(value as number);
           break;
         case 'cancel-spawn':
           this.cancelSpawn(r.pid, m.requestId);
           break;
         case 'wait':
           this.owned(r, m.pid);
+          if (m.release) r.handles.delete(m.pid);
           value = await this.wait(m.pid);
-          r.handles.delete(m.pid);
           break;
         case 'drop':
           this.owned(r, m.pid);
           r.handles.delete(m.pid);
           {
             const child = this.records.get(m.pid);
-            if (child) child.parent = null;
+            if (child) child.retained = false;
           }
           this.reap(m.pid);
           break;
@@ -197,14 +223,6 @@ export class ProcessManager {
           ports = transferables(refs);
           break;
         }
-        case 'foreground':
-          for (const pid of m.pids) this.owned(r, pid);
-          if (m.input !== null && m.input !== 0 && m.input !== r.pid && !m.pids.includes(m.input))
-            throw new Error('invalid input owner');
-          this.foreground = m.pids;
-          this.controller = r.pid;
-          this.focus(m.input === 0 ? r.pid : m.input);
-          break;
       }
       this.send(r, { type: 'reply', id: m.id, value }, ports);
     } catch (e) {
@@ -219,7 +237,8 @@ export class ProcessManager {
   private send(r: RecordEntry, message: unknown, ports: Transferable[] = []): boolean {
     if (r.state === 'EXITED') return false;
     try {
-      r.worker!.postMessage(message, ports);
+      if (r.hostSend) r.hostSend(message, ports);
+      else r.worker!.postMessage(message, ports);
       return true;
     } catch (error) {
       // A failed transfer leaves these endpoints in the Core.
@@ -233,7 +252,8 @@ export class ProcessManager {
   }
   wait(pid: number): Promise<Exit> {
     const r = this.records.get(pid);
-    if (!r || r.claimed) return Promise.reject(new Error('exit already consumed'));
+    if (!r || r.claimed)
+      return Promise.reject(new RpcFailure('already-consumed', 'exit already consumed'));
     r.claimed = true;
     if (r.exit) {
       const exit = r.exit;
@@ -261,19 +281,17 @@ export class ProcessManager {
         this.finish(pid, { kind: 'terminated', message: 'stop grace period expired' });
     }, 150);
   }
-  interrupt() {
-    for (const r of this.records.values())
-      if (r.parent === this.controller && r.state === 'STARTING')
-        this.finish(r.pid, { kind: 'terminated', message: 'spawn cancelled by terminal' });
-    for (const pid of this.foreground) this.requestStop(pid);
-  }
   terminate(pid: number) {
     this.finish(pid, { kind: 'terminated', message: 'supervisor terminate' });
   }
+  shutdownChildren() {
+    for (const r of [...this.records.values()]) if (!r.hostSend) this.terminate(r.pid);
+  }
   dispose() {
-    for (const pid of [...this.records.keys()]) this.terminate(pid);
+    this.shutdownChildren();
     this.records.clear();
     this.owners.clear();
+    this.publish();
   }
   private finish(pid: number, exit: Exit) {
     const r = this.records.get(pid);
@@ -283,6 +301,7 @@ export class ProcessManager {
     r.exit = exit;
     clearTimeout(r.timer);
     r.worker?.terminate();
+    r.worker = null;
     if (!r.transferred)
       for (const s of r.spec.stdio)
         if (s && (s.kind === 'pipe' || s.kind === 'tty')) {
@@ -316,12 +335,11 @@ export class ProcessManager {
       if (target?.state === 'RUNNING') this.send(target, { type: 'stream-gone', id: owner.peer });
     }
     r.handles.clear();
-    this.emit({ type: 'tty-close', pid, abnormal: exit.kind !== 'exited' });
     this.emit({ type: 'exit', pid, exit, durationMs: performance.now() - r.started });
-    if (this.inputOwner === pid || this.controller === pid) this.focus(null);
     for (const child of this.records.values())
       if (child.parent === pid) {
         child.parent = null;
+        child.retained = false;
         if (child.state === 'EXITED') this.reap(child.pid);
         if (child.state === 'STARTING' && exit.kind !== 'exited')
           this.finish(child.pid, {
@@ -330,12 +348,19 @@ export class ProcessManager {
           });
       }
     r.waiter?.(exit);
-    if (r.parent === null || starting) this.reap(pid);
+    if (starting) {
+      r.retained = false;
+      if (r.parent !== null) this.records.get(r.parent)?.handles.delete(pid);
+    }
+    if (!r.retained || r.claimed) this.reap(pid);
     this.publish();
   }
   private reap(pid: number) {
     const r = this.records.get(pid);
-    if (r?.state === 'EXITED') this.records.delete(pid);
+    if (r?.state === 'EXITED') {
+      this.records.delete(pid);
+      this.publish();
+    }
   }
   private publish() {
     this.emit({

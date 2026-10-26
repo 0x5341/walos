@@ -76,7 +76,7 @@ async function launch(
     cwd: root,
     cwdPath: '/',
     argv: [format, mode],
-    env: {},
+    env: { PWD: '/' },
     stdio,
   };
   const ready = deferred<unknown>();

@@ -49,17 +49,6 @@ export async function runLifecycle(scenario: Scenario) {
     (event) => {
       events.push(event);
       if (event.type === 'processes') snapshot = event.processes;
-      if (event.type !== 'tty') return;
-      ports.push(event.port);
-      if (event.direction === 'in') inputs.set(event.pid, event.port);
-      else {
-        const decoder = new TextDecoder();
-        event.port.onmessage = ({ data }) => {
-          if (data.type === 'data')
-            outputs.set(event.pid, (outputs.get(event.pid) || '') + decoder.decode(data.bytes));
-        };
-        event.port.start();
-      }
     },
     () => {
       const worker = new Worker(new URL('./lifecycle.worker.ts', import.meta.url), {
@@ -113,6 +102,33 @@ export async function runLifecycle(scenario: Scenario) {
       return worker;
     },
   );
+  const launch = manager.spawn.bind(manager);
+  manager.spawn = (spec, parent, request) => {
+    const nextPid = (manager as any).nextPid;
+    spec.env = { PWD: '/', ...spec.env };
+    spec.stdio = spec.stdio.map((ref, i) => {
+      if (ref) return ref;
+      const c = new MessageChannel();
+      ports.push(c.port1);
+      if (i === 0) inputs.set(nextPid, c.port1);
+      else {
+        const decoder = new TextDecoder();
+        c.port1.onmessage = ({ data }) => {
+          if (data.type === 'data')
+            outputs.set(nextPid, (outputs.get(nextPid) || '') + decoder.decode(data.bytes));
+        };
+        c.port1.start();
+      }
+      return {
+        kind: 'pipe',
+        id: 0,
+        direction: i === 0 ? 'in' : 'out',
+        port: c.port2,
+        capacity: 65536,
+      };
+    });
+    return launch(spec, parent, request);
+  };
   try {
     const parentPid = await manager.spawn(
       {
@@ -187,9 +203,6 @@ export async function runLifecycle(scenario: Scenario) {
       childOutput: outputs.get(childPid) || '',
       exits: [parentPid, childPid].map(
         (pid) => events.filter((e) => e.type === 'exit' && e.pid === pid).length,
-      ),
-      ttyCloses: [parentPid, childPid].map(
-        (pid) => events.filter((e) => e.type === 'tty-close' && e.pid === pid).length,
       ),
       terminations: workers.map((w) => w.terminateCount),
       retainedParentHandles: parentRecord.handles.size,

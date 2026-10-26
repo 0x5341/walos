@@ -232,7 +232,7 @@ static int execute(char *line) {
   for (int i = 0; i < MAX_CMDS - 1; i++)
     pipes[i][0] = pipes[i][1] = -1;
   uint32_t handles[MAX_CMDS] = {0};
-  int started = 0, failed = 0, input = -1;
+  int started = 0, failed = 0;
   for (int i = 0; i < count - 1; i++)
     if (os_pipe(pipes[i])) {
       failed = 1;
@@ -268,16 +268,14 @@ static int execute(char *line) {
         break;
       }
     }
-    int exe = find_exe(c->argv[0]), cwd = open(".", O_RDONLY | O_DIRECTORY);
+    int exe = find_exe(c->argv[0]);
     char json[32768];
     int n = options(json, sizeof(json), c);
-    int err = exe < 0 || cwd < 0 || n < 0
+    int err = exe < 0 || n < 0
                   ? 1
-                  : os_spawn(exe, cwd, json, n, in, out, -1, &handles[i]);
+                  : os_spawn(exe, json, n, in, out, -1, &handles[i]);
     if (exe >= 0)
       close(exe);
-    if (cwd >= 0)
-      close(cwd);
     if (i)
       pipes[i - 1][0] = -1;
     if (i < count - 1)
@@ -292,8 +290,6 @@ static int execute(char *line) {
       break;
     }
     started++;
-    if (i == 0 && in < 0)
-      input = (int)handles[0];
   }
   for (int i = 0; i < count - 1; i++) {
     if (pipes[i][0] >= 0)
@@ -305,8 +301,7 @@ static int execute(char *line) {
     for (int i = 0; i < started; i++)
       os_stop(handles[i]);
     status = 127;
-  } else
-    os_foreground(handles, started, input);
+  }
   for (int i = 0; i < started; i++) {
     uint32_t result[2];
     int err = os_wait(handles[i], result);
@@ -335,7 +330,6 @@ int main(void) {
     if (getline(&line, &cap, stdin) < 0)
       break;
     execute(line);
-    os_foreground(NULL, 0, 0);
   }
   free(line);
   return status;
