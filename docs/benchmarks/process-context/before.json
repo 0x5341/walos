@@ -1,0 +1,1806 @@
+{
+  "schemaVersion": 2,
+  "metadata": {
+    "startedAt": "2026-10-26T20:04:00.679Z",
+    "revision": "20ca7fddcd4045f9ade819bf05415316a91452b3",
+    "dirty": true,
+    "node": "v24.19.0",
+    "playwright": "1.56.1",
+    "jco": "1.15.1",
+    "wasiSdk": "27.0",
+    "wasiSdkBuild": "27.0\nwasi-libc: 3f7eb4c7d6ed\nllvm: 87f0227cb601\nllvm-version: 20.1.8\nconfig: f992bcc08219",
+    "clang": "clang version 20.1.8-wasi-sdk (https://github.com/llvm/llvm-project 87f0227cb60147a26a1eeb4fb06e3b505e9c7261)\nTarget: wasm32-unknown-wasi\nThread model: posix\nInstalledDir: /workspace/walos/work/wasi-sdk-27.0-x86_64-linux/bin\nConfiguration file: /workspace/walos/work/wasi-sdk-27.0-x86_64-linux/bin/clang.cfg",
+    "platform": "linux",
+    "arch": "x64",
+    "release": "6.18.55",
+    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "logicalCpus": 3,
+    "parallelism": 2,
+    "totalMemoryBytes": 10452471808,
+    "trials": 3,
+    "sizes": [
+      1,
+      4096,
+      65536,
+      1048576,
+      4194304
+    ],
+    "cpuIterations": 20000000,
+    "pipeCapacityBytes": 65536,
+    "chunkBytes": 16384,
+    "headless": true,
+    "compilerFlags": [
+      "-O2",
+      "-Wall",
+      "-Wextra",
+      "-Werror",
+      "-Wl,--strip-all"
+    ],
+    "warmups": "Cold startup primes warm startup; one excluded CPU run per trial and one I/O run per size/transport.",
+    "statistics": "All samples; median, nearest-rank p95, min/max, arithmetic mean and population standard deviation; no outlier removal.",
+    "memory": "CDP Runtime.getHeapUsage in held Process Worker after READY; no forced GC; no RSS or Component-only total.",
+    "p1Sha256": "dcdc4e07c88182af8475d98442c8e962d3d46bd66b82d33c3657ff9980db65a0",
+    "p2Sha256": "f616d0be00c46e6d467d65e0fb40717c0f138a2bcae9e90db6b321151ac98ab8",
+    "chromium": "154.0.8037.57",
+    "chromiumPath": "/usr/bin/chromium",
+    "launchArgs": [
+      "--no-sandbox"
+    ],
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+    "finishedAt": "2026-10-26T20:04:20.902Z",
+    "dirtyNote": "Only an untracked node_modules dependency symlink; no tracked baseline source changes."
+  },
+  "samples": [
+    {
+      "scenario": "p1/startup-cold",
+      "trial": 1,
+      "startupMs": 20.200000000186265,
+      "readMs": 2.1450000000186265,
+      "adapterMs": 0.9350000000558794,
+      "compileMs": 0.6850000000558794,
+      "instantiateMs": 2.330000000074506,
+      "linearMemoryBytes": 131072,
+      "readyAtMs": 12.53000000002794
+    },
+    {
+      "scenario": "p1/startup-warm",
+      "trial": 1,
+      "startupMs": 19.080000000074506,
+      "readMs": 2.949999999953434,
+      "adapterMs": 1.8300000000745058,
+      "compileMs": 0.39999999990686774,
+      "instantiateMs": 1.9399999999441206,
+      "linearMemoryBytes": 131072,
+      "readyAtMs": 14.475000000093132
+    },
+    {
+      "scenario": "p1/cpu",
+      "trial": 1,
+      "runMs": 34.455000000074506,
+      "checksum": 2438676993
+    },
+    {
+      "scenario": "p1/memory-loaded",
+      "trial": 1,
+      "memoryStatus": "available",
+      "jsHeapUsedBytes": 489884,
+      "jsHeapTotalBytes": 1048576,
+      "embedderHeapUsedBytes": 773712,
+      "backingStorageBytes": 73848,
+      "linearMemoryBytes": 131072
+    },
+    {
+      "scenario": "p1/startup-cold",
+      "trial": 2,
+      "startupMs": 52.419999999925494,
+      "readMs": 1.1899999999441206,
+      "adapterMs": 2.459999999962747,
+      "compileMs": 0.8549999999813735,
+      "instantiateMs": 4.129999999888241,
+      "linearMemoryBytes": 131072,
+      "readyAtMs": 44.925000000046566
+    },
+    {
+      "scenario": "p1/startup-warm",
+      "trial": 2,
+      "startupMs": 25.40500000002794,
+      "readMs": 1.1350000000093132,
+      "adapterMs": 0.9000000001396984,
+      "compileMs": 0.6399999998975545,
+      "instantiateMs": 1.9799999999813735,
+      "linearMemoryBytes": 131072,
+      "readyAtMs": 17.31499999994412
+    },
+    {
+      "scenario": "p1/cpu",
+      "trial": 2,
+      "runMs": 48.78000000002794,
+      "checksum": 2438676993
+    },
+    {
+      "scenario": "p1/memory-loaded",
+      "trial": 2,
+      "memoryStatus": "available",
+      "jsHeapUsedBytes": 489884,
+      "jsHeapTotalBytes": 1048576,
+      "embedderHeapUsedBytes": 773712,
+      "backingStorageBytes": 73848,
+      "linearMemoryBytes": 131072
+    },
+    {
+      "scenario": "p1/startup-cold",
+      "trial": 3,
+      "startupMs": 43.080000000074506,
+      "readMs": 3.550000000046566,
+      "adapterMs": 3.284999999916181,
+      "compileMs": 1.6200000001117587,
+      "instantiateMs": 4.330000000074506,
+      "linearMemoryBytes": 131072,
+      "readyAtMs": 30.31000000005588
+    },
+    {
+      "scenario": "p1/startup-warm",
+      "trial": 3,
+      "startupMs": 33.53000000002794,
+      "readMs": 9.880000000121072,
+      "adapterMs": 4.939999999944121,
+      "compileMs": 1.040000000037253,
+      "instantiateMs": 2.0049999998882413,
+      "linearMemoryBytes": 131072,
+      "readyAtMs": 27.760000000009313
+    },
+    {
+      "scenario": "p1/cpu",
+      "trial": 3,
+      "runMs": 39.47500000009313,
+      "checksum": 2438676993
+    },
+    {
+      "scenario": "p1/memory-loaded",
+      "trial": 3,
+      "memoryStatus": "available",
+      "jsHeapUsedBytes": 489884,
+      "jsHeapTotalBytes": 1048576,
+      "embedderHeapUsedBytes": 773712,
+      "backingStorageBytes": 73848,
+      "linearMemoryBytes": 131072
+    },
+    {
+      "scenario": "p2/startup-cold",
+      "trial": 1,
+      "startupMs": 1239.6699999999255,
+      "readMs": 2.0750000001862645,
+      "adapterMs": 6.544999999925494,
+      "component.keyMs": 0.5699999998323619,
+      "component.lookupMs": 9.125,
+      "component.cache": "miss",
+      "component.converterLoadMs": 627.6599999999162,
+      "component.convertMs": 542.8300000000745,
+      "component.publishStatus": "saved",
+      "component.instantiateMs": 12.989999999990687,
+      "component.publishStartedAtMs": 1218.7600000000093,
+      "component.publishCompletedAtMs": 1241.0049999998882,
+      "component.publishMs": 22.244999999878928,
+      "loadMs": 1194.3250000001863,
+      "readyAtMs": 1218.5600000000559
+    },
+    {
+      "scenario": "p2/startup-warm",
+      "trial": 1,
+      "startupMs": 31.889999999897555,
+      "readMs": 1.430000000167638,
+      "adapterMs": 1.0749999999534339,
+      "component.keyMs": 0.5650000001769513,
+      "component.lookupMs": 8.84499999997206,
+      "component.cache": "opfs",
+      "component.instantiateMs": 8.40500000002794,
+      "loadMs": 18.570000000065193,
+      "readyAtMs": 27.575000000186265
+    },
+    {
+      "scenario": "p2/startup-opfs-reload",
+      "trial": 1,
+      "startupMs": 38.88500000000931,
+      "readMs": 1.1350000000093132,
+      "adapterMs": 1.0749999999534339,
+      "component.keyMs": 0.6049999999813735,
+      "component.lookupMs": 10.415000000037253,
+      "component.cache": "opfs",
+      "component.instantiateMs": 11.229999999981374,
+      "loadMs": 23.040000000037253,
+      "readyAtMs": 34.699999999953434
+    },
+    {
+      "scenario": "p2/startup-warm-miss",
+      "trial": 1,
+      "startupMs": 775.4449999998324,
+      "readMs": 1.2749999999068677,
+      "adapterMs": 0.9200000001583248,
+      "component.keyMs": 0.5300000000279397,
+      "component.lookupMs": 2.790000000037253,
+      "component.cache": "miss",
+      "component.converterLoadMs": 218.93999999994412,
+      "component.convertMs": 526.9399999999441,
+      "component.publishStatus": "saved",
+      "component.instantiateMs": 12.285000000149012,
+      "component.publishStartedAtMs": 772.0999999998603,
+      "component.publishCompletedAtMs": 795.2249999998603,
+      "component.publishMs": 23.125,
+      "loadMs": 762.2600000000093,
+      "readyAtMs": 771.625
+    },
+    {
+      "scenario": "p2/cpu",
+      "trial": 1,
+      "runMs": 37.75499999988824,
+      "checksum": 2438676993
+    },
+    {
+      "scenario": "p2/memory-miss",
+      "trial": 1,
+      "memoryStatus": "available",
+      "jsHeapUsedBytes": 11184020,
+      "jsHeapTotalBytes": 12840960,
+      "embedderHeapUsedBytes": 724320,
+      "backingStorageBytes": 20035176,
+      "cache": "miss"
+    },
+    {
+      "scenario": "p2/memory-opfs",
+      "trial": 1,
+      "memoryStatus": "available",
+      "jsHeapUsedBytes": 803364,
+      "jsHeapTotalBytes": 2097152,
+      "embedderHeapUsedBytes": 773712,
+      "backingStorageBytes": 536869,
+      "cache": "opfs"
+    },
+    {
+      "scenario": "p2/startup-cold",
+      "trial": 2,
+      "startupMs": 1228.7950000001583,
+      "readMs": 1.084999999962747,
+      "adapterMs": 1.8649999999906868,
+      "component.keyMs": 0.5350000001490116,
+      "component.lookupMs": 2.919999999925494,
+      "component.cache": "miss",
+      "component.converterLoadMs": 589.1750000000466,
+      "component.convertMs": 593.6650000000373,
+      "component.publishStatus": "saved",
+      "component.instantiateMs": 21.55999999982305,
+      "component.publishStartedAtMs": 1221.6200000001118,
+      "component.publishCompletedAtMs": 1242.1950000000652,
+      "component.publishMs": 20.574999999953434,
+      "loadMs": 1208.4250000000466,
+      "readyAtMs": 1220.5549999999348
+    },
+    {
+      "scenario": "p2/startup-warm",
+      "trial": 2,
+      "startupMs": 53.8499999998603,
+      "readMs": 1.0600000000558794,
+      "adapterMs": 0.8799999998882413,
+      "component.keyMs": 0.6149999999906868,
+      "component.lookupMs": 9.214999999850988,
+      "component.cache": "opfs",
+      "component.instantiateMs": 7.815000000176951,
+      "loadMs": 18.375,
+      "readyAtMs": 48.074999999953434
+    },
+    {
+      "scenario": "p2/startup-opfs-reload",
+      "trial": 2,
+      "startupMs": 55.29000000003725,
+      "readMs": 1.1400000001303852,
+      "adapterMs": 0.9150000000372529,
+      "component.keyMs": 0.5050000001210719,
+      "component.lookupMs": 11.09499999997206,
+      "component.cache": "opfs",
+      "component.instantiateMs": 13.020000000018626,
+      "loadMs": 25.165000000037253,
+      "readyAtMs": 34.57000000006519
+    },
+    {
+      "scenario": "p2/startup-warm-miss",
+      "trial": 2,
+      "startupMs": 758.5400000000373,
+      "readMs": 0.9950000001117587,
+      "adapterMs": 0.7350000001024455,
+      "component.keyMs": 0.4199999999254942,
+      "component.lookupMs": 1.9750000000931323,
+      "component.cache": "miss",
+      "component.converterLoadMs": 196.2949999999255,
+      "component.convertMs": 503.85000000009313,
+      "component.publishStatus": "saved",
+      "component.instantiateMs": 44.34499999997206,
+      "component.publishStartedAtMs": 755.6899999999441,
+      "component.publishCompletedAtMs": 782.3000000000466,
+      "component.publishMs": 26.610000000102445,
+      "loadMs": 747.4399999999441,
+      "readyAtMs": 755.2299999999814
+    },
+    {
+      "scenario": "p2/cpu",
+      "trial": 2,
+      "runMs": 39.045000000158325,
+      "checksum": 2438676993
+    },
+    {
+      "scenario": "p2/memory-miss",
+      "trial": 2,
+      "memoryStatus": "available",
+      "jsHeapUsedBytes": 11176396,
+      "jsHeapTotalBytes": 12840960,
+      "embedderHeapUsedBytes": 725056,
+      "backingStorageBytes": 20035176,
+      "cache": "miss"
+    },
+    {
+      "scenario": "p2/memory-opfs",
+      "trial": 2,
+      "memoryStatus": "available",
+      "jsHeapUsedBytes": 1489156,
+      "jsHeapTotalBytes": 2097152,
+      "embedderHeapUsedBytes": 773712,
+      "backingStorageBytes": 536775,
+      "cache": "opfs"
+    },
+    {
+      "scenario": "p2/startup-cold",
+      "trial": 3,
+      "startupMs": 1228.3349999999627,
+      "readMs": 2.3799999998882413,
+      "adapterMs": 1.3599999998696148,
+      "component.keyMs": 0.5649999999441206,
+      "component.lookupMs": 8.295000000158325,
+      "component.cache": "miss",
+      "component.converterLoadMs": 605.7649999998976,
+      "component.convertMs": 580.5949999999721,
+      "component.publishStatus": "saved",
+      "component.instantiateMs": 13.924999999813735,
+      "component.publishStartedAtMs": 1222.8149999999441,
+      "component.publishCompletedAtMs": 1247.1350000000093,
+      "component.publishMs": 24.320000000065193,
+      "loadMs": 1209.7050000000745,
+      "readyAtMs": 1222.6599999999162
+    },
+    {
+      "scenario": "p2/startup-warm",
+      "trial": 3,
+      "startupMs": 53.264999999897555,
+      "readMs": 1.1450000000186265,
+      "adapterMs": 1.034999999916181,
+      "component.keyMs": 0.6700000001583248,
+      "component.lookupMs": 11.084999999962747,
+      "component.cache": "opfs",
+      "component.instantiateMs": 8.130000000121072,
+      "loadMs": 20.46999999997206,
+      "readyAtMs": 28.9749999998603
+    },
+    {
+      "scenario": "p2/startup-opfs-reload",
+      "trial": 3,
+      "startupMs": 58.93500000005588,
+      "readMs": 0.965000000083819,
+      "adapterMs": 1.1750000000465661,
+      "component.keyMs": 0.44999999995343387,
+      "component.lookupMs": 10.054999999934807,
+      "component.cache": "opfs",
+      "component.instantiateMs": 6.525000000139698,
+      "loadMs": 17.580000000074506,
+      "readyAtMs": 52.425000000046566
+    },
+    {
+      "scenario": "p2/startup-warm-miss",
+      "trial": 3,
+      "startupMs": 756.0399999998044,
+      "readMs": 1.2600000000093132,
+      "adapterMs": 0.7749999999068677,
+      "component.keyMs": 0.4249999998137355,
+      "component.lookupMs": 2.205000000074506,
+      "component.cache": "miss",
+      "component.converterLoadMs": 207.18000000016764,
+      "component.convertMs": 521.434999999823,
+      "component.publishStatus": "saved",
+      "component.instantiateMs": 14.555000000167638,
+      "component.publishStartedAtMs": 753.8049999999348,
+      "component.publishCompletedAtMs": 774.1899999999441,
+      "component.publishMs": 20.385000000009313,
+      "loadMs": 746.3300000000745,
+      "readyAtMs": 753.1699999999255
+    },
+    {
+      "scenario": "p2/cpu",
+      "trial": 3,
+      "runMs": 56.205000000074506,
+      "checksum": 2438676993
+    },
+    {
+      "scenario": "p2/memory-miss",
+      "trial": 3,
+      "memoryStatus": "available",
+      "jsHeapUsedBytes": 11069876,
+      "jsHeapTotalBytes": 12840960,
+      "embedderHeapUsedBytes": 725152,
+      "backingStorageBytes": 20034940,
+      "cache": "miss"
+    },
+    {
+      "scenario": "p2/memory-opfs",
+      "trial": 3,
+      "memoryStatus": "available",
+      "jsHeapUsedBytes": 803364,
+      "jsHeapTotalBytes": 2097152,
+      "embedderHeapUsedBytes": 773712,
+      "backingStorageBytes": 536869,
+      "cache": "opfs"
+    },
+    {
+      "scenario": "opfs/1",
+      "trial": 1,
+      "writeMs": 1.8350000001955777,
+      "readMs": 1.909999999916181,
+      "bytes": 1,
+      "writeMiBps": 0.0005197135238717196,
+      "readMiBps": 0.0004993059248419379
+    },
+    {
+      "scenario": "pipe/1",
+      "trial": 1,
+      "elapsedMs": 0.525146484375,
+      "firstByteMs": 0.500244140625,
+      "bytes": 1,
+      "MiBps": 0.001816015806601581
+    },
+    {
+      "scenario": "opfs/1",
+      "trial": 2,
+      "writeMs": 1.9750000000931323,
+      "readMs": 0.7700000000186265,
+      "bytes": 1,
+      "writeMiBps": 0.0004828730715753311,
+      "readMiBps": 0.0012385380732249096
+    },
+    {
+      "scenario": "pipe/1",
+      "trial": 2,
+      "elapsedMs": 0.6201171875,
+      "firstByteMs": 0.580078125,
+      "bytes": 1,
+      "MiBps": 0.0015378937007874014
+    },
+    {
+      "scenario": "opfs/1",
+      "trial": 3,
+      "writeMs": 2.109999999869615,
+      "readMs": 2.5999999998603016,
+      "bytes": 1,
+      "writeMiBps": 0.00045197834903563087,
+      "readMiBps": 0.00036679781402211196
+    },
+    {
+      "scenario": "pipe/1",
+      "trial": 3,
+      "elapsedMs": 0.60009765625,
+      "firstByteMs": 0.550048828125,
+      "bytes": 1,
+      "MiBps": 0.0015891985353946297
+    },
+    {
+      "scenario": "opfs/4096",
+      "trial": 1,
+      "writeMs": 2.0350000001490116,
+      "readMs": 1.0100000000093132,
+      "bytes": 4096,
+      "writeMiBps": 1.9195331693926128,
+      "readMiBps": 3.86757425739008
+    },
+    {
+      "scenario": "pipe/4096",
+      "trial": 1,
+      "elapsedMs": 0.735107421875,
+      "firstByteMs": 0.710205078125,
+      "bytes": 4096,
+      "MiBps": 5.313849219528396
+    },
+    {
+      "scenario": "opfs/4096",
+      "trial": 2,
+      "writeMs": 2.2199999999720603,
+      "readMs": 0.8850000000093132,
+      "bytes": 4096,
+      "writeMiBps": 1.7595720720942172,
+      "readMiBps": 4.413841807863156
+    },
+    {
+      "scenario": "pipe/4096",
+      "trial": 2,
+      "elapsedMs": 0.525146484375,
+      "firstByteMs": 0.4951171875,
+      "bytes": 4096,
+      "MiBps": 7.438400743840075
+    },
+    {
+      "scenario": "opfs/4096",
+      "trial": 3,
+      "writeMs": 1.4199999999254942,
+      "readMs": 0.75,
+      "bytes": 4096,
+      "writeMiBps": 2.7508802818344766,
+      "readMiBps": 5.208333333333333
+    },
+    {
+      "scenario": "pipe/4096",
+      "trial": 3,
+      "elapsedMs": 0.590087890625,
+      "firstByteMs": 0.56005859375,
+      "bytes": 4096,
+      "MiBps": 6.619776582540339
+    },
+    {
+      "scenario": "opfs/65536",
+      "trial": 1,
+      "writeMs": 4.7999999998137355,
+      "readMs": 1.340000000083819,
+      "bytes": 65536,
+      "writeMiBps": 13.020833333838608,
+      "readMiBps": 46.6417910418586
+    },
+    {
+      "scenario": "pipe/65536",
+      "trial": 1,
+      "elapsedMs": 0.905029296875,
+      "firstByteMs": 0.780029296875,
+      "bytes": 65536,
+      "MiBps": 69.05853790126787
+    },
+    {
+      "scenario": "opfs/65536",
+      "trial": 2,
+      "writeMs": 5.070000000065193,
+      "readMs": 1.6149999999906868,
+      "bytes": 65536,
+      "writeMiBps": 12.327416173411509,
+      "readMiBps": 38.69969040269995
+    },
+    {
+      "scenario": "pipe/65536",
+      "trial": 2,
+      "elapsedMs": 2.1298828125,
+      "firstByteMs": 2,
+      "bytes": 65536,
+      "MiBps": 29.344337459880787
+    },
+    {
+      "scenario": "opfs/65536",
+      "trial": 3,
+      "writeMs": 3.2700000000186265,
+      "readMs": 1.6399999998975545,
+      "bytes": 65536,
+      "writeMiBps": 19.11314984698593,
+      "readMiBps": 38.10975609994157
+    },
+    {
+      "scenario": "pipe/65536",
+      "trial": 3,
+      "elapsedMs": 0.71484375,
+      "firstByteMs": 0.52490234375,
+      "bytes": 65536,
+      "MiBps": 87.43169398907104
+    },
+    {
+      "scenario": "opfs/1048576",
+      "trial": 1,
+      "writeMs": 33.28500000014901,
+      "readMs": 15.020000000018626,
+      "bytes": 1048576,
+      "writeMiBps": 30.043563166457055,
+      "readMiBps": 66.57789613839947
+    },
+    {
+      "scenario": "pipe/1048576",
+      "trial": 1,
+      "elapsedMs": 2.72998046875,
+      "firstByteMs": 0.7099609375,
+      "bytes": 1048576,
+      "MiBps": 366.30298694330173
+    },
+    {
+      "scenario": "opfs/1048576",
+      "trial": 2,
+      "writeMs": 31.334999999962747,
+      "readMs": 14.340000000083819,
+      "bytes": 1048576,
+      "writeMiBps": 31.913196106628014,
+      "readMiBps": 69.73500697309309
+    },
+    {
+      "scenario": "pipe/1048576",
+      "trial": 2,
+      "elapsedMs": 2.815185546875,
+      "firstByteMs": 0.6650390625,
+      "bytes": 1048576,
+      "MiBps": 355.2163732547047
+    },
+    {
+      "scenario": "opfs/1048576",
+      "trial": 3,
+      "writeMs": 31.270000000018626,
+      "readMs": 12.159999999916181,
+      "bytes": 1048576,
+      "writeMiBps": 31.979533098797713,
+      "readMiBps": 82.23684210583002
+    },
+    {
+      "scenario": "pipe/1048576",
+      "trial": 3,
+      "elapsedMs": 2.465087890625,
+      "firstByteMs": 0.455078125,
+      "bytes": 1048576,
+      "MiBps": 405.66504902446275
+    },
+    {
+      "scenario": "opfs/4194304",
+      "trial": 1,
+      "writeMs": 128.46999999997206,
+      "readMs": 54.35499999998137,
+      "bytes": 4194304,
+      "writeMiBps": 31.135673698146416,
+      "readMiBps": 73.59028608226235
+    },
+    {
+      "scenario": "pipe/4194304",
+      "trial": 1,
+      "elapsedMs": 6.91015625,
+      "firstByteMs": 0.455078125,
+      "bytes": 4194304,
+      "MiBps": 578.8581119276428
+    },
+    {
+      "scenario": "opfs/4194304",
+      "trial": 2,
+      "writeMs": 122.43000000016764,
+      "readMs": 67.77000000001863,
+      "bytes": 4194304,
+      "writeMiBps": 32.6717307848936,
+      "readMiBps": 59.02316659287149
+    },
+    {
+      "scenario": "pipe/4194304",
+      "trial": 2,
+      "elapsedMs": 6.56005859375,
+      "firstByteMs": 0.47998046875,
+      "bytes": 4194304,
+      "MiBps": 609.7506512839598
+    },
+    {
+      "scenario": "opfs/4194304",
+      "trial": 3,
+      "writeMs": 146.88999999989755,
+      "readMs": 54.169999999925494,
+      "bytes": 4194304,
+      "writeMiBps": 27.231261488207434,
+      "readMiBps": 73.84160974719406
+    },
+    {
+      "scenario": "pipe/4194304",
+      "trial": 3,
+      "elapsedMs": 8.114990234375,
+      "firstByteMs": 0.4599609375,
+      "bytes": 4194304,
+      "MiBps": 492.91494930653755
+    }
+  ],
+  "summary": {
+    "p1/startup-cold": {
+      "startupMs": {
+        "n": 3,
+        "min": 20.200000000186265,
+        "max": 52.419999999925494,
+        "mean": 38.56666666672876,
+        "median": 43.080000000074506,
+        "p95": 52.419999999925494,
+        "stddev": 13.535379155610833
+      },
+      "readMs": {
+        "n": 3,
+        "min": 1.1899999999441206,
+        "max": 3.550000000046566,
+        "mean": 2.2950000000031046,
+        "median": 2.1450000000186265,
+        "p95": 3.550000000046566,
+        "stddev": 0.969286679339466
+      },
+      "adapterMs": {
+        "n": 3,
+        "min": 0.9350000000558794,
+        "max": 3.284999999916181,
+        "mean": 2.226666666644936,
+        "median": 2.459999999962747,
+        "p95": 3.284999999916181,
+        "stddev": 0.9734674564544193
+      },
+      "compileMs": {
+        "n": 3,
+        "min": 0.6850000000558794,
+        "max": 1.6200000001117587,
+        "mean": 1.053333333383004,
+        "median": 0.8549999999813735,
+        "p95": 1.6200000001117587,
+        "stddev": 0.4066598360462753
+      },
+      "instantiateMs": {
+        "n": 3,
+        "min": 2.330000000074506,
+        "max": 4.330000000074506,
+        "mean": 3.5966666666790843,
+        "median": 4.129999999888241,
+        "p95": 4.330000000074506,
+        "stddev": 0.8993825041786513
+      },
+      "linearMemoryBytes": {
+        "n": 3,
+        "min": 131072,
+        "max": 131072,
+        "mean": 131072,
+        "median": 131072,
+        "p95": 131072,
+        "stddev": 0
+      },
+      "readyAtMs": {
+        "n": 3,
+        "min": 12.53000000002794,
+        "max": 44.925000000046566,
+        "mean": 29.255000000043463,
+        "median": 30.31000000005588,
+        "p95": 44.925000000046566,
+        "stddev": 13.24622650670299
+      }
+    },
+    "p1/startup-warm": {
+      "startupMs": {
+        "n": 3,
+        "min": 19.080000000074506,
+        "max": 33.53000000002794,
+        "mean": 26.005000000043463,
+        "median": 25.40500000002794,
+        "p95": 33.53000000002794,
+        "stddev": 5.914424457751716
+      },
+      "readMs": {
+        "n": 3,
+        "min": 1.1350000000093132,
+        "max": 9.880000000121072,
+        "mean": 4.65500000002794,
+        "median": 2.949999999953434,
+        "p95": 9.880000000121072,
+        "stddev": 3.7682024893114234
+      },
+      "adapterMs": {
+        "n": 3,
+        "min": 0.9000000001396984,
+        "max": 4.939999999944121,
+        "mean": 2.5566666667194418,
+        "median": 1.8300000000745058,
+        "p95": 4.939999999944121,
+        "stddev": 1.7275094467497767
+      },
+      "compileMs": {
+        "n": 3,
+        "min": 0.39999999990686774,
+        "max": 1.040000000037253,
+        "mean": 0.6933333332805584,
+        "median": 0.6399999998975545,
+        "p95": 1.040000000037253,
+        "stddev": 0.26398653170067876
+      },
+      "instantiateMs": {
+        "n": 3,
+        "min": 1.9399999999441206,
+        "max": 2.0049999998882413,
+        "mean": 1.9749999999379118,
+        "median": 1.9799999999813735,
+        "p95": 2.0049999998882413,
+        "stddev": 0.026770630655127567
+      },
+      "linearMemoryBytes": {
+        "n": 3,
+        "min": 131072,
+        "max": 131072,
+        "mean": 131072,
+        "median": 131072,
+        "p95": 131072,
+        "stddev": 0
+      },
+      "readyAtMs": {
+        "n": 3,
+        "min": 14.475000000093132,
+        "max": 27.760000000009313,
+        "mean": 19.850000000015523,
+        "median": 17.31499999994412,
+        "p95": 27.760000000009313,
+        "stddev": 5.712120155115479
+      }
+    },
+    "p1/cpu": {
+      "runMs": {
+        "n": 3,
+        "min": 34.455000000074506,
+        "max": 48.78000000002794,
+        "mean": 40.90333333339853,
+        "median": 39.47500000009313,
+        "p95": 48.78000000002794,
+        "stddev": 5.934728768468976
+      },
+      "checksum": {
+        "n": 3,
+        "min": 2438676993,
+        "max": 2438676993,
+        "mean": 2438676993,
+        "median": 2438676993,
+        "p95": 2438676993,
+        "stddev": 0
+      }
+    },
+    "p1/memory-loaded": {
+      "jsHeapUsedBytes": {
+        "n": 3,
+        "min": 489884,
+        "max": 489884,
+        "mean": 489884,
+        "median": 489884,
+        "p95": 489884,
+        "stddev": 0
+      },
+      "jsHeapTotalBytes": {
+        "n": 3,
+        "min": 1048576,
+        "max": 1048576,
+        "mean": 1048576,
+        "median": 1048576,
+        "p95": 1048576,
+        "stddev": 0
+      },
+      "embedderHeapUsedBytes": {
+        "n": 3,
+        "min": 773712,
+        "max": 773712,
+        "mean": 773712,
+        "median": 773712,
+        "p95": 773712,
+        "stddev": 0
+      },
+      "backingStorageBytes": {
+        "n": 3,
+        "min": 73848,
+        "max": 73848,
+        "mean": 73848,
+        "median": 73848,
+        "p95": 73848,
+        "stddev": 0
+      },
+      "linearMemoryBytes": {
+        "n": 3,
+        "min": 131072,
+        "max": 131072,
+        "mean": 131072,
+        "median": 131072,
+        "p95": 131072,
+        "stddev": 0
+      }
+    },
+    "p2/startup-cold": {
+      "startupMs": {
+        "n": 3,
+        "min": 1228.3349999999627,
+        "max": 1239.6699999999255,
+        "mean": 1232.266666666682,
+        "median": 1228.7950000001583,
+        "p95": 1239.6699999999255,
+        "stddev": 5.238314508336853
+      },
+      "readMs": {
+        "n": 3,
+        "min": 1.084999999962747,
+        "max": 2.3799999998882413,
+        "mean": 1.8466666666790843,
+        "median": 2.0750000001862645,
+        "p95": 2.3799999998882413,
+        "stddev": 0.5527858737610393
+      },
+      "adapterMs": {
+        "n": 3,
+        "min": 1.3599999998696148,
+        "max": 6.544999999925494,
+        "mean": 3.2566666665952653,
+        "median": 1.8649999999906868,
+        "p95": 6.544999999925494,
+        "stddev": 2.3343247893625243
+      },
+      "component.keyMs": {
+        "n": 3,
+        "min": 0.5350000001490116,
+        "max": 0.5699999998323619,
+        "mean": 0.5566666666418314,
+        "median": 0.5649999999441206,
+        "p95": 0.5699999998323619,
+        "stddev": 0.015456030697949003
+      },
+      "component.lookupMs": {
+        "n": 3,
+        "min": 2.919999999925494,
+        "max": 9.125,
+        "mean": 6.78000000002794,
+        "median": 8.295000000158325,
+        "p95": 9.125,
+        "stddev": 2.7503848216237494
+      },
+      "component.converterLoadMs": {
+        "n": 3,
+        "min": 589.1750000000466,
+        "max": 627.6599999999162,
+        "mean": 607.5333333332868,
+        "median": 605.7649999998976,
+        "p95": 627.6599999999162,
+        "stddev": 15.761113715533613
+      },
+      "component.convertMs": {
+        "n": 3,
+        "min": 542.8300000000745,
+        "max": 593.6650000000373,
+        "mean": 572.3633333333613,
+        "median": 580.5949999999721,
+        "p95": 593.6650000000373,
+        "stddev": 21.554111105644424
+      },
+      "component.instantiateMs": {
+        "n": 3,
+        "min": 12.989999999990687,
+        "max": 21.55999999982305,
+        "mean": 16.158333333209157,
+        "median": 13.924999999813735,
+        "p95": 21.55999999982305,
+        "stddev": 3.8385811903899247
+      },
+      "component.publishStartedAtMs": {
+        "n": 3,
+        "min": 1218.7600000000093,
+        "max": 1222.8149999999441,
+        "mean": 1221.0650000000217,
+        "median": 1221.6200000001118,
+        "p95": 1222.8149999999441,
+        "stddev": 1.7013279127283232
+      },
+      "component.publishCompletedAtMs": {
+        "n": 3,
+        "min": 1241.0049999998882,
+        "max": 1247.1350000000093,
+        "mean": 1243.4449999999877,
+        "median": 1242.1950000000652,
+        "p95": 1247.1350000000093,
+        "stddev": 2.654066063009179
+      },
+      "component.publishMs": {
+        "n": 3,
+        "min": 20.574999999953434,
+        "max": 24.320000000065193,
+        "mean": 22.37999999996585,
+        "median": 22.244999999878928,
+        "p95": 24.320000000065193,
+        "stddev": 1.5318670525923304
+      },
+      "loadMs": {
+        "n": 3,
+        "min": 1194.3250000001863,
+        "max": 1209.7050000000745,
+        "mean": 1204.1516666667692,
+        "median": 1208.4250000000466,
+        "p95": 1209.7050000000745,
+        "stddev": 6.9681242493761415
+      },
+      "readyAtMs": {
+        "n": 3,
+        "min": 1218.5600000000559,
+        "max": 1222.6599999999162,
+        "mean": 1220.5916666666355,
+        "median": 1220.5549999999348,
+        "p95": 1222.6599999999162,
+        "stddev": 1.674018783854954
+      }
+    },
+    "p2/startup-warm": {
+      "startupMs": {
+        "n": 3,
+        "min": 31.889999999897555,
+        "max": 53.8499999998603,
+        "mean": 46.334999999885135,
+        "median": 53.264999999897555,
+        "p95": 53.8499999998603,
+        "stddev": 10.216949153236174
+      },
+      "readMs": {
+        "n": 3,
+        "min": 1.0600000000558794,
+        "max": 1.430000000167638,
+        "mean": 1.2116666667473812,
+        "median": 1.1450000000186265,
+        "p95": 1.430000000167638,
+        "stddev": 0.15823681274220508
+      },
+      "adapterMs": {
+        "n": 3,
+        "min": 0.8799999998882413,
+        "max": 1.0749999999534339,
+        "mean": 0.996666666585952,
+        "median": 1.034999999916181,
+        "p95": 1.0749999999534339,
+        "stddev": 0.0840965054347726
+      },
+      "component.keyMs": {
+        "n": 3,
+        "min": 0.5650000001769513,
+        "max": 0.6700000001583248,
+        "mean": 0.616666666775321,
+        "median": 0.6149999999906868,
+        "p95": 0.6700000001583248,
+        "stddev": 0.042882267762253144
+      },
+      "component.lookupMs": {
+        "n": 3,
+        "min": 8.84499999997206,
+        "max": 11.084999999962747,
+        "mean": 9.7149999999286,
+        "median": 9.214999999850988,
+        "p95": 11.084999999962747,
+        "stddev": 0.9804420771766774
+      },
+      "component.instantiateMs": {
+        "n": 3,
+        "min": 7.815000000176951,
+        "max": 8.40500000002794,
+        "mean": 8.116666666775322,
+        "median": 8.130000000121072,
+        "p95": 8.40500000002794,
+        "stddev": 0.24105093969204
+      },
+      "loadMs": {
+        "n": 3,
+        "min": 18.375,
+        "max": 20.46999999997206,
+        "mean": 19.138333333345752,
+        "median": 18.570000000065193,
+        "p95": 20.46999999997206,
+        "stddev": 0.9449897118519601
+      },
+      "readyAtMs": {
+        "n": 3,
+        "min": 27.575000000186265,
+        "max": 48.074999999953434,
+        "mean": 34.875,
+        "median": 28.9749999998603,
+        "p95": 48.074999999953434,
+        "stddev": 9.35129224577544
+      }
+    },
+    "p2/startup-opfs-reload": {
+      "startupMs": {
+        "n": 3,
+        "min": 38.88500000000931,
+        "max": 58.93500000005588,
+        "mean": 51.03666666670082,
+        "median": 55.29000000003725,
+        "p95": 58.93500000005588,
+        "stddev": 8.72042653138098
+      },
+      "readMs": {
+        "n": 3,
+        "min": 0.965000000083819,
+        "max": 1.1400000001303852,
+        "mean": 1.0800000000745058,
+        "median": 1.1350000000093132,
+        "p95": 1.1400000001303852,
+        "stddev": 0.08134289560740651
+      },
+      "adapterMs": {
+        "n": 3,
+        "min": 0.9150000000372529,
+        "max": 1.1750000000465661,
+        "mean": 1.0550000000124176,
+        "median": 1.0749999999534339,
+        "p95": 1.1750000000465661,
+        "stddev": 0.10708252269298728
+      },
+      "component.keyMs": {
+        "n": 3,
+        "min": 0.44999999995343387,
+        "max": 0.6049999999813735,
+        "mean": 0.5200000000186265,
+        "median": 0.5050000001210719,
+        "p95": 0.6049999999813735,
+        "stddev": 0.06416125518234143
+      },
+      "component.lookupMs": {
+        "n": 3,
+        "min": 10.054999999934807,
+        "max": 11.09499999997206,
+        "mean": 10.52166666664804,
+        "median": 10.415000000037253,
+        "p95": 11.09499999997206,
+        "stddev": 0.43122564344262904
+      },
+      "component.instantiateMs": {
+        "n": 3,
+        "min": 6.525000000139698,
+        "max": 13.020000000018626,
+        "mean": 10.2583333333799,
+        "median": 11.229999999981374,
+        "p95": 13.020000000018626,
+        "stddev": 2.739143215538408
+      },
+      "loadMs": {
+        "n": 3,
+        "min": 17.580000000074506,
+        "max": 25.165000000037253,
+        "mean": 21.928333333383005,
+        "median": 23.040000000037253,
+        "p95": 25.165000000037253,
+        "stddev": 3.1947778569796625
+      },
+      "readyAtMs": {
+        "n": 3,
+        "min": 34.57000000006519,
+        "max": 52.425000000046566,
+        "mean": 40.56500000002173,
+        "median": 34.699999999953434,
+        "p95": 52.425000000046566,
+        "stddev": 8.38645435610046
+      }
+    },
+    "p2/startup-warm-miss": {
+      "startupMs": {
+        "n": 3,
+        "min": 756.0399999998044,
+        "max": 775.4449999998324,
+        "mean": 763.341666666558,
+        "median": 758.5400000000373,
+        "p95": 775.4449999998324,
+        "stddev": 8.618990982419907
+      },
+      "readMs": {
+        "n": 3,
+        "min": 0.9950000001117587,
+        "max": 1.2749999999068677,
+        "mean": 1.17666666667598,
+        "median": 1.2600000000093132,
+        "p95": 1.2749999999068677,
+        "stddev": 0.12860361141805363
+      },
+      "adapterMs": {
+        "n": 3,
+        "min": 0.7350000001024455,
+        "max": 0.9200000001583248,
+        "mean": 0.8100000000558794,
+        "median": 0.7749999999068677,
+        "p95": 0.9200000001583248,
+        "stddev": 0.07947746017159812
+      },
+      "component.keyMs": {
+        "n": 3,
+        "min": 0.4199999999254942,
+        "max": 0.5300000000279397,
+        "mean": 0.4583333332557231,
+        "median": 0.4249999998137355,
+        "p95": 0.5300000000279397,
+        "stddev": 0.05071708025508139
+      },
+      "component.lookupMs": {
+        "n": 3,
+        "min": 1.9750000000931323,
+        "max": 2.790000000037253,
+        "mean": 2.32333333340163,
+        "median": 2.205000000074506,
+        "p95": 2.790000000037253,
+        "stddev": 0.34308243257217397
+      },
+      "component.converterLoadMs": {
+        "n": 3,
+        "min": 196.2949999999255,
+        "max": 218.93999999994412,
+        "mean": 207.47166666667908,
+        "median": 207.18000000016764,
+        "p95": 218.93999999994412,
+        "stddev": 9.247082723161084
+      },
+      "component.convertMs": {
+        "n": 3,
+        "min": 503.85000000009313,
+        "max": 526.9399999999441,
+        "mean": 517.4083333332868,
+        "median": 521.434999999823,
+        "p95": 526.9399999999441,
+        "stddev": 9.847082760250213
+      },
+      "component.instantiateMs": {
+        "n": 3,
+        "min": 12.285000000149012,
+        "max": 44.34499999997206,
+        "mean": 23.72833333342957,
+        "median": 14.555000000167638,
+        "p95": 44.34499999997206,
+        "stddev": 14.607610649464302
+      },
+      "component.publishStartedAtMs": {
+        "n": 3,
+        "min": 753.8049999999348,
+        "max": 772.0999999998603,
+        "mean": 760.5316666665798,
+        "median": 755.6899999999441,
+        "p95": 772.0999999998603,
+        "stddev": 8.216165299068512
+      },
+      "component.publishCompletedAtMs": {
+        "n": 3,
+        "min": 774.1899999999441,
+        "max": 795.2249999998603,
+        "mean": 783.9049999999503,
+        "median": 782.3000000000466,
+        "p95": 795.2249999998603,
+        "stddev": 8.662171590653495
+      },
+      "component.publishMs": {
+        "n": 3,
+        "min": 20.385000000009313,
+        "max": 26.610000000102445,
+        "mean": 23.373333333370585,
+        "median": 23.125,
+        "p95": 26.610000000102445,
+        "stddev": 2.547404997723119
+      },
+      "loadMs": {
+        "n": 3,
+        "min": 746.3300000000745,
+        "max": 762.2600000000093,
+        "mean": 752.0100000000093,
+        "median": 747.4399999999441,
+        "p95": 762.2600000000093,
+        "stddev": 7.261996970527581
+      },
+      "readyAtMs": {
+        "n": 3,
+        "min": 753.1699999999255,
+        "max": 771.625,
+        "mean": 760.0083333333023,
+        "median": 755.2299999999814,
+        "p95": 771.625,
+        "stddev": 8.257162883780838
+      }
+    },
+    "p2/cpu": {
+      "runMs": {
+        "n": 3,
+        "min": 37.75499999988824,
+        "max": 56.205000000074506,
+        "mean": 44.33500000004036,
+        "median": 39.045000000158325,
+        "p95": 56.205000000074506,
+        "stddev": 8.40986325694547
+      },
+      "checksum": {
+        "n": 3,
+        "min": 2438676993,
+        "max": 2438676993,
+        "mean": 2438676993,
+        "median": 2438676993,
+        "p95": 2438676993,
+        "stddev": 0
+      }
+    },
+    "p2/memory-miss": {
+      "jsHeapUsedBytes": {
+        "n": 3,
+        "min": 11069876,
+        "max": 11184020,
+        "mean": 11143430.666666666,
+        "median": 11176396,
+        "p95": 11184020,
+        "stddev": 52104.050292552965
+      },
+      "jsHeapTotalBytes": {
+        "n": 3,
+        "min": 12840960,
+        "max": 12840960,
+        "mean": 12840960,
+        "median": 12840960,
+        "p95": 12840960,
+        "stddev": 0
+      },
+      "embedderHeapUsedBytes": {
+        "n": 3,
+        "min": 724320,
+        "max": 725152,
+        "mean": 724842.6666666666,
+        "median": 725056,
+        "p95": 725152,
+        "stddev": 371.65336299059936
+      },
+      "backingStorageBytes": {
+        "n": 3,
+        "min": 20034940,
+        "max": 20035176,
+        "mean": 20035097.333333332,
+        "median": 20035176,
+        "p95": 20035176,
+        "stddev": 111.25146690668349
+      }
+    },
+    "p2/memory-opfs": {
+      "jsHeapUsedBytes": {
+        "n": 3,
+        "min": 803364,
+        "max": 1489156,
+        "mean": 1031961.3333333334,
+        "median": 803364,
+        "p95": 1489156,
+        "stddev": 323285.4491223232
+      },
+      "jsHeapTotalBytes": {
+        "n": 3,
+        "min": 2097152,
+        "max": 2097152,
+        "mean": 2097152,
+        "median": 2097152,
+        "p95": 2097152,
+        "stddev": 0
+      },
+      "embedderHeapUsedBytes": {
+        "n": 3,
+        "min": 773712,
+        "max": 773712,
+        "mean": 773712,
+        "median": 773712,
+        "p95": 773712,
+        "stddev": 0
+      },
+      "backingStorageBytes": {
+        "n": 3,
+        "min": 536775,
+        "max": 536869,
+        "mean": 536837.6666666666,
+        "median": 536869,
+        "p95": 536869,
+        "stddev": 44.31202495435698
+      }
+    },
+    "opfs/1": {
+      "writeMs": {
+        "n": 3,
+        "min": 1.8350000001955777,
+        "max": 2.109999999869615,
+        "mean": 1.9733333333861083,
+        "median": 1.9750000000931323,
+        "p95": 2.109999999869615,
+        "stddev": 0.11227446515456169
+      },
+      "readMs": {
+        "n": 3,
+        "min": 0.7700000000186265,
+        "max": 2.5999999998603016,
+        "mean": 1.759999999931703,
+        "median": 1.909999999916181,
+        "p95": 2.5999999998603016,
+        "stddev": 0.7545859791310023
+      },
+      "bytes": {
+        "n": 3,
+        "min": 1,
+        "max": 1,
+        "mean": 1,
+        "median": 1,
+        "p95": 1,
+        "stddev": 0
+      },
+      "writeMiBps": {
+        "n": 3,
+        "min": 0.00045197834903563087,
+        "max": 0.0005197135238717196,
+        "mean": 0.00048485498149422715,
+        "median": 0.0004828730715753311,
+        "p95": 0.0005197135238717196,
+        "stddev": 2.76882580734607e-05
+      },
+      "readMiBps": {
+        "n": 3,
+        "min": 0.00036679781402211196,
+        "max": 0.0012385380732249096,
+        "mean": 0.0007015472706963198,
+        "median": 0.0004993059248419379,
+        "p95": 0.0012385380732249096,
+        "stddev": 0.0003835439491188148
+      }
+    },
+    "pipe/1": {
+      "elapsedMs": {
+        "n": 3,
+        "min": 0.525146484375,
+        "max": 0.6201171875,
+        "mean": 0.581787109375,
+        "median": 0.60009765625,
+        "p95": 0.6201171875,
+        "stddev": 0.04087636406009713
+      },
+      "firstByteMs": {
+        "n": 3,
+        "min": 0.500244140625,
+        "max": 0.580078125,
+        "mean": 0.54345703125,
+        "median": 0.550048828125,
+        "p95": 0.580078125,
+        "stddev": 0.032923700731923404
+      },
+      "bytes": {
+        "n": 3,
+        "min": 1,
+        "max": 1,
+        "mean": 1,
+        "median": 1,
+        "p95": 1,
+        "stddev": 0
+      },
+      "MiBps": {
+        "n": 3,
+        "min": 0.0015378937007874014,
+        "max": 0.001816015806601581,
+        "mean": 0.0016477026809278705,
+        "median": 0.0015891985353946297,
+        "p95": 0.001816015806601581,
+        "stddev": 0.0001208443288396533
+      }
+    },
+    "opfs/4096": {
+      "writeMs": {
+        "n": 3,
+        "min": 1.4199999999254942,
+        "max": 2.2199999999720603,
+        "mean": 1.8916666666821886,
+        "median": 2.0350000001490116,
+        "p95": 2.2199999999720603,
+        "stddev": 0.341963285924732
+      },
+      "readMs": {
+        "n": 3,
+        "min": 0.75,
+        "max": 1.0100000000093132,
+        "mean": 0.8816666666728755,
+        "median": 0.8850000000093132,
+        "p95": 1.0100000000093132,
+        "stddev": 0.10617072206140314
+      },
+      "bytes": {
+        "n": 3,
+        "min": 4096,
+        "max": 4096,
+        "mean": 4096,
+        "median": 4096,
+        "p95": 4096,
+        "stddev": 0
+      },
+      "writeMiBps": {
+        "n": 3,
+        "min": 1.7595720720942172,
+        "max": 2.7508802818344766,
+        "mean": 2.1433285077737687,
+        "median": 1.9195331693926128,
+        "p95": 2.7508802818344766,
+        "stddev": 0.434539032988186
+      },
+      "readMiBps": {
+        "n": 3,
+        "min": 3.86757425739008,
+        "max": 5.208333333333333,
+        "mean": 4.496583132862189,
+        "median": 4.413841807863156,
+        "p95": 5.208333333333333,
+        "stddev": 0.5504805900774329
+      }
+    },
+    "pipe/4096": {
+      "elapsedMs": {
+        "n": 3,
+        "min": 0.525146484375,
+        "max": 0.735107421875,
+        "mean": 0.6167805989583334,
+        "median": 0.590087890625,
+        "p95": 0.735107421875,
+        "stddev": 0.08776967710090627
+      },
+      "firstByteMs": {
+        "n": 3,
+        "min": 0.4951171875,
+        "max": 0.710205078125,
+        "mean": 0.5884602864583334,
+        "median": 0.56005859375,
+        "p95": 0.710205078125,
+        "stddev": 0.09007660549000107
+      },
+      "bytes": {
+        "n": 3,
+        "min": 4096,
+        "max": 4096,
+        "mean": 4096,
+        "median": 4096,
+        "p95": 4096,
+        "stddev": 0
+      },
+      "MiBps": {
+        "n": 3,
+        "min": 5.313849219528396,
+        "max": 7.438400743840075,
+        "mean": 6.4573421819696035,
+        "median": 6.619776582540339,
+        "p95": 7.438400743840075,
+        "stddev": 0.8749165658241748
+      }
+    },
+    "opfs/65536": {
+      "writeMs": {
+        "n": 3,
+        "min": 3.2700000000186265,
+        "max": 5.070000000065193,
+        "mean": 4.379999999965851,
+        "median": 4.7999999998137355,
+        "p95": 5.070000000065193,
+        "stddev": 0.7925906887946962
+      },
+      "readMs": {
+        "n": 3,
+        "min": 1.340000000083819,
+        "max": 1.6399999998975545,
+        "mean": 1.5316666666573535,
+        "median": 1.6149999999906868,
+        "p95": 1.6399999998975545,
+        "stddev": 0.13591255351731044
+      },
+      "bytes": {
+        "n": 3,
+        "min": 65536,
+        "max": 65536,
+        "mean": 65536,
+        "median": 65536,
+        "p95": 65536,
+        "stddev": 0
+      },
+      "writeMiBps": {
+        "n": 3,
+        "min": 12.327416173411509,
+        "max": 19.11314984698593,
+        "mean": 14.820466451412017,
+        "median": 13.020833333838608,
+        "p95": 19.11314984698593,
+        "stddev": 3.0485575704553227
+      },
+      "readMiBps": {
+        "n": 3,
+        "min": 38.10975609994157,
+        "max": 46.6417910418586,
+        "mean": 41.15041251483337,
+        "median": 38.69969040269995,
+        "p95": 46.6417910418586,
+        "stddev": 3.890452777051199
+      }
+    },
+    "pipe/65536": {
+      "elapsedMs": {
+        "n": 3,
+        "min": 0.71484375,
+        "max": 2.1298828125,
+        "mean": 1.2499186197916667,
+        "median": 0.905029296875,
+        "p95": 2.1298828125,
+        "stddev": 0.6270541555010261
+      },
+      "firstByteMs": {
+        "n": 3,
+        "min": 0.52490234375,
+        "max": 2,
+        "mean": 1.1016438802083333,
+        "median": 0.780029296875,
+        "p95": 2,
+        "stddev": 0.6437158943861626
+      },
+      "bytes": {
+        "n": 3,
+        "min": 65536,
+        "max": 65536,
+        "mean": 65536,
+        "median": 65536,
+        "p95": 65536,
+        "stddev": 0
+      },
+      "MiBps": {
+        "n": 3,
+        "min": 29.344337459880787,
+        "max": 87.43169398907104,
+        "mean": 61.944856450073225,
+        "median": 69.05853790126787,
+        "p95": 87.43169398907104,
+        "stddev": 24.241680290759803
+      }
+    },
+    "opfs/1048576": {
+      "writeMs": {
+        "n": 3,
+        "min": 31.270000000018626,
+        "max": 33.28500000014901,
+        "mean": 31.963333333376795,
+        "median": 31.334999999962747,
+        "p95": 33.28500000014901,
+        "stddev": 0.9349361238575856
+      },
+      "readMs": {
+        "n": 3,
+        "min": 12.159999999916181,
+        "max": 15.020000000018626,
+        "mean": 13.840000000006208,
+        "median": 14.340000000083819,
+        "p95": 15.020000000018626,
+        "stddev": 1.2199453540233418
+      },
+      "bytes": {
+        "n": 3,
+        "min": 1048576,
+        "max": 1048576,
+        "mean": 1048576,
+        "median": 1048576,
+        "p95": 1048576,
+        "stddev": 0
+      },
+      "writeMiBps": {
+        "n": 3,
+        "min": 30.043563166457055,
+        "max": 31.979533098797713,
+        "mean": 31.31209745729426,
+        "median": 31.913196106628014,
+        "p95": 31.979533098797713,
+        "stddev": 0.8973979364083399
+      },
+      "readMiBps": {
+        "n": 3,
+        "min": 66.57789613839947,
+        "max": 82.23684210583002,
+        "mean": 72.84991507244087,
+        "median": 69.73500697309309,
+        "p95": 82.23684210583002,
+        "stddev": 6.761540088533289
+      }
+    },
+    "pipe/1048576": {
+      "elapsedMs": {
+        "n": 3,
+        "min": 2.465087890625,
+        "max": 2.815185546875,
+        "mean": 2.6700846354166665,
+        "median": 2.72998046875,
+        "p95": 2.815185546875,
+        "stddev": 0.1490698390374047
+      },
+      "firstByteMs": {
+        "n": 3,
+        "min": 0.455078125,
+        "max": 0.7099609375,
+        "mean": 0.6100260416666666,
+        "median": 0.6650390625,
+        "p95": 0.7099609375,
+        "stddev": 0.11108896246667686
+      },
+      "bytes": {
+        "n": 3,
+        "min": 1048576,
+        "max": 1048576,
+        "mean": 1048576,
+        "median": 1048576,
+        "p95": 1048576,
+        "stddev": 0
+      },
+      "MiBps": {
+        "n": 3,
+        "min": 355.2163732547047,
+        "max": 405.66504902446275,
+        "mean": 375.7281364074897,
+        "median": 366.30298694330173,
+        "p95": 405.66504902446275,
+        "stddev": 21.647052201893533
+      }
+    },
+    "opfs/4194304": {
+      "writeMs": {
+        "n": 3,
+        "min": 122.43000000016764,
+        "max": 146.88999999989755,
+        "mean": 132.59666666667908,
+        "median": 128.46999999997206,
+        "p95": 146.88999999989755,
+        "stddev": 10.403362704122163
+      },
+      "readMs": {
+        "n": 3,
+        "min": 54.169999999925494,
+        "max": 67.77000000001863,
+        "mean": 58.76499999997517,
+        "median": 54.35499999998137,
+        "p95": 67.77000000001863,
+        "stddev": 6.36794446168161
+      },
+      "bytes": {
+        "n": 3,
+        "min": 4194304,
+        "max": 4194304,
+        "mean": 4194304,
+        "median": 4194304,
+        "p95": 4194304,
+        "stddev": 0
+      },
+      "writeMiBps": {
+        "n": 3,
+        "min": 27.231261488207434,
+        "max": 32.6717307848936,
+        "mean": 30.346221990415813,
+        "median": 31.135673698146416,
+        "p95": 32.6717307848936,
+        "stddev": 2.2901385753086765
+      },
+      "readMiBps": {
+        "n": 3,
+        "min": 59.02316659287149,
+        "max": 73.84160974719406,
+        "mean": 68.81835414077597,
+        "median": 73.59028608226235,
+        "p95": 73.84160974719406,
+        "stddev": 6.927003451233722
+      }
+    },
+    "pipe/4194304": {
+      "elapsedMs": {
+        "n": 3,
+        "min": 6.56005859375,
+        "max": 8.114990234375,
+        "mean": 7.195068359375,
+        "median": 6.91015625,
+        "p95": 8.114990234375,
+        "stddev": 0.6660001422950661
+      },
+      "firstByteMs": {
+        "n": 3,
+        "min": 0.455078125,
+        "max": 0.47998046875,
+        "mean": 0.4650065104166667,
+        "median": 0.4599609375,
+        "p95": 0.47998046875,
+        "stddev": 0.010774198674111566
+      },
+      "bytes": {
+        "n": 3,
+        "min": 4194304,
+        "max": 4194304,
+        "mean": 4194304,
+        "median": 4194304,
+        "p95": 4194304,
+        "stddev": 0
+      },
+      "MiBps": {
+        "n": 3,
+        "min": 492.91494930653755,
+        "max": 609.7506512839598,
+        "mean": 560.5079041727133,
+        "median": 578.8581119276428,
+        "p95": 609.7506512839598,
+        "stddev": 49.43138616726596
+      }
+    }
+  },
+  "publication": {
+    "attempted": 6,
+    "saved": 6,
+    "failed": 0,
+    "unavailable": 0
+  }
+}

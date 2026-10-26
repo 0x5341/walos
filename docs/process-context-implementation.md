@@ -82,3 +82,11 @@ stable code, message and optional cause; adapters translate to P1 errno/P2 varia
 - `npm run check:wit` and `diff -ru wit/generated work/wit-generated`.
 - `npm run test:benchmark` and the reproducible browser benchmark, with a fixed SDK,
   Chromium and sample protocol. See the performance record added with this PR.
+
+Final local results: **151 browser regression tests passed**, with the two production-only
+tests excluded from that run and then **2/2 production tests passed** separately.
+Typecheck/public negative examples, clean build/pack, WIT regeneration comparison,
+Pages subpath smoke test, and 3 benchmark-statistics unit tests passed. The existing
+browser benchmark completed three retained samples per scenario on both revisions.
+See [performance results and raw data](process-context-performance.md), including
+observed slowdowns and limits of the comparison.
