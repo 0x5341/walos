@@ -16,6 +16,9 @@ export default defineConfig({
   },
   preview: {
     headers: {
+      // jsco compiles Wasm directly; no blob modules or JS unsafe-eval required.
+      'Content-Security-Policy':
+        "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; style-src 'self'",
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },

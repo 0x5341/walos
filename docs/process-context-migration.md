@@ -27,7 +27,7 @@ or validates PWD. P1 initial_cwd and P2 environment.initial-cwd read the snapsho
 when Wasm calls them. Descriptor-relative operations do not consult PWD. The
 compat.c/compat2.c constructors initialize wasi-libc cwd **inside Wasm before
 main**. Thus invalid PWD may produce an ordinary exit/trap during that constructor,
-after READY; cwd-free services fixtures omit those constructors and run without
+after READY (P1 code 126; P2 wasi:cli/run maps unsuccessful exit to code 1); cwd-free services fixtures omit those constructors and run without
 PWD. The Shell uses libc chdir/getcwd/setenv and explicitly serializes its current
 environment into each child spawn. Host env remains a readonly launch snapshot.
 

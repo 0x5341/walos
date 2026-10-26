@@ -71,7 +71,7 @@ Shell with byte pipes; no implicit foreground input forwarding is provided.
 - `npm run test:benchmark` and the reproducible browser benchmark, with a fixed SDK,
   Chromium and sample protocol. See the performance record added with this PR.
 
-Final local results: **151 browser regression tests passed**, with the two production-only
+Historical #27–#31 results (before engine/cache removal): **151 browser regression tests passed**, with the two production-only
 tests excluded from that run and then **2/2 production tests passed** separately.
 Typecheck/public negative examples, clean build/pack, WIT regeneration comparison,
 Pages subpath smoke test, and 3 benchmark-statistics unit tests passed. The existing

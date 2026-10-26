@@ -1,4 +1,4 @@
-> Historical pre-integration reference. Current v0.2 behavior and verification: [ProcessContext migration](process-context-migration.md). Old engine/cache/foreground instructions below are historical only.
+> Current runner: `npm run benchmark -- --trials 3` measures jsco-only P1/P2 startup, CPU, memory, local OPFS and direct Pipes. Engine-selection/cache runners were removed; prior JSON/Markdown remain reproducible from their recorded commits. The sections below are a historical pre-integration reference. Current v0.2 behavior and verification: [ProcessContext migration](process-context-migration.md). Old engine/cache/foreground instructions below are historical only.
 
 # Reproducible PoC benchmarks
 

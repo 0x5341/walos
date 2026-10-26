@@ -1,5 +1,5 @@
 // The OS no longer starts a shell. Exercise equivalent command services through
-// the explicit Host API; interactive demo migration remains tracked in #33.
+// the explicit Host API; demo.spec.ts covers the explicit Shell consumer.
 import { test, expect } from '@playwright/test';
 test.beforeEach(async ({ page }) => {
   await page.goto('/tests/fixtures/library.html');

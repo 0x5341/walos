@@ -22,6 +22,7 @@ static int capture_file(char *path) {
     int fd = open(path, O_CREAT | O_EXCL | O_WRONLY, 0600);
     if (fd >= 0) return fd;
   }
+  path[0] = 0; /* Never unlink a file we did not create. */
   return -1;
 }
 static char *token(char **cursor) {

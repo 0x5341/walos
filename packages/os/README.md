@@ -74,3 +74,9 @@ P2 execution uses jsco only. No Component conversion cache or engine selector is
 exported. OS build/pack requires Node/npm only, with no WASI SDK or command assets.
 `@bytecodealliance/jco` is repository build tooling, not a package runtime dependency.
 No capability/security isolation model is introduced here.
+
+Serve ESM and Worker assets from the installed package through your bundler, with
+HTTPS (or localhost) for OPFS. Current Chromium JSPI is required for Wasm execution.
+The production preview tests use `script-src 'self' 'wasm-unsafe-eval'` and
+`worker-src 'self'`, with same-origin assets/fetches; no JavaScript `unsafe-eval` or
+Blob module permission is required. Cross-origin isolation is optional for the OS.
