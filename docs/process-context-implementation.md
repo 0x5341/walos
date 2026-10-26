@@ -78,3 +78,11 @@ Pages subpath smoke test, and 3 benchmark-statistics unit tests passed. The exis
 browser benchmark completed three retained samples per scenario on both revisions.
 See [performance results and raw data](process-context-performance.md), including
 observed slowdowns and limits of the comparison.
+
+## #33/#35–#38 integration verification
+
+The jsco-only integration passes 126 browser regressions (2 production-only skips),
+2 production checks under CSP, Pages subpath/persistence and 4 final demo/PWD/cache
+checks. OS build/pack, public typecheck, WIT regeneration, fixture rebuild and
+benchmark statistics pass. [Current comparative results and limitations](process-context-integration-performance.md)
+record startup, memory, OPFS and direct Pipe samples without performance release gates.

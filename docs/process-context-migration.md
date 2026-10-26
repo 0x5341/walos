@@ -67,5 +67,5 @@ in docs/benchmarks; obsolete multi-engine runners/tests are removed.
 
 CI validates public types, WIT regeneration, command fixtures, browser lifecycle,
 services and I/O, production workers and Pages subpaths. Performance numbers are
-observations, not release thresholds. See the integration performance record for
+observations, not release thresholds. See the [integration performance record](process-context-integration-performance.md) for
 current startup, memory, local OPFS and direct Pipe measurements and limitations.

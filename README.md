@@ -101,7 +101,7 @@ PRs build/test a subpath artifact; pushes to main deploy it. Production code use
 relative asset URLs and does not require cross-origin isolation. Hosting/CSP must
 allow module workers and WebAssembly compilation.
 
-[Performance records](docs/process-context-performance.md) and the
+[Current performance comparison](docs/process-context-integration-performance.md) and the
 [historical engine comparison](docs/benchmarks/2026-10-25-engines.md) retain their
 original measurements; current measurements are linked from the migration notes.
 Unsupported WASI features remain outside this change (#6/#7). JS Process execution
