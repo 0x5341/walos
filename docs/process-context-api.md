@@ -1,9 +1,13 @@
 # ProcessContext 公開API・Resource/Process意味論（Issue #26）
 
-> **状態: 承認済みの設計仕様／実装移行前。** 2026-10-26の設計インタビューを反映する。
+> **状態: 承認済みの設計仕様。#27〜#31 の実装を反映中。** 2026-10-26の設計インタビューを反映する。
 > 現在の `main` の公開APIやWITを説明する文書ではない。型・ABI・Worker・Demoの実装は後続Issueで段階的に移行する。
 >
 > Parent: [#25](https://github.com/0x5341/walos/issues/25) / Contract: [#26](https://github.com/0x5341/walos/issues/26)
+
+実装状況と検証手順は [process-context-implementation.md](process-context-implementation.md) を参照。
+公開 TypeScript 型は `packages/os/src/types.ts`、型使用例は `tests/public-api.types.ts`。
+以下の設計例の「未実装」は #26 確定時の記録であり、現在の実装との差分は実装状況文書で管理する。
 
 ## 1. 目的と原則
 

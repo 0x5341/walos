@@ -5,6 +5,11 @@ export default defineConfig({
   define: {
     __WALOS_COMPONENT_ENGINE__: JSON.stringify(process.env.WALOS_COMPONENT_ENGINE || 'jsco'),
   },
+  build: process.env.WALOS_TEST_BUILD
+    ? {
+        rollupOptions: { input: { main: 'index.html', library: 'tests/fixtures/production.html' } },
+      }
+    : undefined,
   worker: { format: 'es' },
   server: {
     headers: {

@@ -45,30 +45,29 @@ try {
   });
   await page.goto(`http://127.0.0.1:${server.address().port}${prefix}`);
   assert.equal(await page.evaluate(() => crossOriginIsolated), false);
-  const input = page.getByLabel('Terminal input');
-  const log = page.getByRole('log');
-  await expect(input).toBeEnabled({ timeout: 30000 });
-  await expect(log).toContainText('/ $');
-
-  const command = async (line, output) => {
-    const before = (await log.textContent()).length;
-    await input.fill(line);
-    await input.press('Enter');
-    await expect
-      .poll(async () => (await log.textContent()).slice(before), { timeout: 30000 })
-      .toContain(`${output}\n/ $`);
-  };
-  await command('echo pages-p1', 'pages-p1');
-  await command('p2-echo pages-p2', 'pages-p2');
-  await command('echo pages-mixed | p2-cat | cat', 'pages-mixed');
-  await command('echo pages-persisted > /home/pages.txt', '');
+  await expect(page.getByRole('log')).toContainText('Empty OS ready.', { timeout: 30000 });
+  await expect(page.locator('#processes')).toContainText('Host');
+  await expect(page.getByLabel('Terminal input')).toBeDisabled();
+  await page.evaluate(async () => {
+    const root = await navigator.storage.getDirectory();
+    const writer = await (
+      await root.getFileHandle('pages-user-file', { create: true })
+    ).createWritable();
+    await writer.write('preserved');
+    await writer.close();
+  });
   await page.reload();
-  await expect(input).toBeEnabled({ timeout: 30000 });
-  await expect(log).toContainText('/ $');
-  await command('p2-cat /home/pages.txt', 'pages-persisted');
+  await expect(page.getByRole('log')).toContainText('Empty OS ready.');
+  assert.equal(
+    await page.evaluate(async () => {
+      const root = await navigator.storage.getDirectory();
+      return (await (await root.getFileHandle('pages-user-file')).getFile()).text();
+    }),
+    'preserved',
+  );
   assert.deepEqual(errors, []);
   console.log(
-    'Pages smoke test passed: subpath assets, P1/P2, mixed pipeline, reload persistence.',
+    'Pages smoke test passed: subpath assets, empty Host initialization, reload persistence.',
   );
 } finally {
   await browser?.close();

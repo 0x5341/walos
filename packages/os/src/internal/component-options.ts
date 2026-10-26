@@ -51,8 +51,6 @@ export const componentOptions = {
         'walos:runtime/process#spawn',
         ...methods('walos:runtime/process', 'child-process', ['wait', 'request-stop']),
         'walos:runtime/ipc#create-pipe',
-        'walos:runtime/terminal#set-foreground',
-        'walos:runtime/terminal#restore-shell-input',
       ],
       exports: ['wasi:cli/run#run'],
     },

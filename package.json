@@ -9,18 +9,19 @@
   "scripts": {
     "dev": "npm run build:os && vite --host 127.0.0.1",
     "build:apps": "node scripts/build-apps.mjs",
-    "check": "npm run build:os && tsc --noEmit",
+    "check": "npm run build:os && tsc --noEmit && npm run check:public",
     "build": "npm run build:apps && npm run check && vite build",
     "test": "playwright test",
     "preview": "vite preview --host 127.0.0.1",
-    "check:wit": "jco types wit -o work/wit-generated",
+    "check:wit": "node -e \"require('node:fs').rmSync('work/wit-generated',{recursive:true,force:true})\" && jco types wit -o work/wit-generated",
     "format": "prettier --write src packages/os/src packages/os/*.json tests scripts benchmarks *.ts *.json index.html",
-    "test:production": "WALOS_TEST_BUILD=1 playwright test",
+    "test:production": "WALOS_TEST_BUILD=1 vite build && WALOS_TEST_BUILD=1 playwright test",
     "test:pages": "node scripts/test-pages.mjs",
     "build:os": "npm run build --workspace @walos/os",
     "benchmark": "npm run build:os && node benchmarks/build.mjs && tsc --noEmit -p benchmarks/tsconfig.json && node benchmarks/run.mjs",
     "test:benchmark": "node --test benchmarks/stats.test.mjs",
-    "test:engines": "node scripts/test-engines.mjs"
+    "test:engines": "node scripts/test-engines.mjs",
+    "check:public": "tsc -p tests/tsconfig.public.json"
   },
   "devDependencies": {
     "@bytecodealliance/jco": "1.15.1",

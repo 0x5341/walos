@@ -1,69 +1,35 @@
 import './style.css';
 import { Walos } from '@walos/os';
 
+// The application chooses when to install/start commands. OS creation itself
+// creates only a logical Host and preserves all user OPFS content.
 const terminal = document.querySelector<HTMLPreElement>('#terminal')!;
 const input = document.querySelector<HTMLInputElement>('#input')!;
 const state = document.querySelector('#state')!;
 const processes = document.querySelector('#processes')!;
-const os = new Walos({ binUrl: './bin/' });
-
-const output = (text: string) => {
-  terminal.append(document.createTextNode(text));
-  terminal.scrollTop = terminal.scrollHeight;
-};
-const renderState = () => {
-  state.textContent = {
-    created: 'Starting…',
-    booting: 'Starting…',
-    running: 'Running',
-    stopped: 'Stopped',
-    failed: 'OS failed',
-    disposed: 'Stopped',
-  }[os.state];
-  input.disabled = os.state !== 'running' || os.foreground.input === null;
-  if (!input.disabled) input.focus();
-};
-
-os.subscribe((event) => {
-  switch (event.type) {
-    case 'output':
-      output(event.text);
-      break;
-    case 'state':
-    case 'foreground':
-      renderState();
-      break;
-    case 'processes':
-      processes.textContent = event.processes
-        .map(
-          (process) => `${process.pid}  ${process.state.toLowerCase()}  ${process.argv.join(' ')}`,
-        )
+input.disabled = true;
+document.querySelector<HTMLButtonElement>('#interrupt')!.disabled = true;
+void Walos.create()
+  .then((os) => {
+    state.textContent = 'Running';
+    const render = () => {
+      processes.textContent = os.processes
+        .map((p) => `${p.pid}  ${p.state.toLowerCase()}  ${p.argv.join(' ') || 'Host'}`)
         .join('\n');
-      break;
-    case 'error':
-      output(`\n${event.error.message}\n`);
-      break;
-    case 'exit':
-      console.info('process exit', event);
-      break;
-  }
-});
-
-document.querySelector('#interrupt')!.addEventListener('click', () => os.interrupt());
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'c' && event.ctrlKey && !window.getSelection()?.toString()) {
-    event.preventDefault();
-    os.interrupt();
-  }
-});
-input.addEventListener('keydown', (event) => {
-  if (event.key !== 'Enter') return;
-  event.preventDefault();
-  const line = input.value + '\n';
-  input.value = '';
-  if (os.writeInput(line)) output(line);
-});
-window.addEventListener('pagehide', () => void os.dispose());
-renderState();
-// Boot errors are reported through the library's error event.
-void os.boot().catch(() => {});
+    };
+    os.subscribe((event) => {
+      if (event.type === 'processes') render();
+      if (event.type === 'error') {
+        state.textContent = 'OS failed';
+        terminal.textContent += event.error.message;
+      }
+    });
+    render();
+    terminal.textContent =
+      'Empty OS ready. Use Walos.create().getHostProcess() to open descriptors and run WASI commands.\nThe interactive shell demo migration is tracked in issue #33.\n';
+    window.addEventListener('pagehide', () => void os.dispose());
+  })
+  .catch((error) => {
+    state.textContent = 'OS failed';
+    terminal.textContent = String(error);
+  });

@@ -58,7 +58,6 @@ for (const parent of ['lifecycle-parent', 'p2-lifecycle-parent'] as const)
               order === 'exit-first' ? 'audit-parent-failed\n' : 'audit-parent-ready\n',
             );
           expect(result.exits).toEqual([1, 1]);
-          expect(result.ttyCloses).toEqual([1, 1]);
           expect(result.terminations).toEqual([1, 1]);
           expect(result.retainedParentHandles).toBe(0);
           expect(result.ownedStreams).toBe(0);
@@ -83,7 +82,6 @@ for (const parent of ['lifecycle-parent', 'p2-lifecycle-parent'] as const)
       expect(result.childExit).toEqual({ kind: 'exited', code: 0 });
       expect(result.childOutput).toBe('audit-child-survived\n');
       expect(result.exits).toEqual([1, 1]);
-      expect(result.ttyCloses).toEqual([1, 1]);
       expect(result.terminations).toEqual([1, 1]);
       expect(result.retainedParentHandles).toBe(0);
       expect(result.repliesAfterExit).toBe(0);

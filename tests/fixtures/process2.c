@@ -42,17 +42,19 @@ bool exports_wasi_cli_run_run(void) {
   process_probe_string_t args[] = {text("p2-echo"),
                                    text("component-spawn-pipe")};
   process_probe_list_string_t argv = {args, 2};
-  walos_runtime_process_list_environment_entry_t env = {0};
+  walos_runtime_process_environment_entry_t pwd = {text("PWD"),text("/")};
+  walos_runtime_process_list_environment_entry_t env = {&pwd,1};
   walos_runtime_process_spawn_error_t error;
   walos_runtime_process_own_child_process_t a, b;
   CHECK(walos_runtime_process_spawn(
-      wasi_filesystem_types_borrow_descriptor(producer), root, &argv, &env,
+      wasi_filesystem_types_borrow_descriptor(producer), &argv, &env,
       NULL, &pipe.f1, NULL, &a, &error));
   args[0] = text("cat");
   argv.len = 1;
+  wasi_cli_stdout_own_output_stream_t child_stdout = wasi_cli_stdout_get_stdout();
   CHECK(walos_runtime_process_spawn(
-      wasi_filesystem_types_borrow_descriptor(consumer), root, &argv, &env,
-      &pipe.f0, NULL, NULL, &b, &error));
+      wasi_filesystem_types_borrow_descriptor(consumer), &argv, &env,
+      &pipe.f0, &child_stdout, NULL, &b, &error));
   walos_runtime_process_borrow_child_process_t ah =
       walos_runtime_process_borrow_child_process(a);
   walos_runtime_process_borrow_child_process_t bh =
@@ -76,7 +78,7 @@ bool exports_wasi_cli_run_run(void) {
   walos_runtime_process_child_process_drop_own(b);
   // Spawn consumes explicit streams even when the executable is a directory.
   walos_runtime_ipc_create_pipe(&pipe);
-  CHECK(!walos_runtime_process_spawn(root, root, &argv, &env, NULL, &pipe.f1,
+  CHECK(!walos_runtime_process_spawn(root, &argv, &env, NULL, &pipe.f1,
                                      NULL, &a, &error));
   CHECK(error.tag == WALOS_RUNTIME_PROCESS_SPAWN_ERROR_INVALID_DESCRIPTOR);
   wasi_io_streams_input_stream_drop_own(pipe.f0);
@@ -100,7 +102,7 @@ bool exports_wasi_cli_run_run(void) {
   args[1] = text("component-file-transfer");
   argv.len = 2;
   CHECK(walos_runtime_process_spawn(
-      wasi_filesystem_types_borrow_descriptor(producer), root, &argv, &env,
+      wasi_filesystem_types_borrow_descriptor(producer), &argv, &env,
       NULL, &file_output, NULL, &a, &error));
   ah = walos_runtime_process_borrow_child_process(a);
   CHECK(
@@ -120,11 +122,12 @@ bool exports_wasi_cli_run_run(void) {
   // UI.
   wasi_filesystem_types_own_descriptor_t hang;
   CHECK(open_file(root, "bin/p2-hang", &hang));
+  walos_runtime_ipc_create_pipe(&pipe);
   args[0] = text("p2-hang");
   argv.len = 1;
   CHECK(walos_runtime_process_spawn(
-      wasi_filesystem_types_borrow_descriptor(hang), root, &argv, &env, NULL,
-      NULL, NULL, &a, &error));
+      wasi_filesystem_types_borrow_descriptor(hang), &argv, &env, NULL,
+      &pipe.f1, NULL, &a, &error));
   ah = walos_runtime_process_borrow_child_process(a);
   walos_runtime_process_method_child_process_request_stop(ah);
   CHECK(

@@ -1,3 +1,5 @@
+> **ProcessContext transition (v0.2):** `Walos.create()` now creates an empty OS with one logical Host. The package no longer automatically installs or starts the shell. The interactive demo is pending #33. Use the [package API documentation](packages/os/README.md), [contract](docs/process-context-api.md), and [implementation notes](docs/process-context-implementation.md). Historical shell instructions below describe the pre-migration implementation.
+
 # walos
 
 A browser Web OS proof of concept. A WASI Preview 1 shell starts Preview 1
