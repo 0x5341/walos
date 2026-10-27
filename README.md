@@ -1,7 +1,7 @@
 # walos
 
 A browser OS library with one logical Host ProcessContext and explicit WASI
-Preview 1/2 processes. P2 Components run with **jsco only**. OPFS file I/O stays
+Preview 1/2 processes, plus an **experimental WASI 0.3 CLI slice**. P2/P3 Components run with **jsco only**. OPFS file I/O stays
 local to the Host/Process Worker; bounded Pipe DATA travels over direct MessagePorts.
 Only run trusted applications: Worker boundaries do not enforce capability isolation.
 
@@ -29,6 +29,9 @@ See the [package API and byte Pipe example](packages/os/README.md),
 and [migration notes](docs/process-context-migration.md). Public resource disposal
 uses `Symbol.asyncDispose`. Child `wait()` is one-shot; disposal releases the handle
 without stopping the child. Use `child.requestStop()` for an explicit stop.
+
+The experimental P3 CLI implementation and its limitations are documented in
+[docs/wasip3.md](docs/wasip3.md).
 
 ## Build and run
 
