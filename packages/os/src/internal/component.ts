@@ -10,10 +10,21 @@ export function executableFormat(bytes: Uint8Array): 'p1' | 'p2' {
   throw new Error('Unsupported WebAssembly binary version');
 }
 
+export type WasiComponentVersion = 'p2' | 'p3';
+
+export function wasiCommandVersion(exports: string[]): WasiComponentVersion {
+  if (exports.some((name) => /^wasi:cli\/run@0\.3\./.test(name))) return 'p3';
+  if (exports.some((name) => /^wasi:cli\/run@0\.2\./.test(name))) return 'p2';
+  throw new Error('Expected a wasi:cli/run@0.2.x or @0.3.0 command component');
+}
+
 export async function loadComponent(
   bytes: Uint8Array,
-  imports: Record<string, unknown>,
+  createImports: (
+    version: WasiComponentVersion,
+    required: string[],
+  ) => Promise<Record<string, unknown>>,
   metrics?: ComponentMetrics,
 ) {
-  return (await import('./component-jsco.js')).loadJsco(bytes, imports, metrics);
+  return (await import('./component-jsco.js')).loadJsco(bytes, createImports, metrics);
 }
