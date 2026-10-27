@@ -30,8 +30,8 @@ export class Wasi3 {
   };
 
   async imports(required: string[]): Promise<Record<string, unknown>> {
-    const { loadWasiP3Host } = await import('@pavelsavara/jsco');
-    const { createWasiP3Host } = await loadWasiP3Host();
+    // Avoid jsco's root loader, which also references the Node-only P3 Host.
+    const { createWasiP3Host } = await import('@pavelsavara/jsco/wasip3');
     const host = createWasiP3Host({
       args: [...this.spec.argv],
       env: Object.entries(this.spec.env),
