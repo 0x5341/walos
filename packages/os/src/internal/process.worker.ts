@@ -1,10 +1,11 @@
 import { Rpc, type ToProcess, type ProcessMetrics } from './protocol.js';
 import { Wasi, WasiExit } from './wasi.js';
 import { Wasi2 } from './wasi2.js';
+import { Wasi3 } from './wasi3.js';
 import { executableFormat, loadComponent } from './component.js';
 const scope = self as unknown as DedicatedWorkerGlobalScope;
 const rpc = new Rpc((r, ports) => scope.postMessage(r, ports));
-let wasi: Wasi | Wasi2 | undefined;
+let wasi: Wasi | Wasi2 | Wasi3 | undefined;
 // Deserialization failures in this direction do not fire Worker.onmessageerror
 // in the Core. Report them over the remaining control channel instead.
 scope.onmessageerror = () => {
@@ -43,15 +44,27 @@ scope.onmessage = async (e) => {
     const adapterStart = performance.now();
     let run: () => Promise<unknown>;
     if (executableFormat(bytes) === 'p2') {
-      const adapter = new Wasi2(m.spec, rpc);
-      wasi = adapter;
-      await adapter.init();
       const loadStart = performance.now();
-      if (metrics) {
-        metrics.adapterMs = loadStart - adapterStart;
-        metrics.component = {};
-      }
-      const component = await loadComponent(bytes, adapter.imports(), metrics?.component);
+      if (metrics) metrics.component = {};
+      const component = await loadComponent(
+        bytes,
+        async (version, required) => {
+          const started = performance.now();
+          if (version === 'p3') {
+            const adapter = new Wasi3(m.spec);
+            wasi = adapter;
+            await adapter.init();
+            if (metrics) metrics.adapterMs = performance.now() - started;
+            return adapter.imports(required);
+          }
+          const adapter = new Wasi2(m.spec, rpc);
+          wasi = adapter;
+          await adapter.init();
+          if (metrics) metrics.adapterMs = performance.now() - started;
+          return adapter.imports();
+        },
+        metrics?.component,
+      );
       if (metrics) metrics.loadMs = performance.now() - loadStart;
       if (typeof component.run?.run !== 'function')
         throw new Error('Expected a wasi:cli/run command component');
