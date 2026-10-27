@@ -26,8 +26,9 @@ export async function loadJsco(
   try {
     // Existing P2 resources need method/result lowering; the P3 host already
     // exposes the canonical native-async bindings supplied by jsco.
+    const bound = version === 'p2' ? jscoImports(providers, required) : providers;
     const instance = await prepared.instantiate(
-      version === 'p2' ? jscoImports(providers, required) : providers,
+      bound as NonNullable<Parameters<typeof prepared.instantiate>[0]>,
     );
     const run = instance.exports[runName]?.run;
     if (typeof run !== 'function') throw new Error('Missing jsco ' + runName + ' export');
