@@ -1,6 +1,6 @@
 # @walos/os
 
-A browser OS with one logical Host process and explicit WASI Preview 1/2 processes.
+A browser OS with one logical Host process, explicit WASI Preview 1/2 processes, and experimental WASI 0.3 CLI support.
 The v0.2 API is a breaking change. Creating an OS starts no shell, installs no
 commands, and leaves existing OPFS user content unchanged.
 
@@ -38,6 +38,13 @@ individual pipe permits are at most 16 KiB. Release every acquired resource with
 All Host read/write/file operations returning promises must be awaited before
 moving their stream. Moving a busy stream consumes it and rejects with `busy`.
 File output `flush()` commits writes locally; disposal also confirms completion.
+
+P3 CLI support is an **experimental vertical slice**: async command entry points,
+explicit argv/env, and stdio streams backed by the existing Worker-local
+MessagePort/OPFS endpoints. P3 filesystem, HTTP, sockets, and walos-specific WIT
+imports are not implemented; unsupported imports fail instead of using an
+unrelated in-memory filesystem. This is not yet full WASI 0.3 conformance.
+See [scope and validation](../../docs/wasip3.md).
 
 The raw API is descriptor-relative and byte-oriented. Convenience operations such
 as path-based spawn, `readFile`, `writeAll`, and AsyncIterable belong in optional
