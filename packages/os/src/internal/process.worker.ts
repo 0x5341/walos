@@ -102,6 +102,8 @@ scope.onmessage = async (e) => {
       if (metrics) metrics.linearMemoryBytes = adapter.memory.buffer.byteLength;
       run = WebAssembly.promising(instance.exports._start);
     }
+    const activeWasi = wasi;
+    if (!activeWasi) throw new Error('WASI adapter failed to initialize');
     if (metrics) metrics.readyAtMs = performance.now();
     scope.postMessage({ type: 'ready', ...(metrics && { metrics }) });
     ready = true;
@@ -109,7 +111,7 @@ scope.onmessage = async (e) => {
     try {
       await run();
       const runMs = performance.now() - runStart;
-      await wasi.close();
+      await activeWasi.close();
       scope.postMessage({
         type: 'exit',
         exit: { kind: 'exited', code: 0 },
@@ -117,7 +119,7 @@ scope.onmessage = async (e) => {
       });
     } catch (e) {
       const runMs = performance.now() - runStart;
-      await wasi.close();
+      await activeWasi.close();
       scope.postMessage({
         type: 'exit',
         ...(metrics && { runMs, component: metrics.component }),
