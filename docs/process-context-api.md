@@ -1,13 +1,13 @@
 # ProcessContext 公開API・Resource/Process意味論（Issue #26）
 
-> **状態: 承認済みの設計仕様。#27〜#31 の実装を反映中。** 2026-10-26の設計インタビューを反映する。
+> **状態: v0.2.0公開契約。実装・移行の詳細はprocess-context-migration.mdを参照。** 2026-10-26の設計インタビューを反映する。
 > 現在の `main` の公開APIやWITを説明する文書ではない。型・ABI・Worker・Demoの実装は後続Issueで段階的に移行する。
 >
 > Parent: [#25](https://github.com/0x5341/walos/issues/25) / Contract: [#26](https://github.com/0x5341/walos/issues/26)
 
 実装状況と検証手順は [process-context-implementation.md](process-context-implementation.md) を参照。
 公開 TypeScript 型は `packages/os/src/types.ts`、型使用例は `tests/public-api.types.ts`。
-以下の設計例の「未実装」は #26 確定時の記録であり、現在の実装との差分は実装状況文書で管理する。
+以下はv0.2.0の契約。実行経路・Demoの制限と検証結果は実装状況文書と [移行記録](process-context-migration.md) で管理する。
 
 ## 1. 目的と原則
 
@@ -27,7 +27,7 @@ Walosを、同梱Shellの自動起動・文字列Terminalを前提としたAPI�
 ```ts
 import { Walos } from '@walos/os';
 
-// 新APIの設計例。現行のmainではまだ利用できない。
+// v0.2.0 API
 await using os = await Walos.create({
   env: { PWD: '/', PATH: '/bin' },
   argv: [],
@@ -82,7 +82,7 @@ C製Shellは `cd` に伴って `chdir()` し、必要に応じて `getcwd()` か
 
 ## 4. Raw Process API
 
-以下は**設計上の型スケッチ**。まだ実装済みのTypeScript宣言ではない。詳細なDescriptor取得メソッドやError具象クラス名は型定義時に確定する。
+以下は契約の型スケッチ。完全な宣言は `packages/os/src/types.ts` を参照。
 
 ```ts
 interface EnvironmentEntry {
@@ -181,7 +181,7 @@ OS終了時の進行中waitには正常なSupervisor終了で可能な限り `te
 - `new Walos()/boot()/attach()/binUrl/writeInput()/interrupt()/foreground/output`、`ctx.cwd/chdir/terminal`、公開Resourceの `close()/Symbol.dispose` への依存は新契約へ移行する。
 - 実装Issueは[#27](https://github.com/0x5341/walos/issues/27)（生成・Host）、[#28](https://github.com/0x5341/walos/issues/28)（Process寿命）、[#29](https://github.com/0x5341/walos/issues/29)（FS）、[#30](https://github.com/0x5341/walos/issues/30)（Byte IO）、[#31](https://github.com/0x5341/walos/issues/31)（Env/Clock/Random）、[#36](https://github.com/0x5341/walos/issues/36)（WIT ABI）、[#37](https://github.com/0x5341/walos/issues/37)（PWD遅延評価）、[#38](https://github.com/0x5341/walos/issues/38)（共通Service/性能）、[#33](https://github.com/0x5341/walos/issues/33)（Demo/Docs/CI）。
 - 関連する[#35](https://github.com/0x5341/walos/issues/35)はP2のjsco単一化・古いEngine切替とComponent変換Cacheの撤去計画。**OS Services契約の共有とRuntime切替抽象化は別物**で、Phase 1に新たな汎用ExecutionRuntimeを作らない。
-- 現状のREADME/implementationは旧実装の説明なので、この文書と異なる箇所は後続移行PRで更新する。
+- 現行READMEは新APIを説明する。旧architecture/audit/benchmark資料は履歴として明示して維持する。
 
 ## 10. 性能と検証・受け入れ基準
 
@@ -189,7 +189,7 @@ OS終了時の進行中waitには正常なSupervisor終了で可能な限り `te
 
 既存ベンチマークと同条件でWASI P1/P2起動、OPFS/Pipeスループット/レイテンシを計測し、コミット・ブラウザ・測定環境・サンプル・ばらつき・差分を記録する。**性能回帰自体はIssue完了の必須ブロッカーにしない**。観測した悪化は将来の最適化へ追跡する（#38）。
 
-**後続の実装PRで検証すること**:
+**受け入れ基準**（実行結果は実装・移行記録を参照）:
 
 - [ ] `Walos.create` はJSPI不要・同梱資産不要で成立し、Hostだけを登録する。OPFSユーザーデータを変更しない。
 - [ ] HostのPID/PPID・readonly Env/Args・PWDデフォルト、dispose後の操作拒否。
@@ -201,4 +201,4 @@ OS終了時の進行中waitには正常なSupervisor終了で可能な限り `te
 - [ ] TypeScriptの公開型だけをimportする使用例のtypecheck、README/Docs/デモ/CIの新API移行。
 - [ ] 性能測定の結果と測定条件・差分の記録（性能値を合否ゲートにしない）。
 
-> **スコープ**: この設計文書はIssue #26の契約面を固定する。ファイル追加だけでは実API・WIT・プロセス基盤はまだ変更されず、上記の実装確認項目は未完了のままである。
+> この文書は契約面を管理する。実装・検証の実績は [実装記録](process-context-implementation.md) と [移行記録](process-context-migration.md) を参照。

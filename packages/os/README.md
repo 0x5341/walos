@@ -10,7 +10,8 @@ import { Walos, ServiceError } from '@walos/os';
 await using os = await Walos.create({ env: { PWD: '/', PATH: '/bin' }, argv: [] });
 const host = os.getHostProcess(); // synchronous; always the same Host
 const [[root]] = host.fs.getDirectories();
-await using executable = await root.openAt({}, 'app.wasm', {}, { read: true });
+await using directory = root;
+await using executable = await directory.openAt({}, 'app.wasm', {}, { read: true });
 const [reader, writer] = await host.io.createPipe();
 const output = (async () => {
   try {
@@ -65,9 +66,17 @@ from the package root. Browser handles, MessagePorts and RPC structures are inte
 There is no `boot`, `attach`, `binUrl`, `cwd`, `chdir`, `terminal`, `writeInput`,
 `interrupt`, `output` event, or foreground controller. Standard WASI terminal
 introspection remains available; Null and Pipe are not TTYs. The old C shell's
-interactive input forwarding to grandchildren is not guaranteed. The demo migration
-is tracked in #33; engine/cache removal and detailed cwd compatibility are tracked
-in #35/#37. No capability/security isolation model is introduced here.
+interactive input forwarding to grandchildren is unavailable. See the
+[integration/migration notes](../../docs/process-context-migration.md) for explicit
+Shell stdio wiring, PWD/libc timing and ABI rebuild instructions.
 
-See [the API contract](../../docs/process-context-api.md) and
-[implementation and verification notes](../../docs/process-context-implementation.md).
+P2 execution uses jsco only. No Component conversion cache or engine selector is
+exported. OS build/pack requires Node/npm only, with no WASI SDK or command assets.
+`@bytecodealliance/jco` is repository build tooling, not a package runtime dependency.
+No capability/security isolation model is introduced here.
+
+Serve ESM and Worker assets from the installed package through your bundler, with
+HTTPS (or localhost) for OPFS. Current Chromium JSPI is required for Wasm execution.
+The production preview tests use `script-src 'self' 'wasm-unsafe-eval'` and
+`worker-src 'self'`, with same-origin assets/fetches; no JavaScript `unsafe-eval` or
+Blob module permission is required. Cross-origin isolation is optional for the OS.

@@ -22,7 +22,7 @@
         <section class="console">
           <div class="bar">
             <span>Terminal</span
-            ><button id="interrupt" type="button">Stop pipeline <kbd>Ctrl C</kbd></button>
+            ><button id="interrupt" type="button">Stop shell <kbd>Ctrl C</kbd></button>
           </div>
           <pre id="terminal" role="log" aria-label="Terminal output" aria-live="polite"></pre>
           <div class="entry">
@@ -40,13 +40,17 @@
         <aside>
           <h2>Try it</h2>
           <code
-            >cd /home<br />cat README.md | grep TODO | sort<br />p2-echo hello<br />echo saved &gt;
+            >cd /home<br />echo hello | p2-cat | sort<br />p2-echo hello<br />echo saved &gt;
             note.txt<br />cat &lt; note.txt</code
           >
           <h2>Processes</h2>
           <pre id="processes"></pre>
-          <p>Files in /home persist across reloads.<br />/tmp resets at startup.</p>
-          <p>Small WASI Shell. No network, job control, or security isolation.</p>
+          <p>Files in /home persist across reloads.<br />/tmp is preserved too.</p>
+          <p>
+            Small WASI Shell. Child stdin requires redirection; automatic interactive input
+            forwarding is unavailable. Stop ends the Shell; already running children may finish
+            independently. No network, job control, or security isolation.
+          </p>
         </aside>
       </div>
     </main>

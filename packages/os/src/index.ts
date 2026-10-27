@@ -1,4 +1,3 @@
-export { clearComponentCache } from './internal/component.js';
 import { HostResources, serviceError } from './internal/host.js';
 import { Rpc, RpcFailure, type CoreEvent } from './internal/protocol.js';
 import {

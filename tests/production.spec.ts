@@ -5,7 +5,10 @@ test.skip(
 );
 for (const name of ['echo', 'p2-echo'])
   test(`bundled Host starts ${name} through bundled Core/Process Workers`, async ({ page }) => {
-    await page.goto('/tests/fixtures/production.html');
+    const response = await page.goto('/tests/fixtures/production.html');
+    expect(response?.headers()['content-security-policy']).toContain(
+      "script-src 'self' 'wasm-unsafe-eval'",
+    );
     await page.waitForFunction(() => Boolean((window as any).testHost));
     const result = await page.evaluate(async (name) => {
       const h = (window as any).testHost;
