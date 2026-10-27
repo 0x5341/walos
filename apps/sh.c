@@ -16,6 +16,15 @@ struct command {
   int append;
 };
 static int status, token_literal, parse_error;
+static int capture_file(char *path) {
+  for (int i = 0; i < 100; i++) {
+    snprintf(path, 64, "/tmp/walos-capture-%08x-%08x", (unsigned)rand(), (unsigned)rand());
+    int fd = open(path, O_CREAT | O_EXCL | O_WRONLY, 0600);
+    if (fd >= 0) return fd;
+  }
+  path[0] = 0; /* Never unlink a file we did not create. */
+  return -1;
+}
 static char *token(char **cursor) {
   token_literal = 0;
   char *p = *cursor;
@@ -228,11 +237,18 @@ static int execute(char *line) {
     }
     goto cleanup;
   }
+  /* Capture terminal output in files: the shell keeps its own pipe endpoints.
+   * Pipeline DATA still flows directly between children. No implicit stdio copy. */
+  char capture[64];
+  int capture_fd = capture_file(capture);
+  if (capture_fd < 0) { perror("sh output"); status = 1; goto cleanup; }
+  close(capture_fd);
+  char errors[MAX_CMDS][64] = {{0}};
   int pipes[MAX_CMDS - 1][2];
   for (int i = 0; i < MAX_CMDS - 1; i++)
     pipes[i][0] = pipes[i][1] = -1;
   uint32_t handles[MAX_CMDS] = {0};
-  int started = 0, failed = 0, input = -1;
+  int started = 0, failed = 0;
   for (int i = 0; i < count - 1; i++)
     if (os_pipe(pipes[i])) {
       failed = 1;
@@ -241,6 +257,21 @@ static int execute(char *line) {
   for (int i = 0; i < count && !failed; i++) {
     struct command *c = &cmds[i];
     int in = i ? pipes[i - 1][0] : -1, out = i < count - 1 ? pipes[i][1] : -1;
+    if (!i && !c->in) {
+      int eof[2];
+      if (os_pipe(eof)) { failed = 1; break; }
+      close(eof[1]);
+      in = eof[0];
+    }
+    if (i == count - 1 && !c->out) out = open(capture, O_WRONLY | O_APPEND);
+    int error_output = capture_file(errors[i]);
+    if ((!c->in && in < 0) || (!c->out && out < 0) || error_output < 0) {
+      if (in >= 0) close(in);
+      if (out >= 0) close(out);
+      if (error_output >= 0) close(error_output);
+      failed = 1;
+      break;
+    }
     if (c->in) {
       if (in >= 0) {
         close(in);
@@ -249,6 +280,8 @@ static int execute(char *line) {
       in = open(c->in, O_RDONLY);
       if (in < 0) {
         perror(c->in);
+        if (out >= 0) close(out);
+        close(error_output);
         failed = 1;
         break;
       }
@@ -264,25 +297,25 @@ static int execute(char *line) {
         if (c->in && in >= 0)
           close(in);
         perror(c->out);
+        close(error_output);
         failed = 1;
         break;
       }
     }
-    int exe = find_exe(c->argv[0]), cwd = open(".", O_RDONLY | O_DIRECTORY);
+    int exe = find_exe(c->argv[0]);
     char json[32768];
     int n = options(json, sizeof(json), c);
-    int err = exe < 0 || cwd < 0 || n < 0
+    int err = exe < 0 || n < 0
                   ? 1
-                  : os_spawn(exe, cwd, json, n, in, out, -1, &handles[i]);
+                  : os_spawn(exe, json, n, in, out, error_output, &handles[i]);
     if (exe >= 0)
       close(exe);
-    if (cwd >= 0)
-      close(cwd);
     if (i)
       pipes[i - 1][0] = -1;
     if (i < count - 1)
       pipes[i][1] = -1;
     if (err) {
+      close(error_output);
       if (in >= 0)
         close(in);
       if (out >= 0)
@@ -292,8 +325,6 @@ static int execute(char *line) {
       break;
     }
     started++;
-    if (i == 0 && in < 0)
-      input = (int)handles[0];
   }
   for (int i = 0; i < count - 1; i++) {
     if (pipes[i][0] >= 0)
@@ -305,13 +336,29 @@ static int execute(char *line) {
     for (int i = 0; i < started; i++)
       os_stop(handles[i]);
     status = 127;
-  } else
-    os_foreground(handles, started, input);
+  }
   for (int i = 0; i < started; i++) {
     uint32_t result[2];
     int err = os_wait(handles[i], result);
     if (!failed && i == started - 1)
       status = err ? 125 : (int)result[1];
+  }
+  FILE *captured = fopen(capture, "r");
+  if (captured) {
+    char buffer[16384];
+    size_t length;
+    while ((length = fread(buffer, 1, sizeof(buffer), captured))) fwrite(buffer, 1, length, stdout);
+    fclose(captured);
+  }
+  unlink(capture);
+  for (int i = 0; i < count; i++) if (errors[i][0]) {
+    FILE *error_file = fopen(errors[i], "r");
+    if (error_file) {
+      char buffer[16384]; size_t length;
+      while ((length = fread(buffer, 1, sizeof(buffer), error_file))) fwrite(buffer, 1, length, stderr);
+      fclose(error_file);
+    }
+    unlink(errors[i]);
   }
 cleanup:
   for (int i = 0; i < count; i++) {
@@ -335,7 +382,6 @@ int main(void) {
     if (getline(&line, &cap, stdin) < 0)
       break;
     execute(line);
-    os_foreground(NULL, 0, 0);
   }
   free(line);
   return status;

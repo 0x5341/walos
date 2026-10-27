@@ -19,7 +19,7 @@ export default defineConfig({
   build: {
     lib: {
       entry: Object.fromEntries(
-        ['jco', 'component-polyengine', 'component-jsco'].map((name) => [
+        ['component-jsco'].map((name) => [
           name,
           fileURLToPath(new URL(`./src/internal/${name}.ts`, import.meta.url)),
         ]),

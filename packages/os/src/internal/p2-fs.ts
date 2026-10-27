@@ -64,7 +64,9 @@ export class P2Filesystem {
     const flags = { read: true, write: true, mutateDirectory: true };
     return [
       [this.descriptor(this.fs.get(3), flags), '/'],
-      [this.descriptor(this.fs.get(4), flags), this.fs.cwdPath],
+      ...(this.fs.descriptors.has(4)
+        ? [[this.descriptor(this.fs.get(4), flags), this.fs.cwdPath]]
+        : []),
     ];
   }
   close() {
@@ -115,7 +117,7 @@ export class Descriptor {
       file: this.file(),
       position: offsetNumber(offset),
       append,
-    }).open(true);
+    }).open(typeof window === 'undefined');
     this.streams.add(stream);
     return stream;
   }
@@ -152,7 +154,7 @@ export class Descriptor {
       return resource;
     });
   }
-  getType() {
+  getType(): 'directory' | 'regular-file' {
     this.check();
     return this.data.dir ? 'directory' : 'regular-file';
   }
@@ -165,7 +167,7 @@ export class Descriptor {
   }
   async syncData() {
     this.check();
-    for (const stream of this.streams) stream.flush();
+    for (const stream of this.streams) await stream.flushAsync();
   }
   async sync() {
     await this.syncData();
@@ -174,9 +176,9 @@ export class Descriptor {
     return fsCall(async () => {
       const stream = await this.fileStream('out', 0n);
       try {
-        stream.truncate(offsetNumber(size));
+        await stream.truncate(offsetNumber(size));
       } finally {
-        stream.close();
+        await stream.finish();
         this.streams.delete(stream);
       }
     });
@@ -215,9 +217,9 @@ export class Descriptor {
     return fsCall(async () => {
       const stream = await this.fileStream('out', offset);
       try {
-        return BigInt(stream.writeNow(bytes));
+        return BigInt(await stream.write(bytes));
       } finally {
-        stream.close();
+        await stream.finish();
         this.streams.delete(stream);
       }
     });
@@ -394,8 +396,12 @@ export class DirectoryEntryStream {
           };
     });
   }
-  [Symbol.dispose]() {
+  async closeAsync() {
+    if (!this.live) return;
     this.live = false;
-    void this.iterator.return?.();
+    await this.iterator.return?.();
+  }
+  [Symbol.dispose]() {
+    void this.closeAsync();
   }
 }

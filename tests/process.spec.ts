@@ -25,7 +25,7 @@ test('supervisor disposal terminates running and starting processes once', async
       cwd: {} as any,
       cwdPath: '/',
       argv: ['fixture'],
-      env: {},
+      env: { PWD: '/' },
       stdio: [null, null, null],
     });
     const boot = manager.spawn(spec(), null);
@@ -57,7 +57,7 @@ for (const reason of ['normal', 'trap', 'error', 'messageerror'] as const)
     test(`parent ${reason} exit ${readyFirst ? 'after' : 'before'} child READY`, async ({
       page,
     }) => {
-      await page.goto('/');
+      await page.goto('/tests/fixtures/library.html');
       const result = await page.evaluate(
         async ({ reason, readyFirst }) => {
           const { ProcessManager } = await import('/packages/os/dist/internal/core.js');
@@ -93,7 +93,7 @@ for (const reason of ['normal', 'trap', 'error', 'messageerror'] as const)
             cwd: {} as any,
             cwdPath: '/',
             argv: ['fixture'],
-            env: {},
+            env: { PWD: '/' },
             stdio: [null, null, null],
           });
           const parent = pm.spawn(spec(), null);
@@ -132,7 +132,7 @@ for (const reason of ['normal', 'trap', 'error', 'messageerror'] as const)
     });
   }
 test('startup timeout ignores late READY and releases once', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/tests/fixtures/library.html');
   const result = await page.evaluate(async () => {
     const { ProcessManager } = await import('/packages/os/dist/internal/core.js');
     const events: any[] = [];
@@ -148,7 +148,7 @@ test('startup timeout ignores late READY and releases once', async ({ page }) =>
         cwd: {} as any,
         cwdPath: '/',
         argv: [],
-        env: {},
+        env: { PWD: '/' },
         stdio: [null, null, null],
       },
       null,
@@ -172,7 +172,7 @@ test('startup timeout ignores late READY and releases once', async ({ page }) =>
           cwd: {} as any,
           cwdPath: '/',
           argv: [],
-          env: {},
+          env: { PWD: '/' },
           stdio: [null, null, null],
         },
         null,
@@ -192,7 +192,7 @@ test('startup timeout ignores late READY and releases once', async ({ page }) =>
   expect(result.creationError).toContain('SecurityError');
 });
 test('explicit cancellation ignores late READY and never stops a READY child', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/tests/fixtures/library.html');
   const result = await page.evaluate(async () => {
     const { ProcessManager } = await import('/packages/os/dist/internal/core.js');
     const workers: any[] = [];
@@ -217,7 +217,7 @@ test('explicit cancellation ignores late READY and never stops a READY child', a
       cwd: {} as any,
       cwdPath: '/',
       argv: [],
-      env: {},
+      env: { PWD: '/' },
       stdio: [null, null, null],
     });
     const parent = pm.spawn(spec(), null);
@@ -244,7 +244,7 @@ test('explicit cancellation ignores late READY and never stops a READY child', a
 test('wait consumes one exit result and dropping a live handle leaves the child running', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/tests/fixtures/library.html');
   const result = await page.evaluate(async () => {
     const { ProcessManager } = await import('/packages/os/dist/internal/core.js');
     const workers: any[] = [];
@@ -272,7 +272,7 @@ test('wait consumes one exit result and dropping a live handle leaves the child 
       cwd: {} as any,
       cwdPath: '/',
       argv: [],
-      env: {},
+      env: { PWD: '/' },
       stdio: [null, null, null],
     });
     const parent = pm.spawn(spec(), null);
@@ -341,7 +341,7 @@ for (const failure of ['error', 'messageerror', 'send'] as const)
             cwd: {} as any,
             cwdPath: '/',
             argv: [],
-            env: {},
+            env: { PWD: '/' },
             stdio: [null, null, null],
           });
           const boot = pm.spawn(spec(), null);
@@ -426,7 +426,7 @@ test('peer disappearance survives endpoint migration before READY and notificati
       cwd: {} as any,
       cwdPath: '/',
       argv: [],
-      env: {},
+      env: { PWD: '/' },
       stdio,
     });
     const boot = pm.spawn(spec(), null);
@@ -480,17 +480,20 @@ test('peer disappearance survives endpoint migration before READY and notificati
 
 for (const command of ['cat', 'p2-cat'])
   for (const fault of ['error', 'messageerror', 'rejection'])
-    test(`real ${command} Worker ${fault} wakes pipe reader, releases OPFS lock and leaves shell usable`, async ({
+    test(`real ${command} Worker ${fault} wakes pipe reader, releases OPFS lock and preserves supervisor control`, async ({
       page,
     }) => {
-      await page.goto('/');
-      await expect(page.getByLabel('Terminal input')).toBeEnabled();
+      await page.goto('/tests/fixtures/library.html');
       const result = await page.evaluate(
         async ({ command, fault }) => {
           const { ProcessManager } = await import('/packages/os/dist/internal/core.js');
           const { PortStream } = await import('/packages/os/dist/internal/streams.js');
           const root = await navigator.storage.getDirectory();
-          const bin = await root.getDirectoryHandle('bin');
+          const bin = await root.getDirectoryHandle('bin', { create: true });
+          const exe = await bin.getFileHandle(command, { create: true });
+          const installer = await exe.createWritable();
+          await installer.write(await (await fetch(`/bin/${command}.wasm`)).arrayBuffer());
+          await installer.close();
           const file = await root.getFileHandle('disappearance-lock', { create: true });
           let reader: InstanceType<typeof PortStream>;
           let pipe: any[];
@@ -527,7 +530,7 @@ for (const command of ['cat', 'p2-cat'])
               cwd: root,
               cwdPath: '/',
               argv: [],
-              env: {},
+              env: { PWD: '/' },
               stdio: [null, null, null],
             },
             null,
@@ -536,16 +539,20 @@ for (const command of ['cat', 'p2-cat'])
           await boot;
           parent.onmessage({ data: { type: 'request', id: 1, op: 'pipe' } });
           reader = new PortStream(pipe![0]);
+          const stdout = pipe![1];
+          parent.onmessage({ data: { type: 'request', id: 2, op: 'pipe' } });
+          const stdin = pipe![0],
+            inputWriter = pipe![1];
           const pid = await pm.spawn(
             {
               file: await bin.getFileHandle(command),
               cwd: root,
               cwdPath: '/',
               argv: [command],
-              env: {},
+              env: { PWD: '/' },
               stdio: [
-                null,
-                pipe![1],
+                stdin,
+                stdout,
                 { kind: 'file', id: 0, direction: 'out', file, position: 0, append: false },
               ],
             },
@@ -574,6 +581,7 @@ for (const command of ['cat', 'p2-cat'])
             }
           }
           reader.close();
+          inputWriter.port.close();
           pm.dispose();
           return {
             exit,
@@ -595,9 +603,6 @@ for (const command of ['cat', 'p2-cat'])
       });
       expect(result.eof).toBe(0);
       expect(result.exits).toBe(1);
-      await page.getByLabel('Terminal input').fill('echo recovered');
-      await page.getByLabel('Terminal input').press('Enter');
-      await expect(page.getByRole('log')).toContainText('recovered\n');
     });
 
 test('abnormal reader loss wakes a capacity-blocked writer and failed READY notification rejects startup', async ({
@@ -638,7 +643,7 @@ test('abnormal reader loss wakes a capacity-blocked writer and failed READY noti
       cwd: {} as any,
       cwdPath: '/',
       argv: [],
-      env: {},
+      env: { PWD: '/' },
       stdio,
     });
     const boot = pm.spawn(spec(), null);

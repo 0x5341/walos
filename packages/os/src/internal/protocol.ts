@@ -1,15 +1,13 @@
 import type { Exit, ProcessInfo } from '../types.js';
-import type { EngineId } from './component-engines.js';
 import type { ComponentMetrics } from './component.js';
 export type { Exit } from '../types.js';
 export type CoreEvent =
-  | { type: 'tty'; pid: number; direction: 'in' | 'out'; port: MessagePort }
-  | { type: 'tty-close'; pid: number; abnormal: boolean }
-  | { type: 'foreground'; input: number | null; pids: number[] }
   | { type: 'processes'; processes: ProcessInfo[] }
   | { type: 'exit'; pid: number; exit: Exit; durationMs: number }
   | { type: 'booted'; pid: number }
   | { type: 'disposed' }
+  | { type: 'stream-gone'; id: number }
+  | Reply
   | { type: 'error'; message: string };
 
 export type StreamRef =
@@ -39,8 +37,8 @@ export type StreamRef =
     };
 export interface Spec {
   file: FileSystemFileHandle;
-  cwd: FileSystemDirectoryHandle;
-  cwdPath: string;
+  cwd?: FileSystemDirectoryHandle;
+  cwdPath?: string;
   argv: string[];
   env: Record<string, string>;
   stdio: (StreamRef | null)[];
@@ -48,15 +46,14 @@ export interface Spec {
 export type Operation =
   | { op: 'spawn'; spec: Spec }
   | { op: 'cancel-spawn'; requestId: number }
-  | { op: 'wait'; pid: number }
+  | { op: 'wait'; pid: number; release?: boolean }
   | { op: 'drop'; pid: number }
   | { op: 'stop'; pid: number }
   | { op: 'pipe' }
-  | { op: 'stream-close'; streamId: number }
-  | { op: 'foreground'; pids: number[]; input: number | null };
+  | { op: 'stream-close'; streamId: number };
 export type Request = Operation & { type: 'request'; id: number };
 export type RpcError = {
-  kind: 'invalid-resource' | 'startup' | 'timeout' | 'cancelled' | 'internal';
+  kind: 'invalid-resource' | 'already-consumed' | 'startup' | 'timeout' | 'cancelled' | 'internal';
   message: string;
 };
 export class RpcFailure extends Error {
@@ -85,7 +82,7 @@ export interface ProcessMetrics {
 }
 export type ToProcess =
   | Reply
-  | { type: 'start'; pid: number; spec: Spec; measure?: boolean; engine?: EngineId }
+  | { type: 'start'; pid: number; spec: Spec; measure?: boolean }
   | { type: 'stop' };
 export const transferables = (refs: (StreamRef | null)[]) =>
   refs.flatMap((s) => (s && (s.kind === 'pipe' || s.kind === 'tty') ? [s.port] : []));
@@ -95,8 +92,10 @@ export class Rpc {
     number,
     { resolve: (v: any) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }
   >();
+  private failure?: Error;
   constructor(private send: (r: Request, ports: Transferable[]) => void) {}
   call(op: Operation, ports: Transferable[] = []): Promise<any> {
+    if (this.failure) return Promise.reject(this.failure);
     const id = this.next++;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(
@@ -122,6 +121,14 @@ export class Rpc {
         reject(e);
       }
     });
+  }
+  dispose(error = new RpcFailure('internal', 'Control channel closed')) {
+    this.failure = error;
+    for (const p of this.pending.values()) {
+      clearTimeout(p.timer);
+      p.reject(error);
+    }
+    this.pending.clear();
   }
   receive(r: Reply) {
     const p = this.pending.get(r.id);

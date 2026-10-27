@@ -1,6 +1,6 @@
 {
   "name": "@walos/os",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "license": "AGPL-3.0-only",
   "description": "UI-independent browser WASI runtime for walos",
@@ -16,7 +16,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && vite build --config vite.jco.config.ts",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json && vite build --config vite.jsco.config.ts",
     "check": "tsc -p tsconfig.json --noEmit",
     "prepack": "npm run build"
   },
@@ -24,9 +24,6 @@
     "node": ">=22.14"
   },
   "dependencies": {
-    "@pavelsavara/jsco": "0.2.0-preview.0",
-    "@polyengine/protocol": "0.3.1",
-    "@polyengine/runtime": "0.6.7",
-    "@polyengine/translator": "0.6.7"
+    "@pavelsavara/jsco": "0.2.0-preview.0"
   }
 }

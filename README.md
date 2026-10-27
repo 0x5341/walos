@@ -1,146 +1,110 @@
 # walos
 
-A browser Web OS proof of concept. A WASI Preview 1 shell starts Preview 1
-Core Wasm commands and Preview 2 (`wasip2`) Components in Dedicated Workers,
-persists files in OPFS, and connects pipelines with bounded, direct MessagePort
-streams. Components run directly with jsco inside their own Process Worker.
-Jco remains available as a baseline; the experimental polyengine adapter caches
-translation plans in OPFS. See the [engine comparison](docs/benchmarks/2026-10-25-engines.md)
-for measurements and the compatibility-based selection.
+A browser OS library with one logical Host ProcessContext and explicit WASI
+Preview 1/2 processes. P2 Components run with **jsco only**. OPFS file I/O stays
+local to the Host/Process Worker; bounded Pipe DATA travels over direct MessagePorts.
+Only run trusted applications: Worker boundaries do not enforce capability isolation.
 
-The implementation follows the [design baseline](docs/grilled_webos_concept.md).
-See [implementation status](docs/implementation.md) for the supported WASI subset
-and the [nine-criterion acceptance audit](docs/poc-audit.md) for reproducible
-evidence, supported features and constraints. All nine criteria pass within the
-documented Chromium PoC subset, including real P1/P2 parent/child lifecycle tests
-with explicit controls for READY ordering and failure injection.
-Only run trusted applications. Worker boundaries do not
-enforce capability isolation.
-
-## OS library and UI
-
-The OS is the independent npm workspace [`@walos/os`](packages/os/README.md).
-It owns OPFS bootstrap, WASI execution, Core/Process Workers, terminal streams
-and process lifecycle. `src/main.ts` is a workbench UI that imports the package
-and only handles rendering, local echo and keyboard events.
+`@walos/os` **v0.2.0 is a breaking change**. OS creation starts no Shell,
+installs no commands and preserves user OPFS files. The workbench in `src/main.ts`
+installs its own demo binaries, spawns the C Shell and connects explicit byte pipes.
 
 ```ts
 import { Walos } from '@walos/os';
 
-const os = new Walos();
-os.subscribe((event) => {
-  if (event.type === 'output') console.log(event.text);
-});
-await os.boot();
-os.writeInput('echo hello\n');
-// Call await os.dispose() when the session is no longer needed.
+await using os = await Walos.create({ env: { PWD: '/', PATH: '/bin' } });
+const host = os.getHostProcess();
+const [[root]] = host.fs.getDirectories();
+await using directory = root;
+// The consumer has already placed app.wasm in OPFS.
+await using executable = await directory.openAt({}, 'app.wasm', {}, { read: true });
+await using child = await host.process.spawn(
+  executable, ['app'], [{ key: 'PWD', value: '/' }],
+);
+console.log(await child.wait()); // omitted stdio is Null
 ```
 
-`npm run build:os` builds just the library, including ESM modules, Worker assets
-and TypeScript declarations. `npm pack --workspace @walos/os` creates an
-installable tarball. See the package README for the public API and consumer
-hosting requirements. `npm run dev`, `npm run check` and `npm run build` build
-the library before using it; no UI internals are imported by the OS package.
+See the [package API and byte Pipe example](packages/os/README.md),
+[contract](docs/process-context-api.md), [implementation](docs/process-context-implementation.md)
+and [migration notes](docs/process-context-migration.md). Public resource disposal
+uses `Symbol.asyncDispose`. Child `wait()` is one-shot; disposal releases the handle
+without stopping the child. Use `child.requestStop()` for an explicit stop.
 
-## Run
+## Build and run
 
-Requires Node.js 22.14+, a current desktop Chromium browser with JSPI,
-wasi-sdk 27 and wit-bindgen 0.46.0.
-The setup scripts download the checksum-pinned Linux x86-64 tools. On another
-platform install the matching tools and set `WASI_SDK_PATH` to the SDK directory
-and `WIT_BINDGEN_PATH` to the wit-bindgen executable.
+Requires Node 22.14+. **OS build/pack needs no WASI SDK, WIT generator, command
+binaries or demo assets**:
 
 ```sh
 npm ci
+npm run build:os
+npm pack --workspace @walos/os
+```
+
+For the demo/tests, install checksum-pinned wasi-sdk 27 and wit-bindgen 0.46.0
+(Linux x86-64; other platforms may set `WASI_SDK_PATH` and `WIT_BINDGEN_PATH`):
+
+```sh
 bash scripts/setup-sdk.sh
 bash scripts/setup-wit-bindgen.sh
 npm run build:apps
 npm run dev
 ```
 
-Open the localhost URL printed by Vite. Production hosting needs HTTPS (OPFS is
-available in secure contexts). No backend or runtime network access is required
-beyond loading the application assets. The initial bootstrap installs the
-bundled commands into `/bin`; `/home` persists and `/tmp` resets on each OS boot.
-Use one OS tab per origin while evaluating this slice.
+Open Vite's localhost URL in current Chromium with JSPI. HTTPS is required outside
+localhost for OPFS. `Walos.create()` itself does not require JSPI. Use one OS tab per
+origin; concurrent instances have no filesystem isolation guarantee.
+
+The demo overwrites only its named `/bin` commands. `/home`, `/tmp` and other user
+files survive reload. Try:
 
 ```sh
 cd /home
-cat README.md | grep TODO | sort
 echo saved > note.txt
-echo appended >> note.txt
-cat < note.txt
+cat < note.txt | p2-cat | p2-sort
+p2-pwd
 export MESSAGE=hello
 echo $MESSAGE
-false
-echo $?
-p2-echo "hello component"
-p2-cat README.md | grep TODO | p2-sort
-cat README.md | p2-cat > mixed.txt
 ```
 
-Use **Stop pipeline** or Ctrl+C in the input field to interrupt `hang`. `trap`
-provides a trap fixture. The shell supports PATH lookup, `cd`, `export`, `exit`,
-quoted literal arguments, whole-word unquoted `$NAME` / `$?`, pipes, and
-`<`, `>`, `>>`. It is a small shell, not a POSIX shell: no scripts, globbing,
-command substitution, compound commands, `dup`, or job control. `grep` implements
-literal substring filtering on stdin; `sort` sorts stdin lines in memory.
-`cat` is the upstream Linux/Unix-oriented sbase implementation, rebuilt for WASI;
-[source, revision and license](apps/vendor/sbase/README.md) are included.
+The Shell supports PATH lookup, `cd`/PWD updates, `export`, `exit`, quotes,
+whole-word `$NAME`/`$?`, pipes and `<`, `>`, `>>`. It has no job control, globbing,
+compound commands or automatic interactive child stdin forwarding. Use redirection
+for child stdin. Output is captured in temporary files and displayed after the
+pipeline finishes; direct child-to-child pipes retain bounded streaming. **Stop
+shell** requests stop of the Shell handle; already READY descendants may finish
+independently. See [migration notes](docs/process-context-migration.md) for these limits.
 
-## GitHub Pages demo
-
-The [demo](https://0x5341.github.io/walos/) is built and deployed by
-`.github/workflows/pages.yml`. In the repository's **Settings → Pages**, select
-**GitHub Actions** as the build and deployment source before the first deployment.
-Merging to `main` builds the WASI commands and OS library, then publishes `dist`
-to the `github-pages` environment. The workflow can also be run manually on
-`main`. Pull requests build the same Pages artifact without deploying it.
-
-The build uses relative asset and command URLs so it works at `/walos/` as well
-as an origin root. Pages serves the demo over HTTPS; a current desktop Chromium
-with JSPI is still required. Pages does not provide the development server's
-COOP/COEP headers. The default jsco runtime uses dedicated Workers and
-MessagePort streams without requiring cross-origin isolation.
-
-## Validate
+## Validation and hosting
 
 ```sh
-npx playwright install --with-deps chromium
-npm run check:wit
+npm run check
 npm run build
 npm test
 npm run test:production
 npm run test:pages
+npm run check:wit
+npm run test:benchmark
+npm run benchmark -- --trials 3
 ```
 
-For a system Chromium, set `CHROMIUM_PATH=/path/to/chromium` for any browser test
-command. Tests use isolated browser contexts. The suite covers real WASI
-pipelines, persistence, redirection, cwd/argv/env, a 1 MiB transfer, namespace
-operations, traps and termination; separate browser tests exercise OPFS locks,
-pipe protocol errors/migration, and deterministic process lifecycle races.
-Production tests exercise the bundled Worker assets.
-The Pages smoke test serves `dist` below `/walos/` without COOP/COEP headers and
-checks P1/P2 commands, a mixed pipeline and persistence across reloads.
+`CHROMIUM_PATH` can select a system browser. `npm run check:wit` regenerates types
+under `work/wit-generated`; compare with `wit/generated`. `npm run build:apps`
+regenerates C bindings and P1/P2 fixtures for `walos:runtime@0.2.0`.
+Jco remains **build tooling** for WIT/component fixture generation, not an execution
+engine. Component caches and `clearComponentCache` are removed without deleting
+existing OPFS cache directories or user contents.
 
-Run `npm run benchmark -- --trials 5` for the P1/P2 startup, conversion cache,
-Worker memory, CPU, OPFS and Pipe benchmarks. See the
-[benchmark methodology and recorded results](docs/benchmarks.md) for setup,
-timing boundaries, variability and measurement limits. CI runs a single-trial
-integrity check and uploads the raw JSON and summary without performance gates.
+[GitHub Pages](https://0x5341.github.io/walos/) deploys `dist` via
+`.github/workflows/pages.yml`. Select GitHub Actions in repository Pages settings.
+PRs build/test a subpath artifact; pushes to main deploy it. Production code uses
+relative asset URLs and does not require cross-origin isolation. Hosting/CSP must
+allow module workers and WebAssembly compilation.
 
-The `p2-*` commands are compiled with `--target=wasm32-wasip2`. The shell remains
-Preview 1 and detects either executable format through the shared runtime.
-`apps/compat2.c` initializes wasi-sdk 27's libc cwd using standard `initial-cwd`.
-The generated-WIT process fixture is built by `scripts/build-p2-probe.mjs`.
+[Current performance comparison](docs/process-context-integration-performance.md) and the
+[historical engine comparison](docs/benchmarks/2026-10-25-engines.md) retain their
+original measurements; current measurements are linked from the migration notes.
+Unsupported WASI features remain outside this change (#6/#7). JS Process execution
+is deferred to #34; no generic execution-runtime abstraction is introduced.
 
-The WIT uses unmodified standard WASI 0.2.0 dependency types. `npm run check:wit`
-validates it and generates TypeScript bindings with Jco 1.15.1. Compare these
-with `wit/generated` to review ABI changes. The extension namespace is `walos:runtime@0.1.0`; the existing Preview 1
-`webos_v1` compatibility imports retain their names. Standard WASI 0.2.x
-interfaces used by the bundled SDK components are connected to the OS host.
-Networking, symlinks, hard links, timestamp mutation and directory rename remain
-unsupported. Standard Preview 2 command exits carry success/failure (0/1).
-
-The optional Jco conversion path needs CSP permission for Blob modules and Wasm compilation. See the
-[library hosting notes](packages/os/README.md) for the tested policy and cache API.
+`cat` uses [sbase](apps/vendor/sbase/README.md). License: [AGPL-3.0-only](LICENSE).

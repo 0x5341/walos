@@ -8,13 +8,10 @@ import { parseArgs, promisify } from 'node:util';
 import { chromium } from '@playwright/test';
 import { build, preview } from 'vite';
 import { flatten, summarize } from './stats.mjs';
-import { compareEngines } from './comparison.mjs';
 import { workerMemory } from './memory.mjs';
 
 const { values } = parseArgs({
   options: {
-    engines: { type: 'string' },
-    compatibility: { type: 'string' },
     trials: { type: 'string', default: '5' },
     output: { type: 'string', default: 'work/benchmarks/latest.json' },
   },
@@ -102,44 +99,20 @@ async function pageIn(context) {
   await page.evaluate(() => window.bench.prepare());
   return page;
 }
-async function launch(page, format, mode = 'startup', expectedCache) {
+async function launch(page, format, mode = 'startup') {
   const ready = await page.evaluate(({ format, mode }) => window.bench.launch(format, mode), {
     format,
     mode,
   });
-  if (expectedCache)
-    assert.equal(ready.component?.cache, expectedCache, 'Unexpected conversion cache path');
   return ready;
 }
 const finish = (page) => page.evaluate(() => window.bench.finish());
-const clear = (page) => page.evaluate(() => window.bench.clearCache());
 async function completeStartup(page, ready) {
   const exit = await finish(page);
-  if (ready.component?.cache === 'miss') {
-    assert.equal(ready.component.publishStatus, 'pending');
-    assert.equal(ready.component.publishMs, undefined, 'Publication must not precede READY');
-    assert.equal(exit.component?.publishStatus, 'saved', 'Deferred cache save did not complete');
-    assert(exit.component.publishStartedAtMs >= ready.readyAtMs);
-    assert(exit.component.publishCompletedAtMs >= exit.component.publishStartedAtMs);
-  }
-  // startupMs stays the page's original READY receipt; publication is collected
-  // separately at EXIT, never added to loadMs/startupMs or CPU runMs.
   return { ...ready, ...(exit.component && { component: exit.component }) };
 }
 try {
-  if (values.engines) {
-    await compareEngines({
-      engines: values.engines.split(','),
-      trials,
-      output,
-      metadata,
-      openBrowser,
-      pageIn,
-      compatibility: values.compatibility
-        ? JSON.parse(await readFile(values.compatibility, 'utf8'))
-        : undefined,
-    });
-  } else {
+  {
     for (const format of ['p1', 'p2']) {
       for (let trial = 1; trial <= trials; trial++) {
         browser = await openBrowser();
@@ -152,20 +125,10 @@ try {
             await page.evaluate(() => crossOriginIsolated),
             'Benchmark requires cross-origin isolation',
           );
-          const cold = await launch(page, format, 'startup', format === 'p2' ? 'miss' : undefined);
+          const cold = await launch(page, format, 'startup');
           record(`${format}/startup-cold`, trial, await completeStartup(page, cold));
-          const warm = await launch(page, format, 'startup', format === 'p2' ? 'opfs' : undefined);
+          const warm = await launch(page, format, 'startup');
           record(`${format}/startup-warm`, trial, await completeStartup(page, warm));
-          if (format === 'p2') {
-            await page.reload();
-            await page.waitForFunction(() => Boolean(window.bench));
-            await page.evaluate(() => window.bench.prepare());
-            const reused = await launch(page, format, 'startup', 'opfs');
-            record('p2/startup-opfs-reload', trial, await completeStartup(page, reused));
-            await clear(page);
-            const miss = await launch(page, format, 'startup', 'miss');
-            record('p2/startup-warm-miss', trial, await completeStartup(page, miss));
-          }
           // One excluded CPU warmup before each retained fresh-Worker CPU trial.
           await launch(page, format, 'cpu');
           assert.equal((await finish(page)).stdout, `${checksum}\n`);
@@ -173,9 +136,8 @@ try {
           const cpu = await finish(page);
           assert.equal(cpu.stdout, `${checksum}\n`);
           record(`${format}/cpu`, trial, { runMs: cpu.runMs, checksum });
-          for (const state of format === 'p2' ? ['miss', 'opfs'] : ['loaded']) {
-            if (state === 'miss') await clear(page);
-            const held = await launch(page, format, 'hold', format === 'p2' ? state : undefined);
+          for (const state of ['loaded']) {
+            const held = await launch(page, format, 'hold');
             const memory = await workerMemory(browser);
             if (memory.memoryStatus === 'unavailable') console.warn(memory.memoryReason);
             await finish(page);
@@ -184,7 +146,6 @@ try {
               ...(held.linearMemoryBytes !== undefined && {
                 linearMemoryBytes: held.linearMemoryBytes,
               }),
-              ...(held.component && { cache: held.component.cache }),
             });
           }
         } finally {
@@ -222,23 +183,14 @@ try {
     }
     const summary = summarize(samples);
     metadata.finishedAt = new Date().toISOString();
-    const publications = samples.filter((s) => s['component.publishStatus']);
-    const publication = {
-      attempted: publications.length,
-      saved: publications.filter((s) => s['component.publishStatus'] === 'saved').length,
-      failed: publications.filter((s) => s['component.publishStatus'] === 'failed').length,
-      unavailable: publications.filter((s) => s['component.publishStatus'] === 'unavailable')
-        .length,
-    };
-    const result = { schemaVersion: 2, metadata, samples, summary, publication };
+    const result = { schemaVersion: 3, metadata, samples, summary };
     await mkdir(dirname(output), { recursive: true });
     await writeFile(output, JSON.stringify(result, null, 2) + '\n');
     const rows = [
       '# walos benchmark results',
       '',
-      `Chromium ${metadata.chromium}; Node ${metadata.node}; wasi-sdk ${metadata.wasiSdk}; Jco ${metadata.jco}.`,
+      `Chromium ${metadata.chromium}; Node ${metadata.node}; wasi-sdk ${metadata.wasiSdk}; jsco 0.2.0-preview.0 (Jco ${metadata.jco} build tooling).`,
       `${trials} retained trials per scenario. Durations in ms; memory in bytes; throughput in MiB/s.`,
-      `Deferred startup publications: ${publication.saved}/${publication.attempted} saved; ${publication.failed} failed; ${publication.unavailable} unavailable.`,
       '',
       '| Scenario | Metric | N | Median | Min | Max | Mean | p95 | Stddev |',
       '| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',

@@ -1,3 +1,4 @@
+import { createRandom, wallClock, monotonicClock } from './services.js';
 import { Filesystem } from './fs.js';
 import { connect, FileStream, IoError, ioError, type Stream } from './streams.js';
 import { Rpc, transferables, type Spec, type StreamRef } from './protocol.js';
@@ -14,13 +15,15 @@ export class Wasi {
   private decoder = new TextDecoder();
   private encoder = new TextEncoder();
   stopping = false;
+  private random = createRandom();
   constructor(
     private spec: Spec,
     private rpc: Rpc,
   ) {}
   async init() {
     const root = await navigator.storage.getDirectory();
-    this.fs = new Filesystem(root, this.spec.cwd, this.spec.cwdPath);
+    this.fs = new Filesystem(root, this.spec.cwd ?? root, this.spec.cwdPath ?? '/');
+    if (!this.spec.cwd) this.fs.descriptors.delete(4);
     for (let i = 0; i < 3; i++) this.streams.set(i, await connect(this.spec.stdio[i]!));
   }
   private view() {
@@ -106,14 +109,14 @@ export class Wasi {
         throw new WasiExit(n);
       },
       fd_prestat_get: (fd: number, p: number) => {
-        if (fd !== 3 && fd !== 4) return 8;
+        if (!this.fs.descriptors.get(fd)?.dir || (fd !== 3 && fd !== 4)) return 8;
         this.u32(p, 0);
-        this.u32(p + 4, this.encoder.encode(fd === 3 ? '/' : this.spec.cwdPath).length);
+        this.u32(p + 4, this.encoder.encode(fd === 3 ? '/' : (this.spec.cwdPath ?? '/')).length);
         return 0;
       },
       fd_prestat_dir_name: (fd: number, p: number, n: number) => {
-        if (fd !== 3 && fd !== 4) return 8;
-        const b = this.encoder.encode(fd === 3 ? '/' : this.spec.cwdPath);
+        if (!this.fs.descriptors.get(fd)?.dir || (fd !== 3 && fd !== 4)) return 8;
+        const b = this.encoder.encode(fd === 3 ? '/' : (this.spec.cwdPath ?? '/'));
         if (n < b.length) return 37;
         this.bytes(p, b.length).set(b);
         return 0;
@@ -179,7 +182,7 @@ export class Wasi {
       fd_filestat_set_size: this.host(async (fd: number, size: bigint) => {
         const s = this.stream(fd);
         if (!(s instanceof FileStream)) return 8;
-        s.truncate(Number(size));
+        await s.truncate(Number(size));
         return 0;
       }),
       fd_seek: this.host(async (fd: number, offset: bigint, whence: number, out: number) => {
@@ -286,15 +289,24 @@ export class Wasi {
         },
       ),
       random_get: (p: number, n: number) => {
-        for (let i = 0; i < n; i += 65536)
-          crypto.getRandomValues(this.bytes(p + i, Math.min(n - i, 65536)));
-        return 0;
+        try {
+          this.bytes(p, n).set(this.random.getRandomBytes(BigInt(n)));
+          return 0;
+        } catch (error) {
+          return ioError(error).errno;
+        }
       },
       clock_time_get: (id: number, _precision: bigint, out: number) => {
-        this.u64(out, BigInt(Math.floor((id === 0 ? Date.now() : performance.now()) * 1e6)));
+        if (id !== 0 && id !== 1) return 28;
+        const wall = id === 0 ? wallClock.now() : undefined;
+        this.u64(
+          out,
+          wall ? wall.seconds * 1000000000n + BigInt(wall.nanoseconds) : monotonicClock.now(),
+        );
         return 0;
       },
-      clock_res_get: (_id: number, p: number) => {
+      clock_res_get: (id: number, p: number) => {
+        if (id !== 0 && id !== 1) return 28;
         this.u64(p, 1000000n);
         return 0;
       },
@@ -325,7 +337,8 @@ export class Wasi {
     for (const name of names) wasi[name] = () => 52;
     const webos = {
       initial_cwd: (p: number, n: number) => {
-        const b = this.encoder.encode(this.spec.cwdPath);
+        if (this.spec.env.PWD === undefined) return -1;
+        const b = this.encoder.encode(this.spec.env.PWD);
         if (b.length >= n) return -1;
         this.bytes(p, b.length).set(b);
         return b.length;
@@ -333,7 +346,6 @@ export class Wasi {
       spawn: this.host(
         async (
           executable: number,
-          cwd: number,
           p: number,
           n: number,
           stdin: number,
@@ -357,10 +369,9 @@ export class Wasi {
             if (stdio.some((ref, i) => ref && ref.direction !== (i === 0 ? 'in' : 'out')))
               throw new IoError(8, 'stdio direction mismatch');
             const descriptor = this.fs.get(executable);
-            const file = descriptor.file,
-              dir = this.fs.get(cwd);
-            if (!file || descriptor.stream?.ref.direction !== 'in' || !dir.dir)
-              throw new IoError(8, 'spawn requires a readable executable and a directory');
+            const file = descriptor.file;
+            if (!file || descriptor.stream?.ref.direction !== 'in')
+              throw new IoError(8, 'spawn requires a readable executable');
             const opts = JSON.parse(this.str(p, n)) as {
               argv: string[];
               env: Record<string, string>;
@@ -376,8 +387,6 @@ export class Wasi {
               throw new IoError(28, 'invalid argv or env');
             const spec: Spec = {
               file,
-              cwd: dir.dir,
-              cwdPath: dir.path,
               argv: [...opts.argv],
               env: { ...opts.env },
               stdio,
@@ -402,7 +411,7 @@ export class Wasi {
       wait: this.host(async (h: number, out: number) => {
         const pid = this.resource(h);
         this.resources.delete(h);
-        const exit = await this.rpc.call({ op: 'wait', pid });
+        const exit = await this.rpc.call({ op: 'wait', pid, release: true });
         this.u32(out, exit.kind === 'exited' ? 0 : exit.kind === 'trap' ? 1 : 2);
         this.u32(out + 4, exit.kind === 'exited' ? exit.code : exit.kind === 'trap' ? 125 : 130);
         return 0;
@@ -424,15 +433,6 @@ export class Wasi {
           this.streams.set(fd, await connect(refs[i]));
           this.u32(out + i * 4, fd);
         }
-        return 0;
-      }),
-      foreground: this.host(async (p: number, n: number, input: number) => {
-        const hs = Array.from({ length: n }, (_, i) => this.view().getUint32(p + i * 4, true));
-        await this.rpc.call({
-          op: 'foreground',
-          pids: hs.map((h) => this.resource(h)),
-          input: input === -1 ? null : input === 0 ? 0 : this.resource(input),
-        });
         return 0;
       }),
     };

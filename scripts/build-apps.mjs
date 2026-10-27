@@ -21,6 +21,12 @@ const cc = (name, files, extra = []) =>
     ],
     { stdio: 'inherit' },
   );
+// This fixture deliberately has no compat.c constructor: no code needs cwd.
+execFileSync(
+  `${sdk}/bin/clang`,
+  ['-O2', '-Wall', '-Wextra', 'tests/fixtures/services.c', '-o', 'public/bin/services-probe.wasm'],
+  { stdio: 'inherit' },
+);
 cc('sh', ['apps/sh.c']);
 for (const name of ['echo', 'pwd', 'env', 'false', 'true', 'trap', 'hang', 'grep', 'sort'])
   cc(name, ['apps/tools.c']);
@@ -34,6 +40,7 @@ cc(
   ],
   ['-Iapps/vendor/sbase'],
 );
+cc('cwd-probe', ['tests/fixtures/cwd.c']);
 cc('fs-probe', ['tests/fixtures/filesystem.c']);
 cc('lifecycle-parent', ['tests/fixtures/lifecycle.c']);
 
@@ -67,5 +74,19 @@ cc2(
   ],
   ['-Iapps/vendor/sbase'],
 );
+execFileSync(
+  `${sdk}/bin/clang`,
+  [
+    '--target=wasm32-wasip2',
+    '-O2',
+    '-Wall',
+    '-Wextra',
+    'tests/fixtures/services.c',
+    '-o',
+    'public/bin/p2-services-probe.wasm',
+  ],
+  { stdio: 'inherit' },
+);
+cc2('p2-cwd-probe', ['tests/fixtures/cwd.c'], ['-DWALOS_P2']);
 cc2('p2-fs-probe', ['tests/fixtures/filesystem.c']);
 await import('./build-p2-probe.mjs');

@@ -1,136 +1,82 @@
 # @walos/os
 
-A browser WASI Preview 1 / Preview 2 runtime independent of the walos workbench UI. The
-package owns filesystem bootstrap, the Core/Process Workers, terminal streams,
-foreground selection, prompt ordering and lifecycle cleanup. It has no DOM or
-UI framework dependency. Applications subscribe to typed events and supply input.
+A browser OS with one logical Host process and explicit WASI Preview 1/2 processes.
+The v0.2 API is a breaking change. Creating an OS starts no shell, installs no
+commands, and leaves existing OPFS user content unchanged.
 
 ```ts
-import { Walos } from '@walos/os';
+import { Walos, ServiceError } from '@walos/os';
 
-const os = new Walos({ binUrl: '/bin/' });
-const unsubscribe = os.subscribe((event) => {
-  if (event.type === 'output') console.log(event.text);
-  if (event.type === 'processes') console.table(event.processes);
-  if (event.type === 'error') console.error(event.error);
-});
-
-await os.boot();
-os.writeInput('echo hello\n');
-// os.interrupt(); // Stop the current foreground pipeline.
-// When this session is no longer needed:
-await os.dispose();
-unsubscribe();
+await using os = await Walos.create({ env: { PWD: '/', PATH: '/bin' }, argv: [] });
+const host = os.getHostProcess(); // synchronous; always the same Host
+const [[root]] = host.fs.getDirectories();
+await using directory = root;
+await using executable = await directory.openAt({}, 'app.wasm', {}, { read: true });
+const [reader, writer] = await host.io.createPipe();
+const output = (async () => {
+  try {
+    for (;;) console.log(await reader.blockingRead(65536n));
+  } catch (error) {
+    if (!(error instanceof ServiceError) || error.code !== 'closed') throw error;
+  } finally {
+    await reader[Symbol.asyncDispose]();
+  }
+})();
+await using child = await host.process.spawn(
+  executable, ['app'], [{ key: 'PWD', value: '/' }], undefined, writer,
+);
+console.log(await child.wait());
+await output;
 ```
 
-`boot()` resolves after the shell Worker is ready; initial output arrives through
-events and may arrive afterward. Each instance can boot once. `state`,
-`foreground` and `processes` expose current snapshots. `writeInput(text)` sends
-raw text without local echo and returns false when no input owner is available.
-The caller decides how to display output, echo input and handle keyboard shortcuts.
-`interrupt()` requests a foreground stop. `dispose()` cancels pending bootstrap,
-stops all session processes and the Core Worker, closes terminal ports and removes
-subscriptions. It is safe to call more than once. Failed boots reject the promise
-and emit an `error` event. Create a new instance for another session.
+Consumers place their own Wasm files in OPFS, for example with
+`openAt({}, 'app.wasm', { create: true }, { write: true })` and `writeViaStream(0n)`.
+For each write, call `checkWrite()`, respect its byte permit, and await `write()`.
+Use `subscribe().block()` when no permit is available. Pipe capacity is 64 KiB;
+individual pipe permits are at most 16 KiB. Release every acquired resource with
+`Symbol.asyncDispose`, including pollables and resources returned by stdio getters.
+All Host read/write/file operations returning promises must be awaited before
+moving their stream. Moving a busy stream consumes it and rejects with `busy`.
+File output `flush()` commits writes locally; disposal also confirms completion.
 
-Events: `output` (pid/text), `state`, `foreground` (input/pids), `processes`,
-`exit` (pid/exit/durationMs), and `error` (Error). Subscribe before booting to
-receive startup output. Subscriptions receive future events; read the getters for
-the current state. The Worker protocol and WASI adapter are private implementation
-details, excluded from the package's public exports.
+The raw API is descriptor-relative and byte-oriented. Convenience operations such
+as path-based spawn, `readFile`, `writeAll`, and AsyncIterable belong in optional
+consumer wrappers. Public types, including `ProcessContext`, `FileDescriptor`,
+`InputStream`, `OutputStream`, `ChildProcess`, `Exit`, and `ServiceError`, are exported
+from the package root. Browser handles, MessagePorts and RPC structures are internal.
 
-## Build and host
+- Only Host creation supplies a missing `PWD=/`. Child argv/env are explicit copied
+  snapshots; empty argv is valid. Child PWD is never inherited, validated or filled in
+  during spawn. Wasm code that actually needs cwd can fail through its usual error path.
+- A descriptor is borrowed by spawn. Explicit stdio is moved at the call, even if
+  spawn fails. Omitted stdio can inherit Null; pipe/file connections require explicit
+  endpoints. Host stdin is EOF, and stdout/stderr discard bytes.
+- `wait()` consumes its right at invocation. Results include `exited`, `trap`, and
+  `terminated`. The ChildProcess resource remains valid until asynchronous disposal.
+  Dropping a child handle does not stop the child; call `requestStop()` to stop it.
+- Descriptor disposal does not close already acquired file streams. StdIO getter
+  resources have independent lifetimes and do not close the process connection.
+- `dispose()` and `Symbol.asyncDispose` on Walos are idempotent. They terminate owned
+  processes, settle pending waits, release resources, and reject later Host operations.
+- `Walos.create()` works without JSPI. Starting Wasm requires a current browser with
+  JSPI. Secure randomness uses Web Crypto (maximum 16 MiB per request); insecure
+  randomness uses a separate non-cryptographic PRNG. Clock resolution is reported as
+  1 ms and is subject to browser precision limits. Timers execute locally.
 
-From the repository root, `npm ci` links the npm workspace and
-`npm run build:os` emits ESM JavaScript, declarations and both Worker modules to
-`packages/os/dist`. `npm pack --workspace @walos/os` creates an installable package;
-the package has no runtime npm dependencies. Build tools live in the repository's
-root development dependencies. A consumer can install the tarball and import
-`@walos/os` using Vite, which bundles the nested module Workers. Set
-`worker.format` to `es` so the Worker can load the converter as a separate chunk:
+There is no `boot`, `attach`, `binUrl`, `cwd`, `chdir`, `terminal`, `writeInput`,
+`interrupt`, `output` event, or foreground controller. Standard WASI terminal
+introspection remains available; Null and Pipe are not TTYs. The old C shell's
+interactive input forwarding to grandchildren is unavailable. See the
+[integration/migration notes](../../docs/process-context-migration.md) for explicit
+Shell stdio wiring, PWD/libc timing and ABI rebuild instructions.
 
-```ts
-export default { worker: { format: 'es' } };
-```
+P2 execution uses jsco only. No Component conversion cache or engine selector is
+exported. OS build/pack requires Node/npm only, with no WASI SDK or command assets.
+`@bytecodealliance/jco` is repository build tooling, not a package runtime dependency.
+No capability/security isolation model is introduced here.
 
-Both development and production workbench builds use this compiled package entry.
-
-The separately compiled WASI command assets are host-provided. Run
-`npm run build:apps` and serve the files in `public/bin` at `binUrl` (defaults to
-`/bin/`; relative URLs resolve against the current page). `binUrl` is a directory
-URL with an optional trailing slash. Bootstrap installs sh, cat, grep, sort,
-echo, pwd, env, false, true, trap and hang, plus their `p2-*` counterparts, into
-OPFS `/bin`. Existing `/home` files are preserved and `/tmp` is reset at each boot.
-
-Requires a secure browser context, OPFS, module Workers and Chromium JSPI.
-The default runtime works without COOP/COEP headers, as verified by the Pages
-smoke test; the Vite development server enables them for isolated testing. This
-is a browser library; it does not provide a Node.js runtime. Only trusted WASI
-applications and one session per origin are supported; Worker boundaries do not
-enforce capability isolation.
-
-## Preview 2 and component cache
-
-A Process Worker detects Core Wasm versus Component Model binaries from the
-Wasm header. By default it lazily loads jsco 0.2.0-preview.0 to parse/compile
-and instantiate a Component with JSPI, then runs `wasi:cli/run`. Jco 1.15.1 remains
-available as a baseline; polyengine 0.6.7 is experimental and currently fails
-Unicode argv compatibility. Runtime assets are bundled locally; no CDN, Node.js
-host or server-side conversion is used. Engine dependencies are version-pinned;
-the browser modules are bundled by the library build.
-
-The host implements CLI/environment/stdio, I/O streams/pollables, basic OPFS
-filesystem operations, clocks, randomness and `walos:runtime@0.1.0` process/IPC/
-terminal interfaces. P1 and P2 use the same Process Manager and direct Pipe data
-paths. The shell can mix `cat | p2-cat | cat`. Unsupported non-socket interfaces fail startup;
-unreachable wasi-sdk socket imports link to trapping placeholders (no socket support);
-unsupported filesystem operations return the standard `unsupported` error.
-See [implementation notes](../../docs/implementation.md) for the exact limits.
-
-The optional OPFS artifact cache is engine independent. Keys include the Component
-SHA-256, engine ID/version, effective options (with canonical object key ordering),
-host revision and cache schema. Entries live in
-`.walos-components/schema-2/<engine-id>/`. Engines own artifact formats and metadata;
-the shared layer supports canonical relative paths, including nested directories,
-and verifies every artifact's SHA-256 before restoring it. There is no L1 memory
-cache. An engine with `cache: null` skips cache hashing, OPFS and publication entirely;
-jsco is the default and uses this cacheless path. Jco caches generated JS/Core
-Wasm; polyengine caches a translation envelope under its own namespace. For the
-repository application, select a build with `WALOS_COMPONENT_ENGINE=jco` (or
-`polyengine`) before `npm run build`/`npm run dev`. External embedders may define
-`__WALOS_COMPONENT_ENGINE__` at bundle time; absent a definition, jsco is used.
-This is internal configuration, not a public `Walos` constructor option.
-
-Loading and instantiation perform no artifact writes. The Process Worker sends
-READY first, starts deferred persistence, and joins it before normal EXIT (including
-nonzero exits and traps). Saving errors affect cache diagnostics, not command results.
-Key-scoped Web Locks protect readers and publishers. After verified artifact writes,
-`createWritable().close()` publishes the manifest; only then are interrupted and
-superseded stages for that key reclaimed under the same lock. Cleanup is best effort
-and runs during deferred publication, never on the startup path. Other keys are left
-alone; no automatic GC/LRU runs.
-
-The public `clearComponentCache(): Promise<void>` API is unchanged and idempotently
-removes all engines/schemas, including legacy Jco artifacts. Stop OS sessions first.
-Legacy manifests are deliberately cold misses rather than migrated; manual clearing
-reclaims them and abandoned stages for keys that are never published again.
-
-```ts
-import { clearComponentCache } from '@walos/os';
-
-// Stop OS sessions first, then remove all persistent conversion artifacts.
-await clearComponentCache();
-```
-
-The following CSP was tested on both development and production builds (serve it
-on Worker responses as well as the document):
-
-```text
-default-src 'self'; script-src 'self' blob: 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self' data: ws:; style-src 'self' 'unsafe-inline'
-```
-
-`blob:` permits generated module imports, and `'wasm-unsafe-eval'` permits Wasm
-compilation. `data:` in `connect-src` permits the converter's bundled Wasm assets.
-The `ws:` connection is for Vite development HMR and can be omitted in production.
-A stricter policy that blocks these mechanisms prevents cold Component startup.
-There is no `eval` or `new Function` fallback.
+Serve ESM and Worker assets from the installed package through your bundler, with
+HTTPS (or localhost) for OPFS. Current Chromium JSPI is required for Wasm execution.
+The production preview tests use `script-src 'self' 'wasm-unsafe-eval'` and
+`worker-src 'self'`, with same-origin assets/fetches; no JavaScript `unsafe-eval` or
+Blob module permission is required. Cross-origin isolation is optional for the OS.
