@@ -1,21 +1,36 @@
 import { createComponent } from '@pavelsavara/jsco';
 import { jscoImports } from './jsco-host.js';
-import type { ComponentMetrics } from './component.js';
+import { wasiCommandVersion, type WasiComponentVersion, type ComponentMetrics } from './component.js';
+
+// Parse once, select the Host adapter from the actual command world, then
+// instantiate. A component's Wasm header alone cannot distinguish P2 from P3.
 export async function loadJsco(
   bytes: Uint8Array,
-  imports: Record<string, unknown>,
+  createImports: (
+    version: WasiComponentVersion,
+    required: string[],
+  ) => Promise<Record<string, unknown>>,
   metrics?: ComponentMetrics,
 ) {
   const start = performance.now();
   const prepared = await createComponent(bytes, { noJspi: false, validateTypes: true });
   if (metrics) metrics.prepareMs = performance.now() - start;
+  const exported = prepared.exports();
+  const version = wasiCommandVersion(exported);
+  const runName = exported.find((name) =>
+    /^wasi:cli\/run@0\.[23]\.[^/]+$/.test(name),
+  )!;
+  const required = prepared.imports();
+  const providers = await createImports(version, required);
   const instantiateStart = performance.now();
   try {
-    const instance = await prepared.instantiate(jscoImports(imports, prepared.imports()));
-    const run = Object.entries(instance.exports).find(([name]) =>
-      /^wasi:cli\/run@0\.2\.\d+$/.test(name),
-    )?.[1]?.run;
-    if (typeof run !== 'function') throw new Error('Missing jsco wasi:cli/run export');
+    // Existing P2 resources need method/result lowering; the P3 host already
+    // exposes the canonical native-async bindings supplied by jsco.
+    const instance = await prepared.instantiate(
+      version === 'p2' ? jscoImports(providers, required) : providers,
+    );
+    const run = instance.exports[runName]?.run;
+    if (typeof run !== 'function') throw new Error('Missing jsco ' + runName + ' export');
     return {
       run: {
         run: async () => {
