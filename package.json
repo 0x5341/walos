@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "npm run build:os && vite --host 127.0.0.1",
     "build:apps": "node scripts/build-apps.mjs",
-    "check": "npm run build:os && tsc --noEmit && npm run check:public",
+    "check": "npm run build:os && tsc --noEmit && npm run check:public && npm run check:runtime",
     "build": "npm run build:apps && npm run check && vite build",
     "test": "playwright test",
     "preview": "vite preview --host 127.0.0.1",
@@ -20,7 +20,8 @@
     "build:os": "npm run build --workspace @walos/os",
     "benchmark": "npm run build:os && node benchmarks/build.mjs && tsc --noEmit -p benchmarks/tsconfig.json && node benchmarks/run.mjs",
     "test:benchmark": "node --test benchmarks/stats.test.mjs",
-    "check:public": "tsc -p tests/tsconfig.public.json"
+    "check:public": "tsc -p tests/tsconfig.public.json",
+    "check:runtime": "node scripts/check-runtime-boundaries.mjs"
   },
   "devDependencies": {
     "@bytecodealliance/jco": "1.15.1",

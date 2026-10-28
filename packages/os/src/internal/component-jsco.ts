@@ -17,6 +17,7 @@ export async function loadJsco(
     )?.[1]?.run;
     if (typeof run !== 'function') throw new Error('Missing jsco wasi:cli/run export');
     return {
+      dispose: () => instance.dispose(),
       run: {
         run: async () => {
           const result = await run();

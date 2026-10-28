@@ -1,4 +1,5 @@
-import { HostResources, serviceError } from './internal/host.js';
+import { ProcessServices, serviceError } from './internal/process-context.js';
+import { browserPlatform } from './internal/platform.js';
 import { Rpc, RpcFailure, type CoreEvent } from './internal/protocol.js';
 import {
   ServiceError,
@@ -16,7 +17,7 @@ export class Walos implements AsyncDisposable {
   private listeners = new Set<(event: WalosEvent) => void>();
   private currentState: WalosState = 'created';
   private currentProcesses: readonly ProcessInfo[] = [];
-  private host?: HostResources;
+  private host?: ProcessServices;
   private disposal?: Promise<void>;
   private resolveBoot?: (pid: number) => void;
   private rejectBoot?: (error: Error) => void;
@@ -34,7 +35,7 @@ export class Walos implements AsyncDisposable {
     const argv = [...(options.argv ?? [])];
     try {
       os.currentState = 'booting';
-      const root = await navigator.storage.getDirectory();
+      const root = await browserPlatform.root();
       const worker = (os.worker = new Worker(
         new URL('./internal/core.worker.js', import.meta.url),
         { type: 'module' },
@@ -61,7 +62,9 @@ export class Walos implements AsyncDisposable {
         };
         worker.postMessage({ type: 'boot', argv, env });
       });
-      os.host = new HostResources(root, pid, argv, env, os.rpc, () => os.check());
+      os.host = new ProcessServices({ root, pid, ppid: null, argv, env, stdio: [] }, os.rpc, () =>
+        os.check(),
+      );
       await os.host.init();
       if (os.currentState !== 'booting')
         throw new ServiceError('internal', 'Core failed during initialization');

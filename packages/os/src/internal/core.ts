@@ -142,7 +142,7 @@ export class ProcessManager {
       };
       worker.onmessageerror = () =>
         this.finish(pid, { kind: 'trap', message: 'worker message error' });
-      worker.postMessage({ type: 'start', pid, spec }, transferables(spec.stdio));
+      worker.postMessage({ type: 'start', pid, ppid: parent, spec }, transferables(spec.stdio));
       r.transferred = true;
       this.publish();
     } catch (e) {

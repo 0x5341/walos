@@ -82,7 +82,7 @@ export interface ProcessMetrics {
 }
 export type ToProcess =
   | Reply
-  | { type: 'start'; pid: number; spec: Spec; measure?: boolean }
+  | { type: 'start'; pid: number; ppid?: number | null; spec: Spec; measure?: boolean }
   | { type: 'stop' };
 export const transferables = (refs: (StreamRef | null)[]) =>
   refs.flatMap((s) => (s && (s.kind === 'pipe' || s.kind === 'tty') ? [s.port] : []));

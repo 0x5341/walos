@@ -9,8 +9,11 @@ partial resources; repeated disposal returns the same completion promise.
 
 ## Ownership and process control
 
-Host resources are private facades over the existing P2 filesystem/stream semantics.
-Wasm adapters keep P1 errno and P2 variant/drop conventions. The Host resource registry
+Host and process Workers construct the same `ProcessContextImpl` and `ProcessServices`
+implementation. Filesystem/stream semantics and resource ownership live in these
+shared services. Runtime adapters borrow Context and keep only P1 fd/errno or P2
+Component resource/variant representations. `PlatformBackend` connects browser
+primitives without duplicating service rules. The Host resource registry
 invalidates a resource before asynchronous cleanup, waits for local I/O and control
 acknowledgements, and keeps streams alive independently of their original descriptors.
 Disposing a resource that is blocking on a pipe wakes the operation before waiting
@@ -86,3 +89,13 @@ The jsco-only integration passes 126 browser regressions (2 production-only skip
 checks. OS build/pack, public typecheck, WIT regeneration, fixture rebuild and
 benchmark statistics pass. [Current comparative results and limitations](process-context-integration-performance.md)
 record startup, memory, OPFS and direct Pipe samples without performance release gates.
+
+## Runtime integration
+
+See [Runtime/Context architecture](runtime-concept.md). The single internal Runtime
+contract has initialize/run/requestStop/asyncDispose. Process Worker owns selection,
+initialization before READY, exactly-once outcome reporting and disposal in Runtime-
+then-Context order. It remembers stop requests during startup. Partial initialization
+and a Runtime cleanup failure cannot bypass Context cleanup. Shared stdio getter
+views retain their ambient connection; file locks are released immediately on drop
+when no I/O is outstanding, while asynchronous release acknowledgements are drained.

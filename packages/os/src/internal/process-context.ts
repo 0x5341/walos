@@ -18,6 +18,7 @@ import { Descriptor, DirectoryEntryStream, P2Filesystem } from './p2-fs.js';
 import { InputStream, OutputStream, Pollable, StreamResource, type SharedStream } from './p2-io.js';
 import { connect, FileStream, ioError } from './streams.js';
 import { createRandom, environment, monotonicClock, wallClock } from './services.js';
+import { browserPlatform, type PlatformBackend } from './platform.js';
 
 export const serviceError = (error: unknown): ServiceError => {
   if (error instanceof ServiceError) return error;
@@ -75,7 +76,37 @@ const size = (length: bigint) => {
   if (length < 0n) throw new ServiceError('invalid', 'Negative byte length');
   return Number(length > 65536n ? 65536n : length);
 };
-export class HostResources {
+/** Private process bootstrap. Runtime adapters receive only the resulting Context. */
+export interface ContextBootstrap {
+  root: FileSystemDirectoryHandle;
+  pid: number;
+  ppid: number | null;
+  argv: readonly string[];
+  env: Record<string, string>;
+  stdio: (StreamRef | null)[];
+  cwd?: FileSystemDirectoryHandle;
+  cwdPath?: string;
+  platform?: PlatformBackend;
+}
+
+/** One public Context implementation, with a separate instance per process. */
+export class ProcessContextImpl implements ProcessContext {
+  readonly pid!: ProcessContext['pid'];
+  readonly ppid!: ProcessContext['ppid'];
+  readonly args!: ProcessContext['args'];
+  readonly env!: ProcessContext['env'];
+  readonly fs!: ProcessContext['fs'];
+  readonly io!: ProcessContext['io'];
+  readonly process!: ProcessContext['process'];
+  readonly clock!: ProcessContext['clock'];
+  readonly random!: ProcessContext['random'];
+  constructor(services: ProcessContext) {
+    Object.defineProperties(this, Object.getOwnPropertyDescriptors(services));
+    Object.freeze(this);
+  }
+}
+
+export class ProcessServices {
   private resources = new Set<Resource>();
   private closing = false;
   private pending = new Set<Promise<unknown>>();
@@ -93,18 +124,18 @@ export class HostResources {
   private streamViews = new WeakMap<object, StreamResource>();
   private descriptorViews = new WeakMap<object, Descriptor>();
   private fs: P2Filesystem;
+  private ambient = new WeakSet<StreamResource>();
+  private permits = new WeakMap<object, number>();
   private standard: { stream: Awaited<ReturnType<typeof connect>>; shared: SharedStream }[] = [];
   readonly context: ProcessContext;
   constructor(
-    root: FileSystemDirectoryHandle,
-    pid: number,
-    argv: readonly string[],
-    env: Record<string, string>,
+    private bootstrap: ContextBootstrap,
     private rpc: Rpc,
     readonly check: () => void,
   ) {
+    const { root, pid, ppid, argv, env, cwd, cwdPath } = bootstrap;
     this.fs = new P2Filesystem(
-      new Filesystem(root, root, '/'),
+      new Filesystem(root, cwd ?? root, cwdPath ?? '/', this.platform),
       (s) => this.streams.add(s),
       (s, moved) => {
         this.streams.delete(s);
@@ -112,6 +143,7 @@ export class HostResources {
           this.releases.set(s, this.rpc.call({ op: 'stream-close', streamId: s.stream.ref.id }));
       },
     );
+    if (!cwd) this.fs.fs.descriptors.delete(4);
     const owner = this;
     const random = createRandom();
     const guarded = <T extends object>(object: T): T =>
@@ -126,27 +158,20 @@ export class HostResources {
           ]),
         ),
       ) as T;
-    this.context = Object.freeze({
+    this.context = new ProcessContextImpl({
       pid,
-      ppid: null,
+      ppid,
       args: Object.freeze([...argv]),
       env: guarded(environment(env)),
       fs: Object.freeze({
         getDirectories: () => {
           check();
           return Object.freeze(
-            (
-              [
-                [
-                  owner.fs.descriptor(owner.fs.fs.get(3), {
-                    read: true,
-                    write: true,
-                    mutateDirectory: true,
-                  }),
-                  '/',
-                ],
-              ] as [Descriptor, string][]
-            ).map(([d, path]) => Object.freeze([owner.descriptor(d), path] as const)),
+            owner.fs
+              .preopens()
+              .map(([d, path]) =>
+                Object.freeze([owner.descriptor(d as Descriptor), path as string] as const),
+              ),
           );
         },
       }),
@@ -165,9 +190,9 @@ export class HostResources {
           check();
           return this.track(
             call(async () => {
-              const refs: StreamRef[] = await rpc.call({ op: 'pipe' });
-              const input = new InputStream(await connect(refs[0]), this.release);
-              const output = new OutputStream(await connect(refs[1]), this.release);
+              const refs: StreamRef[] = await this.rpc.call({ op: 'pipe' });
+              const input = new InputStream(await this.platform.connect(refs[0]), this.release);
+              const output = new OutputStream(await this.platform.connect(refs[1]), this.release);
               this.streams.add(input);
               this.streams.add(output);
               return Object.freeze([this.input(input), this.output(output)] as const);
@@ -194,10 +219,15 @@ export class HostResources {
     if (s.stream.ref.id && !moved)
       this.releases.set(s, this.rpc.call({ op: 'stream-close', streamId: s.stream.ref.id }));
   };
+  private get platform() {
+    return this.bootstrap.platform ?? browserPlatform;
+  }
   async init() {
     for (let i = 0; i < 3; i++)
       this.standard.push({
-        stream: await connect({ kind: 'null', id: 0, direction: i === 0 ? 'in' : 'out' }),
+        stream: await this.platform.connect(
+          this.bootstrap.stdio[i] ?? { kind: 'null', id: 0, direction: i === 0 ? 'in' : 'out' },
+        ),
         shared: { resources: new Set(), moved: false },
       });
   }
@@ -219,6 +249,7 @@ export class HostResources {
         ? new InputStream(stream, this.release, shared)
         : new OutputStream(stream, this.release, shared);
     this.streams.add(resource);
+    this.ambient.add(resource);
     return resource instanceof InputStream ? this.input(resource) : this.output(resource);
   }
   pollable(p: Pollable) {
@@ -249,7 +280,7 @@ export class HostResources {
       async () => {
         let failure: unknown;
         try {
-          if (s.stream instanceof FileStream) await s.stream.finish();
+          if (s.stream instanceof FileStream && !this.ambient.has(s)) await s.stream.finish();
         } catch (e) {
           failure = e;
         }
@@ -274,6 +305,7 @@ export class HostResources {
         return blocking ? s.blockingRead(length) : s.read(length);
       });
     const view = Object.freeze({
+      isTerminal: s.stream.ref.kind === 'tty',
       read,
       blockingRead: (n: bigint) => read(n, true),
       skip: async (n: bigint) => BigInt((await read(n)).length),
@@ -289,22 +321,23 @@ export class HostResources {
   }
   private output(s: OutputStream): PublicOutput {
     const r = this.streamResource(s);
-    let permit = 0;
     const flush = () => {
-      permit = 0;
+      this.permits.delete(s.stream);
       return r.async(() => (s.stream instanceof FileStream ? s.stream.flushAsync() : s.flush()));
     };
     const view = Object.freeze({
+      isTerminal: s.stream.ref.kind === 'tty',
       checkWrite: () =>
         r.run(() => {
-          permit = Number(s.checkWrite());
+          const permit = Number(s.checkWrite());
+          this.permits.set(s.stream, permit);
           return BigInt(permit);
         }),
       write: (bytes: Uint8Array) =>
         r.async(async () => {
-          if (bytes.length > permit)
+          if (bytes.length > (this.permits.get(s.stream) ?? 0))
             throw new ServiceError('invalid', 'Write exceeds checkWrite permit');
-          permit = 0;
+          this.permits.delete(s.stream);
           if (s.stream instanceof FileStream) await s.stream.write(bytes.slice());
           else s.write(bytes);
         }),
@@ -358,6 +391,16 @@ export class HostResources {
           if (!target) throw new ServiceError('invalid-resource', 'Foreign descriptor');
           return d.isSameObject(target);
         }),
+      advise: (...args: unknown[]) => r.async(() => d.advise()),
+      syncData: () => r.async(() => d.syncData()),
+      setTimes: (...args: unknown[]) => r.async(() => d.setTimes()),
+      setTimesAt: (...args: unknown[]) => r.async(() => d.setTimesAt()),
+      linkAt: (...args: unknown[]) => r.async(() => d.linkAt()),
+      readlinkAt: (...args: unknown[]) => r.async(() => d.readlinkAt()),
+      symlinkAt: (...args: unknown[]) => r.async(() => d.symlinkAt()),
+      metadataHash: () => r.async(() => d.metadataHash()),
+      metadataHashAt: (flags: unknown, path: string) =>
+        r.async(() => d.metadataHashAt(flags, path)),
       [Symbol.asyncDispose]: () => r.dispose(),
     });
     this.descriptorViews.set(view, d);
@@ -472,14 +515,31 @@ export class HostResources {
     );
   }
   gone(id: number) {
+    for (const { stream } of this.standard) if (stream.ref.id === id) stream.gone();
     for (const s of this.streams) if (s.stream.ref.id === id) s.stream.gone();
   }
-  async dispose() {
+  private disposal?: Promise<void>;
+  dispose(): Promise<void> {
+    return (this.disposal ??= this.close());
+  }
+  private async close() {
     this.closing = true;
     const results = await Promise.allSettled([...this.resources].map((r) => r.dispose()));
     await Promise.allSettled([...this.pending]);
     results.push(...(await Promise.allSettled([...this.resources].map((r) => r.dispose()))));
     this.fs.close();
+    for (const { stream, shared } of this.standard) {
+      if (shared.moved) continue;
+      try {
+        if (stream instanceof FileStream) await stream.finish();
+        else stream.close();
+        if (stream.ref.id) await this.rpc.call({ op: 'stream-close', streamId: stream.ref.id });
+      } catch (error) {
+        this.failures.push(error);
+      }
+    }
+    for (const result of await Promise.allSettled(this.releases.values()))
+      if (result.status === 'rejected') this.failures.push(result.reason);
     const failed = results.find((r) => r.status === 'rejected');
     if (failed?.status === 'rejected') throw failed.reason;
     if (this.failures.length) throw this.failures[0];
@@ -492,7 +552,7 @@ class Resource {
   moved?: () => StreamRef;
   onDrop?: () => void;
   constructor(
-    private owner: HostResources,
+    private owner: ProcessServices,
     private drop: () => unknown,
     private drainFirst = true,
   ) {
@@ -536,7 +596,7 @@ class Resource {
     this.onDrop?.();
     this.disposal = call(async () => {
       try {
-        if (this.drainFirst) await Promise.allSettled([...this.pending]);
+        if (this.drainFirst && this.pending.size) await Promise.allSettled([...this.pending]);
         await this.drop();
         if (!this.drainFirst) await Promise.allSettled([...this.pending]);
       } catch (error) {

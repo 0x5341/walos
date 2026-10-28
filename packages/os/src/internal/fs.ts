@@ -1,4 +1,5 @@
 import { FileStream, IoError } from './streams.js';
+import { browserPlatform, type PlatformBackend } from './platform.js';
 export interface Descriptor {
   file?: FileSystemFileHandle;
   dir?: FileSystemDirectoryHandle;
@@ -20,6 +21,7 @@ export class Filesystem {
     public root: FileSystemDirectoryHandle,
     public cwd: FileSystemDirectoryHandle,
     public cwdPath: string,
+    public platform: PlatformBackend = browserPlatform,
   ) {
     this.descriptors.set(3, { dir: root, path: '/' });
     this.descriptors.set(4, { dir: cwd, path: cwdPath });
