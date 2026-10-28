@@ -34,6 +34,13 @@ const metadata = {
     .version,
   jco: JSON.parse(await readFile('node_modules/@bytecodealliance/jco/package.json', 'utf8'))
     .version,
+  jsco: JSON.parse(await readFile('node_modules/@pavelsavara/jsco/package.json', 'utf8')).version,
+  wasiP3Sdk: (
+    await readFile(
+      `${process.env.WASI_P3_SDK_PATH || resolve('work/wasi-sdk-34.0-x86_64-linux')}/VERSION`,
+      'utf8',
+    )
+  ).trim(),
   wasiSdk: (await readFile(`${sdk}/VERSION`, 'utf8')).trim().split('\n')[0],
   wasiSdkBuild: (await readFile(`${sdk}/VERSION`, 'utf8')).trim(),
   clang: await cli(`${sdk}/bin/clang`, ['--version']),
@@ -58,7 +65,7 @@ const metadata = {
   memory:
     'CDP Runtime.getHeapUsage in held Process Worker after READY; no forced GC; no RSS or Component-only total.',
 };
-for (const format of ['p1', 'p2']) {
+for (const format of ['p1', 'p2', 'p3']) {
   metadata[`${format}Sha256`] = createHash('sha256')
     .update(await readFile(`work/benchmark-bin/${format}.wasm`))
     .digest('hex');
@@ -113,7 +120,7 @@ async function completeStartup(page, ready) {
 }
 try {
   {
-    for (const format of ['p1', 'p2']) {
+    for (const format of ['p1', 'p2', 'p3']) {
       for (let trial = 1; trial <= trials; trial++) {
         browser = await openBrowser();
         const context = await browser.newContext();

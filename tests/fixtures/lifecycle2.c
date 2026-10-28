@@ -29,11 +29,11 @@ bool exports_wasi_cli_run_run(void) {
           &executable, &fs_error))
     __builtin_trap();
   lifecycle_probe_list_string_t child_args = {&args.ptr[1], 1};
-  walos_runtime_process_environment_entry_t pwd = {text("PWD"),text("/")};
-  walos_runtime_process_list_environment_entry_t env = {&pwd,1};
-  walos_runtime_process_own_child_process_t child;
-  walos_runtime_process_spawn_error_t error;
-  bool spawned = walos_runtime_process_spawn(
+  walos_runtime_p2_process_environment_entry_t pwd = {text("PWD"),text("/")};
+  walos_runtime_p2_process_list_environment_entry_t env = {&pwd,1};
+  walos_runtime_p2_process_own_child_process_t child;
+  walos_runtime_p2_process_spawn_error_t error;
+  bool spawned = walos_runtime_p2_process_spawn(
       wasi_filesystem_types_borrow_descriptor(executable), &child_args,
       &env, NULL, NULL, NULL, &child, &error);
   char *message = spawned ? "audit-parent-ready\n" : "audit-parent-failed\n";

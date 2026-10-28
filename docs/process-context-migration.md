@@ -1,71 +1,50 @@
-# ProcessContext integration: #33, #35–#38
+# Migrating to the WASI 0.3.2 Context
 
-The public API and Walos extensions are v0.2.0. Standard WASI P1/P2 imports keep
-their existing ABI. Rebuild applications importing Walos extensions; old binaries
-using the cwd spawn argument or foreground import are incompatible.
+The public TS API is replaced. `getHostProcess()` returns the raw P3-based Context,
+with `wasi` package/interface groups and independent `walos` extensions. It does
+not automatically return a convenience wrapper.
 
-| Previous interface | v0.2.0 |
-| --- | --- |
-| new Walos / boot / attach / binUrl | await Walos.create; consumer installs binaries |
-| automatic Shell / OPFS bootstrap | one Worker-free Host; no automatic applications |
-| path/options spawn and cwd FD | borrowed executable Descriptor, full argv, env entries, owned stdio positions |
-| writeInput / output / foreground / interrupt | explicit byte pipes, consumer decoding/echo, ChildProcess.requestStop |
-| ctx.cwd / chdir / terminal | readonly env/args; PWD for initial cwd |
-| Resource.close / Symbol.dispose | await Resource[Symbol.asyncDispose]() |
-| Jco/polyengine selection / Component cache | direct jsco; no cache API or cache writes |
+For former Host `fs/io/process/env/clock/random` convenience calls, explicitly use
+`new HostProcessContext(os.getHostProcess())`. Replace old public resource type
+names with HostDescriptor, HostInput, HostOutput and HostChildProcess. Descriptor
+getType/getFlags now return Promises. Dispose the wrapper to release its generated
+resources; Walos alone owns the underlying Host/Context lifetime.
 
-## ABI and PWD
+For direct use, follow `docs/process-context-api.md`: handle Result variants,
+consume Future once and own/drop Stream ends. P3 FS getType is an async Result of a
+variant, not the former synchronous string. FS and stdio read-via-stream return a
+Stream/Future tuple; writes accept a Stream and return a Future. HTTP, sockets and
+timezone are typed but throw from the common Context.
 
-`wit/world.wit` declares `walos:runtime@0.2.0`, imports only process/ipc and has
-no custom terminal or cwd spawn argument. P1 `apps/webos.h` likewise drops the
-foreground import and cwd argument. Standard WASI terminal queries remain and
-report Null/Pipe as non-TTY. Regenerate TS with `npm run check:wit` and rebuild
-C/Component fixtures with `npm run build:apps` (wasi-sdk 27, wit-bindgen 0.46.0).
+Standard WASI P1 and P2 binaries remain executable. Their adapter-specific integer
+handles, errno, pollables, stream permits and variant representations remain inside
+ABI conversion. P1/P2 use the new raw Context and do not own an OS service stack.
 
-Only Host creation supplies a missing PWD=/; child spawn never inherits, supplies
-or validates PWD. P1 initial_cwd and P2 environment.initial-cwd read the snapshot
-when Wasm calls them. Descriptor-relative operations do not consult PWD. The
-compat.c/compat2.c constructors initialize wasi-libc cwd **inside Wasm before
-main**. Thus invalid PWD may produce an ordinary exit/trap during that constructor,
-after READY (P1 code 126; P2 wasi:cli/run maps unsuccessful exit to code 1); cwd-free services fixtures omit those constructors and run without
-PWD. The Shell uses libc chdir/getcwd/setenv and explicitly serializes its current
-environment into each child spawn. Host env remains a readonly launch snapshot.
+The old Walos custom ABIs are intentionally replaced. Recompile P1 extensions
+against the `walos_p1_v3` import module in apps/webos.h. P2 custom extensions use
+`walos:runtime-p2@0.3.2` (wit/world.wit) with P2 standard resource representations;
+P3 extensions use `walos:runtime@0.3.2` (wit/p3/world.wit), with P3 descriptors,
+owned I/O endpoints, Future/Stream and async process operations. These are distinct
+ABI representations of the same Walos process/Pipe operations. The previous
+webos_v1 and walos:runtime@0.2.0 custom binaries have no compatibility path.
 
-## Demo ownership
+The demo, Host test harness, API type examples and P1/P2 custom fixtures migrate in
+this change. PWD remains lazy, explicit stdio moves at invocation, descriptors are
+borrowed for spawn, child wait is one-shot and handle drop never means stop. Host
+is still a Main Thread logical Process with no Runtime or Process Worker.
 
-The UI installs named command files under /bin and creates missing /home,/tmp;
-it never clears those directories. It connects Shell stdin/out/err through three
-explicit Pipes, drains both output readers, waits once and disposes resources.
-Echo and UTF-8 decoding are consumer code. Page teardown disposes the OS.
+The authoritative WIT is pinned and hash-checked. jco-generated declarations are
+ABI/reference material; the production TS projection preserves Result and uses
+dedicated Future/Stream abstractions. Regenerate with `npm run generate:wasi` and
+validate with `npm run check:wasi`, `check:wit` and `check:wit:p3`. Runtime tools are
+pinned by `scripts/setup-runtime-tools.sh`; the older P1/P2 fixture toolchain is
+retained for standard binary regression coverage.
 
-The C Shell retains its own standard endpoints. Child stdin defaults to an
-explicit EOF pipe; use `< file` for input. Intermediate pipeline endpoints move
-straight between children. Final stdout and each child's stderr are explicit
-temporary files, drained after wait and unlinked. This deliberately bounded-scope
-consumer strategy avoids stealing the Shell's endpoints or adding implicit Pipe
-inheritance. Output is buffered on disk until completion, stderr ordering relative
-to stdout is not preserved, and aborted Shells can leave temporary captures in
-/tmp. No automatic terminal forwarding or job control is promised in Phase 1.
-The Stop button targets the Shell handle, not global foreground state; READY
-children survive a parent's exit, and OS disposal ends all managed processes.
 
-## Service and execution paths
-
-Host facades and P1/P2 adapters share filesystem/streams and local service
-implementations (`services.ts`, `p2-fs.ts`, `p2-io.ts`, `streams.ts`). Host OPFS uses
-async browser APIs; Process Workers retain sync access handles. Core controls PID,
-ownership and MessagePort transfer, never byte DATA. The 64 KiB Pipe bound,
-16 KiB chunks, cumulative ACK, EOF and Broken Pipe behavior stay intact.
-
-P2 load is createComponent → jsco import adaptation → instantiate → run. Old
-Jco/polyengine runtime loaders, registry/options, translator dependencies, OPFS
-artifact/cache hashing/staging/publication and clearComponentCache are removed.
-Existing `.walos-components` data is left untouched. Jco is retained in root
-**devDependencies** solely for WIT and fixture build tooling. OS package build and
-pack do not invoke SDK or command builds. Historical benchmark JSON/Markdown stay
-in docs/benchmarks; obsolete multi-engine runners/tests are removed.
-
-CI validates public types, WIT regeneration, command fixtures, browser lifecycle,
-services and I/O, production workers and Pages subpaths. Performance numbers are
-observations, not release thresholds. See the [integration performance record](process-context-integration-performance.md) for
-current startup, memory, local OPFS and direct Pipe measurements and limitations.
+P3 executables must declare the official 0.3.2 CLI world. Runtime selection now
+reads component interface imports/exports, so a component header does not imply
+P2. Unsupported or mixed versions/worlds fail startup. Standard P1/P2 programs
+continue to work; P3 uses native async Canonical ABI, with `Result`, dedicated
+Future/Stream and Context-backed resource drops. Explicit stop produces terminated,
+while a guest exit code 130 remains exited(130). Internal JS Process execution and
+working HTTP/socket/timezone services are outside this migration.

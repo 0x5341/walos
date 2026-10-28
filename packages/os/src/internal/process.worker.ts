@@ -1,129 +1,164 @@
 import { Rpc, type ToProcess, type ProcessMetrics } from './protocol.js';
-import { Wasi, WasiExit } from './wasi.js';
+import { Wasi } from './wasi.js';
 import { Wasi2 } from './wasi2.js';
-import { executableFormat, loadComponent } from './component.js';
+import { executableKind, prepareComponent } from './component.js';
+import { Wasi3 } from './wasi3.js';
+import { ProcessServices } from './process-context.js';
+import { browserPlatform } from './platform.js';
+import { RuntimeStopped, type Runtime } from './runtime.js';
+import type { Exit } from '../types.js';
+
 const scope = self as unknown as DedicatedWorkerGlobalScope;
-const rpc = new Rpc((r, ports) => scope.postMessage(r, ports));
-let wasi: Wasi | Wasi2 | undefined;
-// Deserialization failures in this direction do not fire Worker.onmessageerror
-// in the Core. Report them over the remaining control channel instead.
-scope.onmessageerror = () => {
-  scope.postMessage({ type: 'boot-error', message: 'worker incoming message error' });
-};
+const rpc = new Rpc((request, ports) => scope.postMessage(request, ports));
+let services: ProcessServices | undefined;
+let runtime: Runtime | undefined;
+let started = false;
+let ready = false;
+let finished = false;
+let stopping = false;
+let fatal: unknown;
+let metrics: ProcessMetrics | undefined;
+
+// Every completion path shares one notification and cleanup scope.
+function notify(exit: Exit) {
+  if (finished) return;
+  finished = true;
+  scope.postMessage(
+    ready
+      ? { type: 'exit', exit, ...(metrics && { component: metrics.component }) }
+      : {
+          type: 'boot-error',
+          message:
+            exit.kind === 'exited' ? `Process exited before READY: ${exit.code}` : exit.message,
+        },
+  );
+}
+function fail(error: unknown) {
+  fatal ??= error;
+  runtime?.requestStop();
+  // External worker faults can interrupt a blocked import; Core terminates the
+  // Worker and reclaims transferred endpoints when it receives this result.
+  notify({ kind: 'trap', message: String(error) });
+}
+scope.onmessageerror = () => fail(new Error('worker incoming message error'));
 scope.onunhandledrejection = (event) => {
   event.preventDefault();
-  scope.postMessage({
-    type: 'boot-error',
-    message: `worker unhandled rejection: ${String(event.reason)}`,
-  });
+  fail(new Error(`worker unhandled rejection: ${String(event.reason)}`));
 };
-scope.onmessage = async (e) => {
-  const m = e.data as ToProcess | { type: 'stream-gone'; id: number };
-  if (m.type === 'reply') {
-    rpc.receive(m);
+scope.onmessage = async (event) => {
+  const message = event.data as ToProcess | { type: 'stream-gone'; id: number };
+  if (message.type === 'reply') {
+    rpc.receive(message);
     return;
   }
-  if (m.type === 'stream-gone') {
-    wasi?.gone(m.id);
+  if (message.type === 'stream-gone') {
+    services?.gone(message.id);
     return;
   }
-  if (m.type === 'stop') {
-    if (wasi) wasi.stopping = true;
+  if (message.type === 'stop') {
+    stopping = true;
+    runtime?.requestStop();
     return;
   }
-  if (m.type !== 'start') return;
-  let ready = false;
-  let metrics: ProcessMetrics | undefined;
+  if (message.type !== 'start' || started) return;
+  started = true;
+  let exit: Exit | undefined;
+  let runStart: number | undefined;
+  let runMs: number | undefined;
   try {
     if (typeof WebAssembly.Suspending !== 'function')
       throw new Error('This slice requires Chromium with JSPI support');
     const readStart = performance.now();
-    const bytes = new Uint8Array(await (await m.spec.file.getFile()).arrayBuffer());
-    metrics = m.measure ? { readMs: performance.now() - readStart } : undefined;
+    const bytes = new Uint8Array(await (await message.spec.file.getFile()).arrayBuffer());
+    metrics = message.measure ? { readMs: performance.now() - readStart } : undefined;
+    if (metrics) metrics.component = {};
+    const prepared =
+      executableKind(bytes) === 'component'
+        ? await prepareComponent(bytes, metrics?.component)
+        : undefined;
+    const format = prepared?.format ?? 'p1';
     const adapterStart = performance.now();
-    let run: () => Promise<unknown>;
-    if (executableFormat(bytes) === 'p2') {
-      const adapter = new Wasi2(m.spec, rpc);
-      wasi = adapter;
-      await adapter.init();
-      const loadStart = performance.now();
-      if (metrics) {
-        metrics.adapterMs = loadStart - adapterStart;
-        metrics.component = {};
-      }
-      const component = await loadComponent(bytes, adapter.imports(), metrics?.component);
-      if (metrics) metrics.loadMs = performance.now() - loadStart;
-      if (typeof component.run?.run !== 'function')
-        throw new Error('Expected a wasi:cli/run command component');
-      run = async () => {
-        try {
-          await component.run.run();
-        } catch (error) {
-          // wasi:cli/run returns result<_, _>; Jco represents err(_) as a payload error.
-          if (
-            error instanceof Error &&
-            Object.hasOwn(error, 'payload') &&
-            (error as Error & { payload: unknown }).payload === undefined
-          )
-            throw new WasiExit(1);
-          throw error;
-        }
-      };
-    } else {
-      const adapter = new Wasi(m.spec, rpc);
-      wasi = adapter;
-      await adapter.init();
-      const compileStart = performance.now();
-      if (metrics) metrics.adapterMs = compileStart - adapterStart;
-      const module = await WebAssembly.compile(bytes);
-      const instantiateStart = performance.now();
-      if (metrics) metrics.compileMs = instantiateStart - compileStart;
-      const instance = await WebAssembly.instantiate(
-        module,
-        adapter.imports() as unknown as WebAssembly.Imports,
-      );
-      if (metrics) metrics.instantiateMs = performance.now() - instantiateStart;
-      adapter.memory = instance.exports.memory as WebAssembly.Memory;
-      if (!adapter.memory || typeof instance.exports._start !== 'function')
-        throw new Error('Expected a WASI Preview 1 command with memory and _start exports');
-      if (metrics) metrics.linearMemoryBytes = adapter.memory.buffer.byteLength;
-      run = WebAssembly.promising(instance.exports._start);
-    }
-    if (metrics) metrics.readyAtMs = performance.now();
-    scope.postMessage({ type: 'ready', ...(metrics && { metrics }) });
-    ready = true;
-    const runStart = performance.now();
-    try {
-      await run();
-      const runMs = performance.now() - runStart;
-      await wasi.close();
-      scope.postMessage({
-        type: 'exit',
-        exit: { kind: 'exited', code: 0 },
-        ...(metrics && { runMs, component: metrics.component }),
-      });
-    } catch (e) {
-      const runMs = performance.now() - runStart;
-      await wasi.close();
-      scope.postMessage({
-        type: 'exit',
-        ...(metrics && { runMs, component: metrics.component }),
-        exit:
-          e instanceof WasiExit
-            ? { kind: 'exited', code: e.code }
-            : { kind: 'trap', message: String(e) },
-      });
-    }
-  } catch (e) {
-    await wasi?.close();
-    scope.postMessage(
-      ready
-        ? {
-            type: 'exit',
-            exit: { kind: 'trap', message: String(e) },
-            ...(metrics?.component && { component: metrics.component }),
-          }
-        : { type: 'boot-error', message: String(e) },
+    services = new ProcessServices(
+      {
+        ...message.spec,
+        root: await browserPlatform.root(),
+        pid: message.pid,
+        ppid: message.ppid ?? null,
+      },
+      rpc,
+      () => {
+        if (finished) throw new Error('Process is finished');
+      },
     );
+    await services.init();
+    runtime =
+      format === 'p3'
+        ? new Wasi3(metrics, prepared)
+        : format === 'p2'
+          ? new Wasi2(metrics, prepared)
+          : new Wasi(metrics);
+    if (stopping) runtime.requestStop();
+    if (metrics) metrics.adapterMs = performance.now() - adapterStart;
+    await runtime.initialize(bytes, services.context);
+    if (fatal) throw fatal;
+    if (stopping) {
+      exit = { kind: 'terminated', message: 'stopped before READY' };
+    } else {
+      if (metrics) metrics.readyAtMs = performance.now();
+      scope.postMessage({ type: 'ready', ...(metrics && { metrics }) });
+      ready = true;
+      runStart = performance.now();
+      exit = { kind: 'exited', code: await runtime.run() };
+      runMs = performance.now() - runStart;
+    }
+  } catch (error) {
+    if (runStart !== undefined) runMs = performance.now() - runStart;
+    exit =
+      error instanceof RuntimeStopped
+        ? { kind: 'terminated', message: error.message }
+        : { kind: 'trap', message: String(error) };
+  } finally {
+    // Failure of the borrower must never prevent cleanup of its owner.
+    const failures: unknown[] = [];
+    try {
+      await runtime?.[Symbol.asyncDispose]();
+    } catch (error) {
+      failures.push(error);
+    }
+    try {
+      await services?.dispose();
+    } catch (error) {
+      failures.push(error);
+    }
+    if (failures.length)
+      exit = {
+        kind: 'trap',
+        message: `${exit?.kind === 'trap' ? exit.message + '; ' : ''}cleanup failed: ${failures.map(String).join('; ')}`,
+      };
+    if (!finished) {
+      finished = true;
+      const result = exit ?? {
+        kind: 'trap' as const,
+        message: 'Process did not produce an exit result',
+      };
+      scope.postMessage(
+        ready
+          ? {
+              type: 'exit',
+              exit: result,
+              ...(metrics && {
+                runMs,
+                component: metrics.component,
+              }),
+            }
+          : {
+              type: 'boot-error',
+              message:
+                result.kind === 'exited'
+                  ? `Process exited before READY: ${result.code}`
+                  : result.message,
+            },
+      );
+    }
   }
 };

@@ -9,7 +9,7 @@ jobs:
   chromium:
     # Playwright 1.56.1 supports Ubuntu 24.04; ubuntu-latest can move to newer releases.
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -21,12 +21,15 @@ jobs:
       - run: npm run build:os && npm pack --workspace @walos/os --dry-run
       - run: bash scripts/setup-sdk.sh
       - run: bash scripts/setup-wit-bindgen.sh
+      - run: bash scripts/setup-runtime-tools.sh
       - run: npx playwright install --with-deps chromium
+      - run: npm run check:wit:p3
       - run: npm run check:wit
       - run: diff -ru wit/generated work/wit-generated
       - run: npm run build
       - run: npm test
       - run: npm run test:production
+      - run: npm run test:pages
       - run: npm run test:benchmark
       # Check reproducibility/integrity, without hardware-dependent performance gates.
       - run: npm run benchmark -- --trials 1

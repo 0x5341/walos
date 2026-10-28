@@ -22,6 +22,7 @@ jobs:
       - run: npm ci
       - run: bash scripts/setup-sdk.sh
       - run: bash scripts/setup-wit-bindgen.sh
+      - run: bash scripts/setup-runtime-tools.sh
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:pages

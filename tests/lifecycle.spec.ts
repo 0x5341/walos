@@ -9,8 +9,8 @@ async function run(page: import('@playwright/test').Page, scenario: Scenario) {
   }, scenario);
 }
 
-for (const parent of ['lifecycle-parent', 'p2-lifecycle-parent'] as const)
-  for (const child of ['cat', 'p2-cat'] as const)
+for (const parent of ['lifecycle-parent', 'p2-lifecycle-parent', 'p3-lifecycle-parent'] as const)
+  for (const child of ['cat', 'p2-cat', 'p3-cat'] as const)
     for (const reason of [
       'normal',
       'nonzero',
@@ -66,8 +66,8 @@ for (const parent of ['lifecycle-parent', 'p2-lifecycle-parent'] as const)
           expect(result.processes).toEqual([]);
         });
 
-for (const parent of ['lifecycle-parent', 'p2-lifecycle-parent'] as const)
-  for (const child of ['cat', 'p2-cat'] as const)
+for (const parent of ['lifecycle-parent', 'p2-lifecycle-parent', 'p3-lifecycle-parent'] as const)
+  for (const child of ['cat', 'p2-cat', 'p3-cat'] as const)
     test(`real ${parent} → ${child}: READY races parent trap before spawn continuation`, async ({
       page,
     }) => {

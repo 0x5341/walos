@@ -1,4 +1,5 @@
-import { ServiceError, type Environment, type RandomService } from '../types.js';
+import { ServiceError } from '../types.js';
+import type { Environment, RandomService } from './service-model.js';
 import { Pollable } from './p2-io.js';
 
 export const environment = (values: Readonly<Record<string, string>>): Environment => {

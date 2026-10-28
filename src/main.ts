@@ -1,5 +1,11 @@
 import './style.css';
-import { Walos, ServiceError, type OutputStream, type InputStream } from '@walos/os';
+import {
+  Walos,
+  HostProcessContext,
+  ServiceError,
+  type HostOutput as OutputStream,
+  type HostInput as InputStream,
+} from '@walos/os';
 
 const terminal = document.querySelector<HTMLPreElement>('#terminal')!;
 const input = document.querySelector<HTMLInputElement>('#input')!;
@@ -39,7 +45,7 @@ async function start() {
   const os = await Walos.create({ env: { PWD: '/', PATH: '/bin' } });
   window.addEventListener('pagehide', () => void os.dispose());
   try {
-    const host = os.getHostProcess();
+    const host = new HostProcessContext(os.getHostProcess());
     const render = () => {
       processes.textContent = os.processes
         .map((p) => `${p.pid}  ${p.state.toLowerCase()}  ${p.argv.join(' ') || 'Host'}`)
@@ -78,6 +84,8 @@ async function start() {
       'p2-env',
       'p2-grep',
       'p2-sort',
+      'p3-probe',
+      'p3-cat',
     ]) {
       const response = await fetch(`${import.meta.env.BASE_URL}bin/${name}.wasm`);
       if (!response.ok) throw new Error(`Cannot install ${name}: ${response.status}`);

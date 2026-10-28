@@ -37,50 +37,50 @@ bool exports_wasi_cli_run_run(void) {
   wasi_filesystem_types_own_descriptor_t producer, consumer;
   CHECK(open_file(root, "bin/p2-echo", &producer));
   CHECK(open_file(root, "bin/cat", &consumer));
-  walos_runtime_ipc_tuple2_own_input_stream_own_output_stream_t pipe;
-  walos_runtime_ipc_create_pipe(&pipe);
+  walos_runtime_p2_ipc_tuple2_own_input_stream_own_output_stream_t pipe;
+  walos_runtime_p2_ipc_create_pipe(&pipe);
   process_probe_string_t args[] = {text("p2-echo"),
                                    text("component-spawn-pipe")};
   process_probe_list_string_t argv = {args, 2};
-  walos_runtime_process_environment_entry_t pwd = {text("PWD"),text("/")};
-  walos_runtime_process_list_environment_entry_t env = {&pwd,1};
-  walos_runtime_process_spawn_error_t error;
-  walos_runtime_process_own_child_process_t a, b;
-  CHECK(walos_runtime_process_spawn(
+  walos_runtime_p2_process_environment_entry_t pwd = {text("PWD"),text("/")};
+  walos_runtime_p2_process_list_environment_entry_t env = {&pwd,1};
+  walos_runtime_p2_process_spawn_error_t error;
+  walos_runtime_p2_process_own_child_process_t a, b;
+  CHECK(walos_runtime_p2_process_spawn(
       wasi_filesystem_types_borrow_descriptor(producer), &argv, &env,
       NULL, &pipe.f1, NULL, &a, &error));
   args[0] = text("cat");
   argv.len = 1;
   wasi_cli_stdout_own_output_stream_t child_stdout = wasi_cli_stdout_get_stdout();
-  CHECK(walos_runtime_process_spawn(
+  CHECK(walos_runtime_p2_process_spawn(
       wasi_filesystem_types_borrow_descriptor(consumer), &argv, &env,
       &pipe.f0, &child_stdout, NULL, &b, &error));
-  walos_runtime_process_borrow_child_process_t ah =
-      walos_runtime_process_borrow_child_process(a);
-  walos_runtime_process_borrow_child_process_t bh =
-      walos_runtime_process_borrow_child_process(b);
-  CHECK(walos_runtime_process_method_child_process_pid(ah) !=
-        walos_runtime_process_method_child_process_pid(bh));
-  walos_runtime_process_exit_result_t exit;
-  walos_runtime_process_wait_error_t wait_error;
+  walos_runtime_p2_process_borrow_child_process_t ah =
+      walos_runtime_p2_process_borrow_child_process(a);
+  walos_runtime_p2_process_borrow_child_process_t bh =
+      walos_runtime_p2_process_borrow_child_process(b);
+  CHECK(walos_runtime_p2_process_method_child_process_pid(ah) !=
+        walos_runtime_p2_process_method_child_process_pid(bh));
+  walos_runtime_p2_process_exit_result_t exit;
+  walos_runtime_p2_process_wait_error_t wait_error;
   CHECK(
-      walos_runtime_process_method_child_process_wait(ah, &exit, &wait_error));
-  CHECK(exit.tag == WALOS_RUNTIME_PROCESS_EXIT_RESULT_EXITED &&
+      walos_runtime_p2_process_method_child_process_wait(ah, &exit, &wait_error));
+  CHECK(exit.tag == WALOS_RUNTIME_P2_PROCESS_EXIT_RESULT_EXITED &&
         exit.val.exited == 0);
   CHECK(
-      walos_runtime_process_method_child_process_wait(bh, &exit, &wait_error));
-  CHECK(exit.tag == WALOS_RUNTIME_PROCESS_EXIT_RESULT_EXITED &&
+      walos_runtime_p2_process_method_child_process_wait(bh, &exit, &wait_error));
+  CHECK(exit.tag == WALOS_RUNTIME_P2_PROCESS_EXIT_RESULT_EXITED &&
         exit.val.exited == 0);
   CHECK(
-      !walos_runtime_process_method_child_process_wait(ah, &exit, &wait_error));
-  CHECK(wait_error.tag == WALOS_RUNTIME_PROCESS_WAIT_ERROR_ALREADY_CONSUMED);
-  walos_runtime_process_child_process_drop_own(a);
-  walos_runtime_process_child_process_drop_own(b);
+      !walos_runtime_p2_process_method_child_process_wait(ah, &exit, &wait_error));
+  CHECK(wait_error.tag == WALOS_RUNTIME_P2_PROCESS_WAIT_ERROR_ALREADY_CONSUMED);
+  walos_runtime_p2_process_child_process_drop_own(a);
+  walos_runtime_p2_process_child_process_drop_own(b);
   // Spawn consumes explicit streams even when the executable is a directory.
-  walos_runtime_ipc_create_pipe(&pipe);
-  CHECK(!walos_runtime_process_spawn(root, &argv, &env, NULL, &pipe.f1,
+  walos_runtime_p2_ipc_create_pipe(&pipe);
+  CHECK(!walos_runtime_p2_process_spawn(root, &argv, &env, NULL, &pipe.f1,
                                      NULL, &a, &error));
-  CHECK(error.tag == WALOS_RUNTIME_PROCESS_SPAWN_ERROR_INVALID_DESCRIPTOR);
+  CHECK(error.tag == WALOS_RUNTIME_P2_PROCESS_SPAWN_ERROR_INVALID_DESCRIPTOR);
   wasi_io_streams_input_stream_drop_own(pipe.f0);
   // A file stream moves its handle and logical offset; the parent releases its
   // lock.
@@ -101,15 +101,15 @@ bool exports_wasi_cli_run_run(void) {
   args[0] = text("p2-echo");
   args[1] = text("component-file-transfer");
   argv.len = 2;
-  CHECK(walos_runtime_process_spawn(
+  CHECK(walos_runtime_p2_process_spawn(
       wasi_filesystem_types_borrow_descriptor(producer), &argv, &env,
       NULL, &file_output, NULL, &a, &error));
-  ah = walos_runtime_process_borrow_child_process(a);
+  ah = walos_runtime_p2_process_borrow_child_process(a);
   CHECK(
-      walos_runtime_process_method_child_process_wait(ah, &exit, &wait_error));
-  CHECK(exit.tag == WALOS_RUNTIME_PROCESS_EXIT_RESULT_EXITED &&
+      walos_runtime_p2_process_method_child_process_wait(ah, &exit, &wait_error));
+  CHECK(exit.tag == WALOS_RUNTIME_P2_PROCESS_EXIT_RESULT_EXITED &&
         exit.val.exited == 0);
-  walos_runtime_process_child_process_drop_own(a);
+  walos_runtime_p2_process_child_process_drop_own(a);
   process_probe_tuple2_list_u8_bool_t file_result;
   CHECK(wasi_filesystem_types_method_descriptor_read(
       wasi_filesystem_types_borrow_descriptor(output_file), 100, 0,
@@ -122,19 +122,19 @@ bool exports_wasi_cli_run_run(void) {
   // UI.
   wasi_filesystem_types_own_descriptor_t hang;
   CHECK(open_file(root, "bin/p2-hang", &hang));
-  walos_runtime_ipc_create_pipe(&pipe);
+  walos_runtime_p2_ipc_create_pipe(&pipe);
   args[0] = text("p2-hang");
   argv.len = 1;
-  CHECK(walos_runtime_process_spawn(
+  CHECK(walos_runtime_p2_process_spawn(
       wasi_filesystem_types_borrow_descriptor(hang), &argv, &env, NULL,
       &pipe.f1, NULL, &a, &error));
-  ah = walos_runtime_process_borrow_child_process(a);
-  walos_runtime_process_method_child_process_request_stop(ah);
+  ah = walos_runtime_p2_process_borrow_child_process(a);
+  walos_runtime_p2_process_method_child_process_request_stop(ah);
   CHECK(
-      walos_runtime_process_method_child_process_wait(ah, &exit, &wait_error));
-  CHECK(exit.tag == WALOS_RUNTIME_PROCESS_EXIT_RESULT_TERMINATED);
-  walos_runtime_process_exit_result_free(&exit);
-  walos_runtime_process_child_process_drop_own(a);
+      walos_runtime_p2_process_method_child_process_wait(ah, &exit, &wait_error));
+  CHECK(exit.tag == WALOS_RUNTIME_P2_PROCESS_EXIT_RESULT_TERMINATED);
+  walos_runtime_p2_process_exit_result_free(&exit);
+  walos_runtime_p2_process_child_process_drop_own(a);
   wasi_filesystem_types_descriptor_drop_own(hang);
   wasi_filesystem_types_descriptor_drop_own(producer);
   wasi_filesystem_types_descriptor_drop_own(consumer);

@@ -1,12 +1,13 @@
 import {
   Walos,
+  HostProcessContext,
   ServiceError,
-  type FileDescriptor,
-  type InputStream,
-  type OutputStream,
-  type ProcessContext,
+  type HostDescriptor as FileDescriptor,
+  type HostInput as InputStream,
+  type HostOutput as OutputStream,
+  type HostProcessContext as ProcessContext,
 } from '../../packages/os/dist/index.js';
-export { Walos, ServiceError };
+export { Walos, ServiceError, HostProcessContext };
 export async function install(host: ProcessContext, name: string, path = name) {
   const [[root]] = host.fs.getDirectories();
   const file = await root.openAt(

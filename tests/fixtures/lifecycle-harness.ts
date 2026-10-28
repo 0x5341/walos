@@ -2,8 +2,8 @@ import { ProcessManager } from '../../packages/os/dist/internal/core.js';
 import type { CoreEvent } from '../../packages/os/dist/internal/protocol.js';
 
 export interface Scenario {
-  parent: 'lifecycle-parent' | 'p2-lifecycle-parent';
-  child: 'cat' | 'p2-cat';
+  parent: 'lifecycle-parent' | 'p2-lifecycle-parent' | 'p3-lifecycle-parent';
+  child: 'cat' | 'p2-cat' | 'p3-cat';
   reason: 'normal' | 'nonzero' | 'trap' | 'error' | 'messageerror' | 'rejection';
   order: 'exit-first' | 'ready-first' | 'same-turn-ready-first';
 }

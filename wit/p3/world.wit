@@ -1,0 +1,49 @@
+package walos:runtime@0.3.2;
+
+interface io {
+    use wasi:cli/types@0.3.2.{error-code};
+    use wasi:filesystem/types@0.3.2.{descriptor, filesize, error-code as filesystem-error};
+    resource input-endpoint {
+        read-via-stream: func() -> tuple<stream<u8>, future<result<_, error-code>>>;
+    }
+    resource output-endpoint {
+        when-writable: func(minimum: u64) -> future<result<u64, error-code>>;
+        write-via-stream: func(data: stream<u8>) -> future<result<_, error-code>>;
+    }
+    read-via-descriptor: async func(file: borrow<descriptor>, offset: filesize) -> result<input-endpoint, filesystem-error>;
+    write-via-descriptor: async func(file: borrow<descriptor>, offset: filesize, append: bool) -> result<output-endpoint, filesystem-error>;
+    get-stdin: func() -> input-endpoint;
+    get-stdout: func() -> output-endpoint;
+    get-stderr: func() -> output-endpoint;
+    create-pipe: async func() -> tuple<input-endpoint, output-endpoint>;
+}
+
+interface process {
+    use wasi:filesystem/types@0.3.2.{descriptor};
+    use io.{input-endpoint, output-endpoint};
+    variant spawn-error { invalid-descriptor, invalid-stream, initialization(string), timeout, cancelled, busy, internal(string) }
+    variant exit-result { exited(u32), trap(string), terminated(string) }
+    variant wait-error { already-consumed }
+    resource child-process {
+        pid: func() -> u32;
+        wait: async func() -> result<exit-result, wait-error>;
+        request-stop: async func();
+    }
+    spawn: async func(
+        executable: borrow<descriptor>,
+        argv: list<string>,
+        env: list<tuple<string, string>>,
+        stdin: option<input-endpoint>,
+        stdout: option<output-endpoint>,
+        stderr: option<output-endpoint>
+    ) -> result<child-process, spawn-error>;
+}
+
+world command {
+    include wasi:cli/command@0.3.2;
+    import io;
+    import process;
+    import wasi:http/types@0.3.2;
+    import wasi:http/client@0.3.2;
+    import wasi:http/handler@0.3.2;
+}

@@ -110,14 +110,14 @@ export class Descriptor {
   }
   private async fileStream(direction: 'in' | 'out', offset: bigint, append = false) {
     direction === 'in' ? this.readable() : this.writable();
-    const stream = await new FileStream({
+    const stream = (await this.owner.fs.platform.connect({
       kind: 'file',
       id: 0,
       direction,
       file: this.file(),
       position: offsetNumber(offset),
       append,
-    }).open(typeof window === 'undefined');
+    })) as FileStream;
     this.streams.add(stream);
     return stream;
   }

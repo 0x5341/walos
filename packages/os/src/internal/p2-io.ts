@@ -87,6 +87,7 @@ export interface SharedStream {
 }
 export abstract class StreamResource {
   protected live = true;
+  private dropListeners = new Set<() => void>();
   constructor(
     public stream: Stream,
     private release: (s: StreamResource, moved: boolean) => void = () => {},
@@ -105,12 +106,22 @@ export abstract class StreamResource {
       throw streamError(error);
     }
   }
-  subscribe() {
+  protected subscribeWhen(ready: () => boolean) {
     this.check();
     return new Pollable(
-      () => !this.live || this.ready(),
-      (wake) => this.stream.onReady(wake),
+      () => !this.live || ready(),
+      (wake) => {
+        const remove = this.stream.onReady(wake);
+        this.dropListeners.add(wake);
+        return () => {
+          remove();
+          this.dropListeners.delete(wake);
+        };
+      },
     );
+  }
+  subscribe() {
+    return this.subscribeWhen(() => this.ready());
   }
   protected abstract ready(): boolean;
   take(): StreamRef {
@@ -124,12 +135,14 @@ export abstract class StreamResource {
       this.shared.resources.delete(this);
     }
     this.live = false;
+    for (const wake of [...this.dropListeners]) wake();
     this.release(this, true);
     return this.stream.detach();
   }
   [Symbol.dispose]() {
     if (!this.live) return;
     this.live = false;
+    for (const wake of [...this.dropListeners]) wake();
     if (this.shared) {
       this.shared.resources.delete(this);
       // Ambient stdio survives an individual getter resource's drop.
@@ -172,6 +185,9 @@ export class InputStream extends StreamResource {
   }
 }
 export class OutputStream extends StreamResource {
+  subscribeCapacity(minimum: number) {
+    return this.subscribeWhen(() => this.stream.writable() >= minimum);
+  }
   private localPermit = 0;
   private get permit() {
     return this.shared ? (this.shared.permit ?? 0) : this.localPermit;

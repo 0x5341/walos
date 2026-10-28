@@ -1,6 +1,6 @@
 {
   "name": "@walos/os",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "license": "AGPL-3.0-only",
   "description": "UI-independent browser WASI runtime for walos",
@@ -24,6 +24,6 @@
     "node": ">=22.14"
   },
   "dependencies": {
-    "@pavelsavara/jsco": "0.2.0-preview.0"
+    "@pavelsavara/jsco": "0.2.0-preview.2"
   }
 }
