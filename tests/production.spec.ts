@@ -14,7 +14,7 @@ for (const name of ['echo', 'p2-echo'])
       const h = (window as any).testHost;
       const os = await h.Walos.create();
       try {
-        const host = os.getHostProcess();
+        const host = new h.HostProcessContext(os.getHostProcess());
         return await h.run(host, await h.install(host, name), [name, 'production']);
       } finally {
         await os.dispose();

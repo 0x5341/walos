@@ -1,7 +1,7 @@
 # ProcessContext implementation (#27–#31, #33, #35–#38)
 
 This implements the public contract in [process-context-api.md](process-context-api.md).
-`@walos/os` is version 0.2.0. Its constructor is private; `Walos.create()` completes
+`@walos/os` is version 0.3.0. Its constructor is private; `Walos.create()` completes
 Core registration of exactly one Worker-free Host before returning. No application
 or TTY is started, no commands are fetched, and no user directory is initialized.
 Only the supervisor Core Worker is created. Creation rollback and OS disposal reclaim
@@ -66,7 +66,7 @@ Shell with byte pipes; no implicit foreground input forwarding is provided.
 
 - `npm run check`: OS build, demo typecheck, root-only public API type examples,
   and negative checks for removed/forbidden public interfaces.
-- `npm run build:apps`: actual P1/P2 binaries plus generated v0.2.0 WIT fixtures.
+- `npm run build:apps`: actual P1/P2 binaries plus generated versioned P1/P2 Walos ABI fixtures.
 - `npm test`: Host lifecycle/streams/filesystem/services and existing actual-worker
   READY/EXIT, parent failure, peer disappearance, OPFS locking and jsco regressions.
 - `npm run test:production`, `npm run test:pages`: built-worker and Pages smoke checks.
@@ -99,3 +99,24 @@ then-Context order. It remembers stop requests during startup. Partial initializ
 and a Runtime cleanup failure cannot bypass Context cleanup. Shared stdio getter
 views retain their ambient connection; file locks are released immediately on drop
 when no I/O is outstanding, while asynchronous release acknowledgements are drained.
+
+## WASI 0.3.2 public projection
+
+The public Context now exposes WIT package/interface groups, explicit Result,
+Thenable Future and dedicated Stream ends. `wasi-services.ts` connects these to
+ProcessServices' private shared byte/resource model. That private model is not a
+second public Context. Common errors, resource ownership, filesystem policy and
+stdio rules stay in services; Main Thread/Worker primitives stay in PlatformBackend.
+P1/P2 and explicit Host wrappers use `abi-view.ts` only for representation conversion,
+including P3 async-to-P2 readiness/permit conversion. None constructs OS services.
+
+The io endpoint whenWritable Future uses the common stream capacity predicate,
+including the requested minimum threshold. Adapter reservations and standard getter
+write permits remain shared; pending data does not bypass Pipe backpressure. Dropping
+an individual getter wakes its local pollables without closing ambient stdio. P3
+operation Futures and streams are cancelled/drained before the remaining kernel
+resources close, and an API cleanup failure cannot skip the kernel cleanup attempt.
+
+The complete API and coverage inventories are generated from pinned, hash-checked
+0.3.2 WIT, including the optional timezone feature. Unimplemented operations throw
+from the shared Context; errors preserve that exception across ABI adapters.

@@ -2,7 +2,7 @@
 #define WEBOS_H
 #include <stdint.h>
 #define OS_IMPORT(name)                                                        \
-  __attribute__((import_module("webos_v1"), import_name(name)))
+  __attribute__((import_module("walos_p1_v3"), import_name(name)))
 OS_IMPORT("spawn")
 int os_spawn(int exe, const char *json, int length, int in, int out,
              int err, uint32_t *handle);

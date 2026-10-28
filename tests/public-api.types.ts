@@ -1,15 +1,21 @@
 import {
   Walos,
+  HostProcessContext,
   ServiceError,
-  type ChildProcess,
-  type InputStream,
-  type OutputStream,
+  type HostChildProcess as ChildProcess,
+  type HostInput as InputStream,
+  type HostOutput as OutputStream,
   type ProcessContext,
-  type FileDescriptor,
+  type HostDescriptor as FileDescriptor,
 } from '@walos/os';
 export async function publicExample(executable: FileDescriptor) {
   await using os = await Walos.create({ env: { PWD: '/' }, argv: [] });
-  const host: ProcessContext = os.getHostProcess();
+  const raw: ProcessContext = os.getHostProcess();
+  const host = new HostProcessContext(raw);
+  // @ts-expect-error old P2-based Context grouping has been removed
+  raw.fs;
+  // @ts-expect-error Host convenience grouping requires the explicit wrapper
+  raw.io;
   const [[root]] = host.fs.getDirectories();
   await using input = await root.openAt({}, 'app.wasm', {}, { read: true });
   const [reader, writer] = await host.io.createPipe();

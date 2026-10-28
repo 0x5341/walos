@@ -4,7 +4,7 @@ const fallible = (iface: string, resource: string, name: string) =>
     ['Descriptor', 'DirectoryEntryStream'].includes(resource) &&
     name !== 'isSameObject') ||
   (iface === 'wasi:io/streams' && name !== 'subscribe') ||
-  (iface === 'walos:runtime/process' && ['spawn', 'wait'].includes(name));
+  (iface === 'walos:runtime-p2/process' && ['spawn', 'wait'].includes(name));
 const expectedError = (e: unknown) =>
   typeof e === 'string' || (e !== null && typeof e === 'object' && Object.hasOwn(e, 'tag'));
 const methods = (cls: Function) => {
@@ -51,16 +51,17 @@ export function jscoImports(imports: Record<string, any>, required: string[]) {
     const iface = versioned.split('@')[0],
       provider = imports[iface];
     if (!provider) {
-      if (!iface.startsWith('wasi:sockets/'))
+      if (!iface.startsWith('wasi:sockets/') || typeof imports.__unsupportedSocket !== 'function')
         throw new Error(`Unsupported component import: ${versioned}`);
       // wasi-sdk includes unreachable socket imports. Jco eliminates these;
-      // direct runtimes link trapping placeholders. No network host is provided.
+      // direct runtimes route calls to the shared Context's unimplemented socket APIs.
       result[versioned] = new Proxy(
         {},
         {
-          get: (_target, name) => () => {
-            throw new Error(`Unsupported host import: ${versioned}/${String(name)}`);
-          },
+          get:
+            (_target, name) =>
+            (...args: unknown[]) =>
+              imports.__unsupportedSocket(iface, String(name), args),
         },
       );
       continue;

@@ -21,7 +21,9 @@ jobs:
       - run: npm run build:os && npm pack --workspace @walos/os --dry-run
       - run: bash scripts/setup-sdk.sh
       - run: bash scripts/setup-wit-bindgen.sh
+      - run: bash scripts/setup-runtime-tools.sh
       - run: npx playwright install --with-deps chromium
+      - run: npm run check:wit:p3
       - run: npm run check:wit
       - run: diff -ru wit/generated work/wit-generated
       - run: npm run build

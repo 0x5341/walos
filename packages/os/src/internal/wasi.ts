@@ -1,12 +1,12 @@
+import { ServiceError, type ProcessContext } from '../types.js';
 import {
-  ServiceError,
-  type ProcessContext,
-  type FileDescriptor,
-  type InputStream,
-  type OutputStream,
-  type ChildProcess,
-  type DescriptorStat,
-} from '../types.js';
+  createAbiView,
+  type AbiDescriptor as FileDescriptor,
+  type AbiInput as InputStream,
+  type AbiOutput as OutputStream,
+  type AbiChild as ChildProcess,
+} from './abi-view.js';
+import type { DescriptorStat } from './service-model.js';
 import { errno } from './abi-errors.js';
 import { WasiExit, PendingDrops, type Runtime } from './runtime.js';
 import type { ProcessMetrics } from './protocol.js';
@@ -23,7 +23,7 @@ type Fd = {
 
 /** Preview 1's fd table, memory layout and errno conversion; all OS work uses Context. */
 export class Wasi implements Runtime {
-  private context!: ProcessContext;
+  private context!: ReturnType<typeof createAbiView>;
   memory!: WebAssembly.Memory;
   private fds = new Map<number, Fd>();
   private nextFd = 5;
@@ -38,11 +38,12 @@ export class Wasi implements Runtime {
   private encoder = new TextEncoder();
   constructor(private metrics?: ProcessMetrics) {}
   async initialize(bytes: Uint8Array, context: ProcessContext) {
-    this.context = context;
-    this.fds.set(0, { input: context.io.stdin, position: 0n });
-    this.fds.set(1, { output: context.io.stdout, position: 0n });
-    this.fds.set(2, { output: context.io.stderr, position: 0n });
-    context.fs
+    this.context = createAbiView(context);
+    const services = this.context;
+    this.fds.set(0, { input: services.io.stdin, position: 0n });
+    this.fds.set(1, { output: services.io.stdout, position: 0n });
+    this.fds.set(2, { output: services.io.stderr, position: 0n });
+    services.fs
       .getDirectories()
       .forEach(([descriptor, preopen], index) =>
         this.fds.set(3 + index, { descriptor, preopen, position: 0n }),
@@ -192,7 +193,7 @@ export class Wasi implements Runtime {
         return 0;
       },
       proc_exit: (code: number) => {
-        throw new WasiExit(code);
+        return context.exit(code);
       },
       fd_prestat_get: (fd: number, out: number) => {
         const name = this.fds.get(fd)?.preopen;
@@ -214,7 +215,7 @@ export class Wasi implements Runtime {
         this.bytes(out, 24).fill(0);
         this.view().setUint8(
           out,
-          entry.descriptor?.getType() === 'directory'
+          (await entry.descriptor?.getType()) === 'directory'
             ? 3
             : (entry.input ?? (entry.output as any))?.isTerminal
               ? 2
@@ -288,7 +289,7 @@ export class Wasi implements Runtime {
       }),
       fd_seek: this.host(async (fd: number, offset: bigint, whence: number, out: number) => {
         const entry = this.fd(fd);
-        if (!entry.descriptor || entry.descriptor.getType() === 'directory') return 70;
+        if (!entry.descriptor || (await entry.descriptor.getType()) === 'directory') return 70;
         const position =
           whence === 0
             ? offset
@@ -303,9 +304,27 @@ export class Wasi implements Runtime {
         this.u64(out, position);
         return 0;
       }),
+      fd_filestat_set_times: this.host(
+        async (fd: number, atime: bigint, mtime: bigint, flags: number) => {
+          const timestamp = (value: bigint, set: boolean, now: boolean) =>
+            now
+              ? { tag: 'now' as const }
+              : set
+                ? {
+                    tag: 'timestamp' as const,
+                    val: { seconds: value / 1000000000n, nanoseconds: Number(value % 1000000000n) },
+                  }
+                : { tag: 'no-change' as const };
+          await this.descriptor(fd).setTimes(
+            timestamp(atime, !!(flags & 1), !!(flags & 2)),
+            timestamp(mtime, !!(flags & 4), !!(flags & 8)),
+          );
+          return 0;
+        },
+      ),
       fd_tell: this.host(async (fd: number, out: number) => {
         const entry = this.fd(fd);
-        if (!entry.descriptor || entry.descriptor.getType() === 'directory') return 70;
+        if (!entry.descriptor || (await entry.descriptor.getType()) === 'directory') return 70;
         this.u64(out, entry.position);
         return 0;
       }),
@@ -337,7 +356,7 @@ export class Wasi implements Runtime {
             },
           );
           const entry: Fd = { descriptor, position: 0n, append: !!(fdflags & 1) };
-          if (descriptor.getType() !== 'directory') {
+          if ((await descriptor.getType()) !== 'directory') {
             try {
               if (rights & 64n)
                 entry.output = entry.append
@@ -434,12 +453,10 @@ export class Wasi implements Runtime {
       'fd_allocate',
       'fd_fdstat_set_flags',
       'fd_fdstat_set_rights',
-      'fd_filestat_set_times',
       'fd_pread',
       'fd_pwrite',
       'fd_readdir',
       'fd_renumber',
-      'path_filestat_set_times',
       'path_link',
       'path_readlink',
       'path_symlink',
@@ -561,7 +578,7 @@ export class Wasi implements Runtime {
         return 0;
       }),
     };
-    return { wasi_snapshot_preview1: wasi, webos_v1: webos };
+    return { wasi_snapshot_preview1: wasi, walos_p1_v3: webos };
   }
   [Symbol.asyncDispose](): Promise<void> {
     return (this.disposal ??= this.close());

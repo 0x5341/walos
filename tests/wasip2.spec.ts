@@ -7,10 +7,12 @@ for (const name of ['env', 'p2-env'])
     page,
   }) => {
     const result = await page.evaluate(async (name) => {
-      const { Walos, install, run } = await import('/tests/fixtures/host-harness.ts');
+      const { Walos, HostProcessContext, install, run } = await import(
+        '/tests/fixtures/host-harness.ts'
+      );
       const os = await Walos.create({ env: { HOST_ONLY: 'secret', PWD: '/host' } });
       try {
-        const h = os.getHostProcess();
+        const h = new HostProcessContext(os.getHostProcess());
         const exe = await install(h, name);
         return await run(
           h,
@@ -35,10 +37,12 @@ test('P2 generated WIT bindings spawn P2/P1 children, move file/pipe streams, wa
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { Walos, install, readAll } = await import('/tests/fixtures/host-harness.ts');
+    const { Walos, HostProcessContext, install, readAll } = await import(
+      '/tests/fixtures/host-harness.ts'
+    );
     const os = await Walos.create();
     try {
-      const h = os.getHostProcess();
+      const h = new HostProcessContext(os.getHostProcess());
       const [[root]] = h.fs.getDirectories();
       await root.createDirectoryAt('bin');
       await root.createDirectoryAt('tmp');

@@ -6,7 +6,7 @@ test('empty OS preserves OPFS, has one Host without JSPI or command fetches, imm
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { Walos } = await import('/packages/os/dist/index.js');
+    const { Walos, HostProcessContext } = await import('/packages/os/dist/index.js');
     const root = await navigator.storage.getDirectory();
     for (const name of ['bin', 'home', 'tmp']) {
       const dir = await root.getDirectoryHandle(name, { create: true });
@@ -22,17 +22,17 @@ test('empty OS preserves OPFS, has one Host without JSPI or command fetches, imm
     env.A = 'after';
     argv[0] = 'after';
     const os = await pending;
-    const h = os.getHostProcess();
+    const h = new HostProcessContext(os.getHostProcess());
     const snapshot = {
       pid: h.pid,
       ppid: h.ppid,
       args: [...h.args],
       env: h.env.entries(),
-      same: h === os.getHostProcess(),
+      same: h.context === os.getHostProcess(),
       processes: os.processes,
     };
     const other = await Walos.create({ env: { PWD: 'relative' } });
-    const pwd = other.getHostProcess().env.get('PWD');
+    const pwd = new HostProcessContext(other.getHostProcess()).env.get('PWD');
     await other.dispose();
     const stdin = h.io.stdin;
     let eof = '';
@@ -53,7 +53,7 @@ test('empty OS preserves OPFS, has one Host without JSPI or command fetches, imm
     await os[Symbol.asyncDispose]();
     const rejected = [];
     for (const fn of [
-      () => os.getHostProcess(),
+      () => new HostProcessContext(os.getHostProcess()),
       () => h.fs.getDirectories(),
       () => h.env.get('PWD'),
       () => h.clock.wall.now(),
@@ -111,13 +111,15 @@ test('empty OS preserves OPFS, has one Host without JSPI or command fetches, imm
 for (const name of ['echo', 'p2-echo', 'true', 'p2-true', 'trap', 'p2-trap'])
   test(`Host spawns ${name}, preserves fast EXIT and separates stdio`, async ({ page }) => {
     const result = await page.evaluate(async (name) => {
-      const { Walos, install, run } = await import('/tests/fixtures/host-harness.ts');
+      const { Walos, HostProcessContext, install, run } = await import(
+        '/tests/fixtures/host-harness.ts'
+      );
       const os = await Walos.create();
       try {
-        const host = os.getHostProcess();
+        const host = new HostProcessContext(os.getHostProcess());
         const exe = await install(host, name);
         const result = await run(host, exe, [name, 'こんにちは', 'two words']);
-        const type = exe.getType();
+        const type = await exe.getType();
         await exe[Symbol.asyncDispose]();
         return { ...result, type };
       } finally {
@@ -133,9 +135,9 @@ test('wait consumes its right on invocation; stop works during wait; handle drop
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { Walos, install } = await import('/tests/fixtures/host-harness.ts');
+    const { Walos, HostProcessContext, install } = await import('/tests/fixtures/host-harness.ts');
     const os = await Walos.create();
-    const h = os.getHostProcess();
+    const h = new HostProcessContext(os.getHostProcess());
     const exe = await install(h, 'hang');
     const child = await h.process.spawn(exe, ['hang'], [{ key: 'PWD', value: '/' }]);
     const waiting = child.wait();
@@ -166,12 +168,12 @@ for (const source of ['cat', 'p2-cat'])
     }) => {
       const result = await page.evaluate(
         async ({ source, dest }) => {
-          const { Walos, install, readAll, writeAll } = await import(
+          const { Walos, HostProcessContext, install, readAll, writeAll } = await import(
             '/tests/fixtures/host-harness.ts'
           );
           const os = await Walos.create();
           try {
-            const h = os.getHostProcess();
+            const h = new HostProcessContext(os.getHostProcess());
             const a = await install(h, source),
               b = source === dest ? a : await install(h, dest);
             const [stdin, writer] = await h.io.createPipe(),
@@ -224,10 +226,12 @@ test('Descriptor-relative Host I/O, directory operations, offsets, independent s
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { Walos, readAll, writeAll } = await import('/tests/fixtures/host-harness.ts');
+    const { Walos, HostProcessContext, readAll, writeAll } = await import(
+      '/tests/fixtures/host-harness.ts'
+    );
     const os = await Walos.create({ env: { PWD: '/does-not-exist' } });
     try {
-      const h = os.getHostProcess();
+      const h = new HostProcessContext(os.getHostProcess());
       const [[root]] = h.fs.getDirectories();
       await root.createDirectoryAt('relative');
       const dir = await root.openAt(
@@ -287,11 +291,11 @@ test('stdio move is immediate on failed spawn and foreign resources are rejected
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { Walos } = await import('/tests/fixtures/host-harness.ts');
+    const { Walos, HostProcessContext } = await import('/tests/fixtures/host-harness.ts');
     const os = await Walos.create();
     const other = await Walos.create();
     try {
-      const h = os.getHostProcess();
+      const h = new HostProcessContext(os.getHostProcess());
       const [[dir]] = h.fs.getDirectories();
       const [r, w] = await h.io.createPipe();
       const spawn = h.process.spawn(dir, [], [], undefined, w);
@@ -303,7 +307,9 @@ test('stdio move is immediate on failed spawn and foreign resources are rejected
       }
       const rejected = await spawn.catch((e: any) => e.code);
       const eof = await r.blockingRead(1n).catch((e: any) => e.code);
-      const [foreign, foreignWriter] = await other.getHostProcess().io.createPipe();
+      const [foreign, foreignWriter] = await new HostProcessContext(
+        other.getHostProcess(),
+      ).io.createPipe();
       const error = await h.process.spawn(dir, [], [], foreign).catch((e: any) => e.code);
       foreignWriter.checkWrite();
       return { immediate, rejected, eof, error };
@@ -323,10 +329,10 @@ test('Clock, timer cancellation, random limits and insecure random independence'
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { Walos } = await import('/tests/fixtures/host-harness.ts');
+    const { Walos, HostProcessContext } = await import('/tests/fixtures/host-harness.ts');
     const os = await Walos.create();
     try {
-      const h = os.getHostProcess();
+      const h = new HostProcessContext(os.getHostProcess());
       const wall = h.clock.wall.now(),
         before = h.clock.monotonic.now();
       const timer = h.clock.monotonic.subscribeDuration(2000000n);
@@ -392,10 +398,12 @@ for (const name of ['services-probe', 'p2-services-probe'])
     }) => {
       const result = await page.evaluate(
         async ({ name, pwd }) => {
-          const { Walos, install, readAll } = await import('/tests/fixtures/host-harness.ts');
+          const { Walos, HostProcessContext, install, readAll } = await import(
+            '/tests/fixtures/host-harness.ts'
+          );
           const os = await Walos.create({ env: { HOST_ONLY: 'hidden' } });
           try {
-            const h = os.getHostProcess(),
+            const h = new HostProcessContext(os.getHostProcess()),
               exe = await install(h, name);
             const [r, w] = await h.io.createPipe();
             const output = readAll(r);
@@ -426,10 +434,17 @@ for (const name of ['services-probe', 'p2-services-probe'])
 for (const name of ['services-probe', 'p2-services-probe'])
   test(`${name} accepts completely empty argv`, async ({ page }) => {
     const result = await page.evaluate(async (name) => {
-      const { Walos, install, run } = await import('/tests/fixtures/host-harness.ts');
+      const { Walos, HostProcessContext, install, run } = await import(
+        '/tests/fixtures/host-harness.ts'
+      );
       const os = await Walos.create();
       try {
-        return await run(os.getHostProcess(), await install(os.getHostProcess(), name), [], []);
+        return await run(
+          new HostProcessContext(os.getHostProcess()),
+          await install(new HostProcessContext(os.getHostProcess()), name),
+          [],
+          [],
+        );
       } finally {
         await os.dispose();
       }
@@ -441,10 +456,10 @@ test('Host output stream flush, append, lock conflicts and descriptor disposal c
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { Walos, writeAll } = await import('/tests/fixtures/host-harness.ts');
+    const { Walos, HostProcessContext, writeAll } = await import('/tests/fixtures/host-harness.ts');
     const os = await Walos.create();
     try {
-      const h = os.getHostProcess();
+      const h = new HostProcessContext(os.getHostProcess());
       const [[root]] = h.fs.getDirectories();
       const file = await root.openAt({}, 'append', { create: true }, { read: true, write: true });
       const stream = await file.appendViaStream();

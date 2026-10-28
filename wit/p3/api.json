@@ -1,0 +1,4224 @@
+{
+  "upstream": "bdadbbb8cadd287cc5014c4b5a0bf76efc60291c",
+  "interfaces": [
+    {
+      "package": "wasi:clocks",
+      "version": "0.3.2",
+      "interface": "types",
+      "namespace": "WasiClocksTypes",
+      "types": {
+        "duration": {
+          "kind": {
+            "type": "u64"
+          },
+          "ts": "U64"
+        }
+      },
+      "operations": []
+    },
+    {
+      "package": "wasi:clocks",
+      "version": "0.3.2",
+      "interface": "monotonic-clock",
+      "namespace": "WasiClocksMonotonicClock",
+      "types": {
+        "duration": {
+          "kind": {
+            "type": 0
+          },
+          "ts": "WasiClocksTypes.Duration"
+        },
+        "mark": {
+          "kind": {
+            "type": "u64"
+          },
+          "ts": "U64"
+        }
+      },
+      "operations": [
+        {
+          "wit": "now",
+          "ts": "now",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "Mark"
+        },
+        {
+          "wit": "get-resolution",
+          "ts": "getResolution",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "Duration"
+        },
+        {
+          "wit": "wait-until",
+          "ts": "waitUntil",
+          "kind": "async-freestanding",
+          "async": true,
+          "params": [
+            {
+              "name": "when",
+              "type": "Mark"
+            }
+          ],
+          "result": "void"
+        },
+        {
+          "wit": "wait-for",
+          "ts": "waitFor",
+          "kind": "async-freestanding",
+          "async": true,
+          "params": [
+            {
+              "name": "how-long",
+              "type": "Duration"
+            }
+          ],
+          "result": "void"
+        }
+      ]
+    },
+    {
+      "package": "wasi:clocks",
+      "version": "0.3.2",
+      "interface": "system-clock",
+      "namespace": "WasiClocksSystemClock",
+      "types": {
+        "duration": {
+          "kind": {
+            "type": 0
+          },
+          "ts": "WasiClocksTypes.Duration"
+        },
+        "instant": {
+          "kind": {
+            "record": {
+              "fields": [
+                {
+                  "name": "seconds",
+                  "type": "s64"
+                },
+                {
+                  "name": "nanoseconds",
+                  "type": "u32"
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly seconds: S64; readonly nanoseconds: U32; }"
+        }
+      },
+      "operations": [
+        {
+          "wit": "now",
+          "ts": "now",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "Instant"
+        },
+        {
+          "wit": "get-resolution",
+          "ts": "getResolution",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "Duration"
+        }
+      ]
+    },
+    {
+      "package": "wasi:clocks",
+      "version": "0.3.2",
+      "interface": "timezone",
+      "namespace": "WasiClocksTimezone",
+      "types": {
+        "instant": {
+          "kind": {
+            "type": 4
+          },
+          "ts": "WasiClocksSystemClock.Instant"
+        }
+      },
+      "operations": [
+        {
+          "wit": "iana-id",
+          "ts": "ianaId",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "(string | undefined)"
+        },
+        {
+          "wit": "utc-offset",
+          "ts": "utcOffset",
+          "kind": "freestanding",
+          "async": false,
+          "params": [
+            {
+              "name": "when",
+              "type": "Instant"
+            }
+          ],
+          "result": "(S64 | undefined)"
+        },
+        {
+          "wit": "to-debug-string",
+          "ts": "toDebugString",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "string"
+        }
+      ]
+    },
+    {
+      "package": "wasi:filesystem",
+      "version": "0.3.2",
+      "interface": "types",
+      "namespace": "WasiFilesystemTypes",
+      "types": {
+        "instant": {
+          "kind": {
+            "type": 4
+          },
+          "ts": "WasiClocksSystemClock.Instant"
+        },
+        "filesize": {
+          "kind": {
+            "type": "u64"
+          },
+          "ts": "U64"
+        },
+        "descriptor-type": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "block-device",
+                  "type": null,
+                  "docs": {
+                    "contents": "The descriptor refers to a block device inode."
+                  }
+                },
+                {
+                  "name": "character-device",
+                  "type": null,
+                  "docs": {
+                    "contents": "The descriptor refers to a character device inode."
+                  }
+                },
+                {
+                  "name": "directory",
+                  "type": null,
+                  "docs": {
+                    "contents": "The descriptor refers to a directory inode."
+                  }
+                },
+                {
+                  "name": "fifo",
+                  "type": null,
+                  "docs": {
+                    "contents": "The descriptor refers to a named pipe."
+                  }
+                },
+                {
+                  "name": "symbolic-link",
+                  "type": null,
+                  "docs": {
+                    "contents": "The file refers to a symbolic link inode."
+                  }
+                },
+                {
+                  "name": "regular-file",
+                  "type": null,
+                  "docs": {
+                    "contents": "The descriptor refers to a regular file inode."
+                  }
+                },
+                {
+                  "name": "socket",
+                  "type": null,
+                  "docs": {
+                    "contents": "The descriptor refers to a socket."
+                  }
+                },
+                {
+                  "name": "other",
+                  "type": 10,
+                  "docs": {
+                    "contents": "The type of the descriptor or file is different from any of the\nother types specified."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"block-device\"; } | { readonly tag: \"character-device\"; } | { readonly tag: \"directory\"; } | { readonly tag: \"fifo\"; } | { readonly tag: \"symbolic-link\"; } | { readonly tag: \"regular-file\"; } | { readonly tag: \"socket\"; } | { readonly tag: \"other\"; readonly val: (string | undefined); }"
+        },
+        "descriptor-flags": {
+          "kind": {
+            "flags": {
+              "flags": [
+                {
+                  "name": "read",
+                  "docs": {
+                    "contents": "Read mode: Data can be read."
+                  }
+                },
+                {
+                  "name": "write",
+                  "docs": {
+                    "contents": "Write mode: Data can be written to."
+                  }
+                },
+                {
+                  "name": "file-integrity-sync",
+                  "docs": {
+                    "contents": "Request that writes be performed according to synchronized I/O file\nintegrity completion. The data stored in the file and the file's\nmetadata are synchronized. This is similar to `O_SYNC` in POSIX.\n\nThe precise semantics of this operation have not yet been defined for\nWASI. At this time, it should be interpreted as a request, and not a\nrequirement."
+                  }
+                },
+                {
+                  "name": "data-integrity-sync",
+                  "docs": {
+                    "contents": "Request that writes be performed according to synchronized I/O data\nintegrity completion. Only the data stored in the file is\nsynchronized. This is similar to `O_DSYNC` in POSIX.\n\nThe precise semantics of this operation have not yet been defined for\nWASI. At this time, it should be interpreted as a request, and not a\nrequirement."
+                  }
+                },
+                {
+                  "name": "requested-write-sync",
+                  "docs": {
+                    "contents": "Requests that reads be performed at the same level of integrity\nrequested for writes. This is similar to `O_RSYNC` in POSIX.\n\nThe precise semantics of this operation have not yet been defined for\nWASI. At this time, it should be interpreted as a request, and not a\nrequirement."
+                  }
+                },
+                {
+                  "name": "mutate-directory",
+                  "docs": {
+                    "contents": "Mutating directories mode: Directory contents may be mutated.\n\nWhen this flag is unset on a descriptor, operations using the\ndescriptor which would create, rename, delete, modify the data or\nmetadata of filesystem objects, or obtain another handle which\nwould permit any of those, shall fail with `error-code::read-only` if\nthey would otherwise succeed.\n\nThis may only be set on directories."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly read?: boolean; readonly write?: boolean; readonly fileIntegritySync?: boolean; readonly dataIntegritySync?: boolean; readonly requestedWriteSync?: boolean; readonly mutateDirectory?: boolean; }"
+        },
+        "path-flags": {
+          "kind": {
+            "flags": {
+              "flags": [
+                {
+                  "name": "symlink-follow",
+                  "docs": {
+                    "contents": "As long as the resolved path corresponds to a symbolic link, it is\nexpanded."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly symlinkFollow?: boolean; }"
+        },
+        "open-flags": {
+          "kind": {
+            "flags": {
+              "flags": [
+                {
+                  "name": "create",
+                  "docs": {
+                    "contents": "Create file if it does not exist, similar to `O_CREAT` in POSIX."
+                  }
+                },
+                {
+                  "name": "directory",
+                  "docs": {
+                    "contents": "Fail if not a directory, similar to `O_DIRECTORY` in POSIX."
+                  }
+                },
+                {
+                  "name": "exclusive",
+                  "docs": {
+                    "contents": "Fail if file already exists, similar to `O_EXCL` in POSIX."
+                  }
+                },
+                {
+                  "name": "truncate",
+                  "docs": {
+                    "contents": "Truncate file to size 0, similar to `O_TRUNC` in POSIX."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly create?: boolean; readonly directory?: boolean; readonly exclusive?: boolean; readonly truncate?: boolean; }"
+        },
+        "link-count": {
+          "kind": {
+            "type": "u64"
+          },
+          "ts": "U64"
+        },
+        "descriptor-stat": {
+          "kind": {
+            "record": {
+              "fields": [
+                {
+                  "name": "type",
+                  "type": 11,
+                  "docs": {
+                    "contents": "File type."
+                  }
+                },
+                {
+                  "name": "link-count",
+                  "type": 15,
+                  "docs": {
+                    "contents": "Number of hard links to the file."
+                  }
+                },
+                {
+                  "name": "size",
+                  "type": 9,
+                  "docs": {
+                    "contents": "For regular files, the file size in bytes. For symbolic links, the\nlength in bytes of the pathname contained in the symbolic link."
+                  }
+                },
+                {
+                  "name": "data-access-timestamp",
+                  "type": 16,
+                  "docs": {
+                    "contents": "Last data access timestamp.\n\nIf the `option` is none, the platform doesn't maintain an access\ntimestamp for this file."
+                  }
+                },
+                {
+                  "name": "data-modification-timestamp",
+                  "type": 16,
+                  "docs": {
+                    "contents": "Last data modification timestamp.\n\nIf the `option` is none, the platform doesn't maintain a\nmodification timestamp for this file."
+                  }
+                },
+                {
+                  "name": "status-change-timestamp",
+                  "type": 16,
+                  "docs": {
+                    "contents": "Last file status-change timestamp.\n\nIf the `option` is none, the platform doesn't maintain a\nstatus-change timestamp for this file."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly type: DescriptorType; readonly linkCount: LinkCount; readonly size: Filesize; readonly dataAccessTimestamp: (Instant | undefined); readonly dataModificationTimestamp: (Instant | undefined); readonly statusChangeTimestamp: (Instant | undefined); }"
+        },
+        "new-timestamp": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "no-change",
+                  "type": null,
+                  "docs": {
+                    "contents": "Leave the timestamp set to its previous value."
+                  }
+                },
+                {
+                  "name": "now",
+                  "type": null,
+                  "docs": {
+                    "contents": "Set the timestamp to the current time of the system clock associated\nwith the filesystem."
+                  }
+                },
+                {
+                  "name": "timestamp",
+                  "type": 8,
+                  "docs": {
+                    "contents": "Set the timestamp to the given value."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"no-change\"; } | { readonly tag: \"now\"; } | { readonly tag: \"timestamp\"; readonly val: Instant; }"
+        },
+        "directory-entry": {
+          "kind": {
+            "record": {
+              "fields": [
+                {
+                  "name": "type",
+                  "type": 11,
+                  "docs": {
+                    "contents": "The type of the file referred to by this directory entry."
+                  }
+                },
+                {
+                  "name": "name",
+                  "type": "string",
+                  "docs": {
+                    "contents": "The name of the object."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly type: DescriptorType; readonly name: string; }"
+        },
+        "error-code": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "access",
+                  "type": null,
+                  "docs": {
+                    "contents": "Permission denied, similar to `EACCES` in POSIX."
+                  }
+                },
+                {
+                  "name": "already",
+                  "type": null,
+                  "docs": {
+                    "contents": "Connection already in progress, similar to `EALREADY` in POSIX."
+                  }
+                },
+                {
+                  "name": "bad-descriptor",
+                  "type": null,
+                  "docs": {
+                    "contents": "Bad descriptor, similar to `EBADF` in POSIX."
+                  }
+                },
+                {
+                  "name": "busy",
+                  "type": null,
+                  "docs": {
+                    "contents": "Device or resource busy, similar to `EBUSY` in POSIX."
+                  }
+                },
+                {
+                  "name": "deadlock",
+                  "type": null,
+                  "docs": {
+                    "contents": "Resource deadlock would occur, similar to `EDEADLK` in POSIX."
+                  }
+                },
+                {
+                  "name": "quota",
+                  "type": null,
+                  "docs": {
+                    "contents": "Storage quota exceeded, similar to `EDQUOT` in POSIX."
+                  }
+                },
+                {
+                  "name": "exist",
+                  "type": null,
+                  "docs": {
+                    "contents": "File exists, similar to `EEXIST` in POSIX."
+                  }
+                },
+                {
+                  "name": "file-too-large",
+                  "type": null,
+                  "docs": {
+                    "contents": "File too large, similar to `EFBIG` in POSIX."
+                  }
+                },
+                {
+                  "name": "illegal-byte-sequence",
+                  "type": null,
+                  "docs": {
+                    "contents": "Illegal byte sequence, similar to `EILSEQ` in POSIX."
+                  }
+                },
+                {
+                  "name": "in-progress",
+                  "type": null,
+                  "docs": {
+                    "contents": "Operation in progress, similar to `EINPROGRESS` in POSIX."
+                  }
+                },
+                {
+                  "name": "interrupted",
+                  "type": null,
+                  "docs": {
+                    "contents": "Interrupted function, similar to `EINTR` in POSIX."
+                  }
+                },
+                {
+                  "name": "invalid",
+                  "type": null,
+                  "docs": {
+                    "contents": "Invalid argument, similar to `EINVAL` in POSIX."
+                  }
+                },
+                {
+                  "name": "io",
+                  "type": null,
+                  "docs": {
+                    "contents": "I/O error, similar to `EIO` in POSIX."
+                  }
+                },
+                {
+                  "name": "is-directory",
+                  "type": null,
+                  "docs": {
+                    "contents": "Is a directory, similar to `EISDIR` in POSIX."
+                  }
+                },
+                {
+                  "name": "loop",
+                  "type": null,
+                  "docs": {
+                    "contents": "Too many levels of symbolic links, similar to `ELOOP` in POSIX."
+                  }
+                },
+                {
+                  "name": "too-many-links",
+                  "type": null,
+                  "docs": {
+                    "contents": "Too many links, similar to `EMLINK` in POSIX."
+                  }
+                },
+                {
+                  "name": "message-size",
+                  "type": null,
+                  "docs": {
+                    "contents": "Message too large, similar to `EMSGSIZE` in POSIX."
+                  }
+                },
+                {
+                  "name": "name-too-long",
+                  "type": null,
+                  "docs": {
+                    "contents": "Filename too long, similar to `ENAMETOOLONG` in POSIX."
+                  }
+                },
+                {
+                  "name": "no-device",
+                  "type": null,
+                  "docs": {
+                    "contents": "No such device, similar to `ENODEV` in POSIX."
+                  }
+                },
+                {
+                  "name": "no-entry",
+                  "type": null,
+                  "docs": {
+                    "contents": "No such file or directory, similar to `ENOENT` in POSIX."
+                  }
+                },
+                {
+                  "name": "no-lock",
+                  "type": null,
+                  "docs": {
+                    "contents": "No locks available, similar to `ENOLCK` in POSIX."
+                  }
+                },
+                {
+                  "name": "insufficient-memory",
+                  "type": null,
+                  "docs": {
+                    "contents": "Not enough space, similar to `ENOMEM` in POSIX."
+                  }
+                },
+                {
+                  "name": "insufficient-space",
+                  "type": null,
+                  "docs": {
+                    "contents": "No space left on device, similar to `ENOSPC` in POSIX."
+                  }
+                },
+                {
+                  "name": "not-directory",
+                  "type": null,
+                  "docs": {
+                    "contents": "Not a directory or a symbolic link to a directory, similar to `ENOTDIR` in POSIX."
+                  }
+                },
+                {
+                  "name": "not-empty",
+                  "type": null,
+                  "docs": {
+                    "contents": "Directory not empty, similar to `ENOTEMPTY` in POSIX."
+                  }
+                },
+                {
+                  "name": "not-recoverable",
+                  "type": null,
+                  "docs": {
+                    "contents": "State not recoverable, similar to `ENOTRECOVERABLE` in POSIX."
+                  }
+                },
+                {
+                  "name": "unsupported",
+                  "type": null,
+                  "docs": {
+                    "contents": "Not supported, similar to `ENOTSUP` and `ENOSYS` in POSIX."
+                  }
+                },
+                {
+                  "name": "no-tty",
+                  "type": null,
+                  "docs": {
+                    "contents": "Inappropriate I/O control operation, similar to `ENOTTY` in POSIX."
+                  }
+                },
+                {
+                  "name": "no-such-device",
+                  "type": null,
+                  "docs": {
+                    "contents": "No such device or address, similar to `ENXIO` in POSIX."
+                  }
+                },
+                {
+                  "name": "overflow",
+                  "type": null,
+                  "docs": {
+                    "contents": "Value too large to be stored in data type, similar to `EOVERFLOW` in POSIX."
+                  }
+                },
+                {
+                  "name": "not-permitted",
+                  "type": null,
+                  "docs": {
+                    "contents": "Operation not permitted, similar to `EPERM` in POSIX."
+                  }
+                },
+                {
+                  "name": "pipe",
+                  "type": null,
+                  "docs": {
+                    "contents": "Broken pipe, similar to `EPIPE` in POSIX."
+                  }
+                },
+                {
+                  "name": "read-only",
+                  "type": null,
+                  "docs": {
+                    "contents": "Read-only file system, similar to `EROFS` in POSIX."
+                  }
+                },
+                {
+                  "name": "invalid-seek",
+                  "type": null,
+                  "docs": {
+                    "contents": "Invalid seek, similar to `ESPIPE` in POSIX."
+                  }
+                },
+                {
+                  "name": "text-file-busy",
+                  "type": null,
+                  "docs": {
+                    "contents": "Text file busy, similar to `ETXTBSY` in POSIX."
+                  }
+                },
+                {
+                  "name": "cross-device",
+                  "type": null,
+                  "docs": {
+                    "contents": "Cross-device link, similar to `EXDEV` in POSIX."
+                  }
+                },
+                {
+                  "name": "other",
+                  "type": 10,
+                  "docs": {
+                    "contents": "A catch-all for errors not captured by the existing variants.\nImplementations can use this to extend the error type without\nbreaking existing code."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"access\"; } | { readonly tag: \"already\"; } | { readonly tag: \"bad-descriptor\"; } | { readonly tag: \"busy\"; } | { readonly tag: \"deadlock\"; } | { readonly tag: \"quota\"; } | { readonly tag: \"exist\"; } | { readonly tag: \"file-too-large\"; } | { readonly tag: \"illegal-byte-sequence\"; } | { readonly tag: \"in-progress\"; } | { readonly tag: \"interrupted\"; } | { readonly tag: \"invalid\"; } | { readonly tag: \"io\"; } | { readonly tag: \"is-directory\"; } | { readonly tag: \"loop\"; } | { readonly tag: \"too-many-links\"; } | { readonly tag: \"message-size\"; } | { readonly tag: \"name-too-long\"; } | { readonly tag: \"no-device\"; } | { readonly tag: \"no-entry\"; } | { readonly tag: \"no-lock\"; } | { readonly tag: \"insufficient-memory\"; } | { readonly tag: \"insufficient-space\"; } | { readonly tag: \"not-directory\"; } | { readonly tag: \"not-empty\"; } | { readonly tag: \"not-recoverable\"; } | { readonly tag: \"unsupported\"; } | { readonly tag: \"no-tty\"; } | { readonly tag: \"no-such-device\"; } | { readonly tag: \"overflow\"; } | { readonly tag: \"not-permitted\"; } | { readonly tag: \"pipe\"; } | { readonly tag: \"read-only\"; } | { readonly tag: \"invalid-seek\"; } | { readonly tag: \"text-file-busy\"; } | { readonly tag: \"cross-device\"; } | { readonly tag: \"other\"; readonly val: (string | undefined); }"
+        },
+        "advice": {
+          "kind": {
+            "enum": {
+              "cases": [
+                {
+                  "name": "normal",
+                  "docs": {
+                    "contents": "The application has no advice to give on its behavior with respect\nto the specified data."
+                  }
+                },
+                {
+                  "name": "sequential",
+                  "docs": {
+                    "contents": "The application expects to access the specified data sequentially\nfrom lower offsets to higher offsets."
+                  }
+                },
+                {
+                  "name": "random",
+                  "docs": {
+                    "contents": "The application expects to access the specified data in a random\norder."
+                  }
+                },
+                {
+                  "name": "will-need",
+                  "docs": {
+                    "contents": "The application expects to access the specified data in the near\nfuture."
+                  }
+                },
+                {
+                  "name": "dont-need",
+                  "docs": {
+                    "contents": "The application expects that it will not access the specified data\nin the near future."
+                  }
+                },
+                {
+                  "name": "no-reuse",
+                  "docs": {
+                    "contents": "The application expects to access the specified data once and then\nnot reuse it thereafter."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "\"normal\" | \"sequential\" | \"random\" | \"will-need\" | \"dont-need\" | \"no-reuse\""
+        },
+        "metadata-hash-value": {
+          "kind": {
+            "record": {
+              "fields": [
+                {
+                  "name": "lower",
+                  "type": "u64",
+                  "docs": {
+                    "contents": "64 bits of a 128-bit hash value."
+                  }
+                },
+                {
+                  "name": "upper",
+                  "type": "u64",
+                  "docs": {
+                    "contents": "Another 64 bits of a 128-bit hash value."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly lower: U64; readonly upper: U64; }"
+        },
+        "descriptor": {
+          "kind": "resource",
+          "ts": "Descriptor"
+        }
+      },
+      "operations": [
+        {
+          "wit": "[method]descriptor.read-via-stream",
+          "ts": "readViaStream",
+          "kind": {
+            "method": 23
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "offset",
+              "type": "Filesize"
+            }
+          ],
+          "result": "readonly [Stream<U8>, Future<Result<void, ErrorCode>>]"
+        },
+        {
+          "wit": "[method]descriptor.write-via-stream",
+          "ts": "writeViaStream",
+          "kind": {
+            "method": 23
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "data",
+              "type": "Stream<U8>"
+            },
+            {
+              "name": "offset",
+              "type": "Filesize"
+            }
+          ],
+          "result": "Future<Result<void, ErrorCode>>"
+        },
+        {
+          "wit": "[method]descriptor.append-via-stream",
+          "ts": "appendViaStream",
+          "kind": {
+            "method": 23
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "data",
+              "type": "Stream<U8>"
+            }
+          ],
+          "result": "Future<Result<void, ErrorCode>>"
+        },
+        {
+          "wit": "[method]descriptor.advise",
+          "ts": "advise",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "offset",
+              "type": "Filesize"
+            },
+            {
+              "name": "length",
+              "type": "Filesize"
+            },
+            {
+              "name": "advice",
+              "type": "Advice"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.sync-data",
+          "ts": "syncData",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.get-flags",
+          "ts": "getFlags",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            }
+          ],
+          "result": "Result<DescriptorFlags, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.get-type",
+          "ts": "getType",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            }
+          ],
+          "result": "Result<DescriptorType, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.set-size",
+          "ts": "setSize",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "size",
+              "type": "Filesize"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.set-times",
+          "ts": "setTimes",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "data-access-timestamp",
+              "type": "NewTimestamp"
+            },
+            {
+              "name": "data-modification-timestamp",
+              "type": "NewTimestamp"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.read-directory",
+          "ts": "readDirectory",
+          "kind": {
+            "method": 23
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            }
+          ],
+          "result": "readonly [Stream<DirectoryEntry>, Future<Result<void, ErrorCode>>]"
+        },
+        {
+          "wit": "[method]descriptor.sync",
+          "ts": "sync",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.create-directory-at",
+          "ts": "createDirectoryAt",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "path",
+              "type": "string"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.stat",
+          "ts": "stat",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            }
+          ],
+          "result": "Result<DescriptorStat, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.stat-at",
+          "ts": "statAt",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "path-flags",
+              "type": "PathFlags"
+            },
+            {
+              "name": "path",
+              "type": "string"
+            }
+          ],
+          "result": "Result<DescriptorStat, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.set-times-at",
+          "ts": "setTimesAt",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "path-flags",
+              "type": "PathFlags"
+            },
+            {
+              "name": "path",
+              "type": "string"
+            },
+            {
+              "name": "data-access-timestamp",
+              "type": "NewTimestamp"
+            },
+            {
+              "name": "data-modification-timestamp",
+              "type": "NewTimestamp"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.link-at",
+          "ts": "linkAt",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "old-path-flags",
+              "type": "PathFlags"
+            },
+            {
+              "name": "old-path",
+              "type": "string"
+            },
+            {
+              "name": "new-descriptor",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "new-path",
+              "type": "string"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.open-at",
+          "ts": "openAt",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "path-flags",
+              "type": "PathFlags"
+            },
+            {
+              "name": "path",
+              "type": "string"
+            },
+            {
+              "name": "open-flags",
+              "type": "OpenFlags"
+            },
+            {
+              "name": "flags",
+              "type": "DescriptorFlags"
+            }
+          ],
+          "result": "Result<Own<Descriptor>, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.readlink-at",
+          "ts": "readlinkAt",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "path",
+              "type": "string"
+            }
+          ],
+          "result": "Result<string, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.remove-directory-at",
+          "ts": "removeDirectoryAt",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "path",
+              "type": "string"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.rename-at",
+          "ts": "renameAt",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "old-path",
+              "type": "string"
+            },
+            {
+              "name": "new-descriptor",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "new-path",
+              "type": "string"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.symlink-at",
+          "ts": "symlinkAt",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "old-path",
+              "type": "string"
+            },
+            {
+              "name": "new-path",
+              "type": "string"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.unlink-file-at",
+          "ts": "unlinkFileAt",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "path",
+              "type": "string"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.is-same-object",
+          "ts": "isSameObject",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "other",
+              "type": "Borrow<Descriptor>"
+            }
+          ],
+          "result": "boolean"
+        },
+        {
+          "wit": "[method]descriptor.metadata-hash",
+          "ts": "metadataHash",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            }
+          ],
+          "result": "Result<MetadataHashValue, ErrorCode>"
+        },
+        {
+          "wit": "[method]descriptor.metadata-hash-at",
+          "ts": "metadataHashAt",
+          "kind": {
+            "async-method": 23
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "path-flags",
+              "type": "PathFlags"
+            },
+            {
+              "name": "path",
+              "type": "string"
+            }
+          ],
+          "result": "Result<MetadataHashValue, ErrorCode>"
+        }
+      ]
+    },
+    {
+      "package": "wasi:filesystem",
+      "version": "0.3.2",
+      "interface": "preopens",
+      "namespace": "WasiFilesystemPreopens",
+      "types": {
+        "descriptor": {
+          "kind": {
+            "type": 23
+          },
+          "ts": "WasiFilesystemTypes.Descriptor"
+        }
+      },
+      "operations": [
+        {
+          "wit": "get-directories",
+          "ts": "getDirectories",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "readonly (readonly [Own<Descriptor>, string])[]"
+        }
+      ]
+    },
+    {
+      "package": "wasi:sockets",
+      "version": "0.3.2",
+      "interface": "types",
+      "namespace": "WasiSocketsTypes",
+      "types": {
+        "duration": {
+          "kind": {
+            "type": 0
+          },
+          "ts": "WasiClocksTypes.Duration"
+        },
+        "error-code": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "access-denied",
+                  "type": null,
+                  "docs": {
+                    "contents": "Access denied.\n\nPOSIX equivalent: EACCES, EPERM"
+                  }
+                },
+                {
+                  "name": "not-supported",
+                  "type": null,
+                  "docs": {
+                    "contents": "The operation is not supported.\n\nPOSIX equivalent: EOPNOTSUPP, ENOPROTOOPT, EPFNOSUPPORT, EPROTONOSUPPORT, ESOCKTNOSUPPORT"
+                  }
+                },
+                {
+                  "name": "invalid-argument",
+                  "type": null,
+                  "docs": {
+                    "contents": "One of the arguments is invalid.\n\nPOSIX equivalent: EINVAL, EDESTADDRREQ, EAFNOSUPPORT"
+                  }
+                },
+                {
+                  "name": "out-of-memory",
+                  "type": null,
+                  "docs": {
+                    "contents": "Not enough memory to complete the operation.\n\nPOSIX equivalent: ENOMEM, ENOBUFS"
+                  }
+                },
+                {
+                  "name": "timeout",
+                  "type": null,
+                  "docs": {
+                    "contents": "The operation timed out before it could finish completely.\n\nPOSIX equivalent: ETIMEDOUT"
+                  }
+                },
+                {
+                  "name": "invalid-state",
+                  "type": null,
+                  "docs": {
+                    "contents": "The operation is not valid in the socket's current state."
+                  }
+                },
+                {
+                  "name": "address-not-bindable",
+                  "type": null,
+                  "docs": {
+                    "contents": "The local address is not available.\n\nPOSIX equivalent: EADDRNOTAVAIL"
+                  }
+                },
+                {
+                  "name": "address-in-use",
+                  "type": null,
+                  "docs": {
+                    "contents": "A bind operation failed because the provided address is already in\nuse or because there are no ephemeral ports available.\n\nPOSIX equivalent: EADDRINUSE"
+                  }
+                },
+                {
+                  "name": "remote-unreachable",
+                  "type": null,
+                  "docs": {
+                    "contents": "The remote address is not reachable.\n\nPOSIX equivalent: EHOSTUNREACH, EHOSTDOWN, ENETDOWN, ENETUNREACH, ENONET"
+                  }
+                },
+                {
+                  "name": "connection-refused",
+                  "type": null,
+                  "docs": {
+                    "contents": "The connection was forcefully rejected.\n\nPOSIX equivalent: ECONNREFUSED"
+                  }
+                },
+                {
+                  "name": "connection-broken",
+                  "type": null,
+                  "docs": {
+                    "contents": "A write failed because the connection was broken.\n\nPOSIX equivalent: EPIPE"
+                  }
+                },
+                {
+                  "name": "connection-reset",
+                  "type": null,
+                  "docs": {
+                    "contents": "The connection was reset.\n\nPOSIX equivalent: ECONNRESET"
+                  }
+                },
+                {
+                  "name": "connection-aborted",
+                  "type": null,
+                  "docs": {
+                    "contents": "The connection was aborted.\n\nPOSIX equivalent: ECONNABORTED"
+                  }
+                },
+                {
+                  "name": "datagram-too-large",
+                  "type": null,
+                  "docs": {
+                    "contents": "The size of a datagram sent to a UDP socket exceeded the maximum\nsupported size.\n\nPOSIX equivalent: EMSGSIZE"
+                  }
+                },
+                {
+                  "name": "other",
+                  "type": 43,
+                  "docs": {
+                    "contents": "A catch-all for errors not captured by the existing variants.\nImplementations can use this to extend the error type without\nbreaking existing code."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"access-denied\"; } | { readonly tag: \"not-supported\"; } | { readonly tag: \"invalid-argument\"; } | { readonly tag: \"out-of-memory\"; } | { readonly tag: \"timeout\"; } | { readonly tag: \"invalid-state\"; } | { readonly tag: \"address-not-bindable\"; } | { readonly tag: \"address-in-use\"; } | { readonly tag: \"remote-unreachable\"; } | { readonly tag: \"connection-refused\"; } | { readonly tag: \"connection-broken\"; } | { readonly tag: \"connection-reset\"; } | { readonly tag: \"connection-aborted\"; } | { readonly tag: \"datagram-too-large\"; } | { readonly tag: \"other\"; readonly val: (string | undefined); }"
+        },
+        "ip-address-family": {
+          "kind": {
+            "enum": {
+              "cases": [
+                {
+                  "name": "ipv4",
+                  "docs": {
+                    "contents": "Similar to `AF_INET` in POSIX."
+                  }
+                },
+                {
+                  "name": "ipv6",
+                  "docs": {
+                    "contents": "Similar to `AF_INET6` in POSIX."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "\"ipv4\" | \"ipv6\""
+        },
+        "ipv4-address": {
+          "kind": {
+            "tuple": {
+              "types": [
+                "u8",
+                "u8",
+                "u8",
+                "u8"
+              ]
+            }
+          },
+          "ts": "readonly [U8, U8, U8, U8]"
+        },
+        "ipv6-address": {
+          "kind": {
+            "tuple": {
+              "types": [
+                "u16",
+                "u16",
+                "u16",
+                "u16",
+                "u16",
+                "u16",
+                "u16",
+                "u16"
+              ]
+            }
+          },
+          "ts": "readonly [U16, U16, U16, U16, U16, U16, U16, U16]"
+        },
+        "ip-address": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "ipv4",
+                  "type": 46
+                },
+                {
+                  "name": "ipv6",
+                  "type": 47
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"ipv4\"; readonly val: Ipv4Address; } | { readonly tag: \"ipv6\"; readonly val: Ipv6Address; }"
+        },
+        "ipv4-socket-address": {
+          "kind": {
+            "record": {
+              "fields": [
+                {
+                  "name": "port",
+                  "type": "u16",
+                  "docs": {
+                    "contents": "sin_port"
+                  }
+                },
+                {
+                  "name": "address",
+                  "type": 46,
+                  "docs": {
+                    "contents": "sin_addr"
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly port: U16; readonly address: Ipv4Address; }"
+        },
+        "ipv6-socket-address": {
+          "kind": {
+            "record": {
+              "fields": [
+                {
+                  "name": "port",
+                  "type": "u16",
+                  "docs": {
+                    "contents": "sin6_port"
+                  }
+                },
+                {
+                  "name": "flow-info",
+                  "type": "u32",
+                  "docs": {
+                    "contents": "sin6_flowinfo"
+                  }
+                },
+                {
+                  "name": "address",
+                  "type": 47,
+                  "docs": {
+                    "contents": "sin6_addr"
+                  }
+                },
+                {
+                  "name": "scope-id",
+                  "type": "u32",
+                  "docs": {
+                    "contents": "sin6_scope_id"
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly port: U16; readonly flowInfo: U32; readonly address: Ipv6Address; readonly scopeId: U32; }"
+        },
+        "ip-socket-address": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "ipv4",
+                  "type": 49
+                },
+                {
+                  "name": "ipv6",
+                  "type": 50
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"ipv4\"; readonly val: Ipv4SocketAddress; } | { readonly tag: \"ipv6\"; readonly val: Ipv6SocketAddress; }"
+        },
+        "tcp-socket": {
+          "kind": "resource",
+          "ts": "TcpSocket"
+        },
+        "udp-socket": {
+          "kind": "resource",
+          "ts": "UdpSocket"
+        }
+      },
+      "operations": [
+        {
+          "wit": "[static]tcp-socket.create",
+          "ts": "create",
+          "kind": {
+            "static": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "address-family",
+              "type": "IpAddressFamily"
+            }
+          ],
+          "result": "Result<Own<TcpSocket>, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.bind",
+          "ts": "bind",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            },
+            {
+              "name": "local-address",
+              "type": "IpSocketAddress"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.connect",
+          "ts": "connect",
+          "kind": {
+            "async-method": 52
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            },
+            {
+              "name": "remote-address",
+              "type": "IpSocketAddress"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.listen",
+          "ts": "listen",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "Result<Stream<Own<TcpSocket>>, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.send",
+          "ts": "send",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            },
+            {
+              "name": "data",
+              "type": "Stream<U8>"
+            }
+          ],
+          "result": "Future<Result<void, ErrorCode>>"
+        },
+        {
+          "wit": "[method]tcp-socket.receive",
+          "ts": "receive",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "readonly [Stream<U8>, Future<Result<void, ErrorCode>>]"
+        },
+        {
+          "wit": "[method]tcp-socket.get-local-address",
+          "ts": "getLocalAddress",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "Result<IpSocketAddress, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.get-remote-address",
+          "ts": "getRemoteAddress",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "Result<IpSocketAddress, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.get-is-listening",
+          "ts": "getIsListening",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "boolean"
+        },
+        {
+          "wit": "[method]tcp-socket.get-address-family",
+          "ts": "getAddressFamily",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "IpAddressFamily"
+        },
+        {
+          "wit": "[method]tcp-socket.set-listen-backlog-size",
+          "ts": "setListenBacklogSize",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            },
+            {
+              "name": "value",
+              "type": "U64"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.get-keep-alive-enabled",
+          "ts": "getKeepAliveEnabled",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "Result<boolean, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.set-keep-alive-enabled",
+          "ts": "setKeepAliveEnabled",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            },
+            {
+              "name": "value",
+              "type": "boolean"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.get-keep-alive-idle-time",
+          "ts": "getKeepAliveIdleTime",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "Result<Duration, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.set-keep-alive-idle-time",
+          "ts": "setKeepAliveIdleTime",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            },
+            {
+              "name": "value",
+              "type": "Duration"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.get-keep-alive-interval",
+          "ts": "getKeepAliveInterval",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "Result<Duration, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.set-keep-alive-interval",
+          "ts": "setKeepAliveInterval",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            },
+            {
+              "name": "value",
+              "type": "Duration"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.get-keep-alive-count",
+          "ts": "getKeepAliveCount",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "Result<U32, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.set-keep-alive-count",
+          "ts": "setKeepAliveCount",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            },
+            {
+              "name": "value",
+              "type": "U32"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.get-hop-limit",
+          "ts": "getHopLimit",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "Result<U8, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.set-hop-limit",
+          "ts": "setHopLimit",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            },
+            {
+              "name": "value",
+              "type": "U8"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.get-receive-buffer-size",
+          "ts": "getReceiveBufferSize",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "Result<U64, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.set-receive-buffer-size",
+          "ts": "setReceiveBufferSize",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            },
+            {
+              "name": "value",
+              "type": "U64"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.get-send-buffer-size",
+          "ts": "getSendBufferSize",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            }
+          ],
+          "result": "Result<U64, ErrorCode>"
+        },
+        {
+          "wit": "[method]tcp-socket.set-send-buffer-size",
+          "ts": "setSendBufferSize",
+          "kind": {
+            "method": 52
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<TcpSocket>"
+            },
+            {
+              "name": "value",
+              "type": "U64"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[static]udp-socket.create",
+          "ts": "create",
+          "kind": {
+            "static": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "address-family",
+              "type": "IpAddressFamily"
+            }
+          ],
+          "result": "Result<Own<UdpSocket>, ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.bind",
+          "ts": "bind",
+          "kind": {
+            "method": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            },
+            {
+              "name": "local-address",
+              "type": "IpSocketAddress"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.connect",
+          "ts": "connect",
+          "kind": {
+            "method": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            },
+            {
+              "name": "remote-address",
+              "type": "IpSocketAddress"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.disconnect",
+          "ts": "disconnect",
+          "kind": {
+            "method": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.send",
+          "ts": "send",
+          "kind": {
+            "async-method": 53
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            },
+            {
+              "name": "data",
+              "type": "Uint8Array"
+            },
+            {
+              "name": "remote-address",
+              "type": "(IpSocketAddress | undefined)"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.receive",
+          "ts": "receive",
+          "kind": {
+            "async-method": 53
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            }
+          ],
+          "result": "Result<readonly [Uint8Array, IpSocketAddress], ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.get-local-address",
+          "ts": "getLocalAddress",
+          "kind": {
+            "method": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            }
+          ],
+          "result": "Result<IpSocketAddress, ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.get-remote-address",
+          "ts": "getRemoteAddress",
+          "kind": {
+            "method": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            }
+          ],
+          "result": "Result<IpSocketAddress, ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.get-address-family",
+          "ts": "getAddressFamily",
+          "kind": {
+            "method": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            }
+          ],
+          "result": "IpAddressFamily"
+        },
+        {
+          "wit": "[method]udp-socket.get-unicast-hop-limit",
+          "ts": "getUnicastHopLimit",
+          "kind": {
+            "method": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            }
+          ],
+          "result": "Result<U8, ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.set-unicast-hop-limit",
+          "ts": "setUnicastHopLimit",
+          "kind": {
+            "method": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            },
+            {
+              "name": "value",
+              "type": "U8"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.get-receive-buffer-size",
+          "ts": "getReceiveBufferSize",
+          "kind": {
+            "method": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            }
+          ],
+          "result": "Result<U64, ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.set-receive-buffer-size",
+          "ts": "setReceiveBufferSize",
+          "kind": {
+            "method": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            },
+            {
+              "name": "value",
+              "type": "U64"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.get-send-buffer-size",
+          "ts": "getSendBufferSize",
+          "kind": {
+            "method": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            }
+          ],
+          "result": "Result<U64, ErrorCode>"
+        },
+        {
+          "wit": "[method]udp-socket.set-send-buffer-size",
+          "ts": "setSendBufferSize",
+          "kind": {
+            "method": 53
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<UdpSocket>"
+            },
+            {
+              "name": "value",
+              "type": "U64"
+            }
+          ],
+          "result": "Result<void, ErrorCode>"
+        }
+      ]
+    },
+    {
+      "package": "wasi:sockets",
+      "version": "0.3.2",
+      "interface": "ip-name-lookup",
+      "namespace": "WasiSocketsIpNameLookup",
+      "types": {
+        "ip-address": {
+          "kind": {
+            "type": 48
+          },
+          "ts": "WasiSocketsTypes.IpAddress"
+        },
+        "error-code": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "access-denied",
+                  "type": null,
+                  "docs": {
+                    "contents": "Access denied.\n\nPOSIX equivalent: EACCES, EPERM"
+                  }
+                },
+                {
+                  "name": "invalid-argument",
+                  "type": null,
+                  "docs": {
+                    "contents": "`name` is a syntactically invalid domain name or IP address.\n\nPOSIX equivalent: EINVAL"
+                  }
+                },
+                {
+                  "name": "name-unresolvable",
+                  "type": null,
+                  "docs": {
+                    "contents": "Name does not exist or has no suitable associated IP addresses.\n\nPOSIX equivalent: EAI_NONAME, EAI_NODATA, EAI_ADDRFAMILY"
+                  }
+                },
+                {
+                  "name": "temporary-resolver-failure",
+                  "type": null,
+                  "docs": {
+                    "contents": "A temporary failure in name resolution occurred.\n\nPOSIX equivalent: EAI_AGAIN"
+                  }
+                },
+                {
+                  "name": "permanent-resolver-failure",
+                  "type": null,
+                  "docs": {
+                    "contents": "A permanent failure in name resolution occurred.\n\nPOSIX equivalent: EAI_FAIL"
+                  }
+                },
+                {
+                  "name": "other",
+                  "type": 43,
+                  "docs": {
+                    "contents": "A catch-all for errors not captured by the existing variants.\nImplementations can use this to extend the error type without\nbreaking existing code."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"access-denied\"; } | { readonly tag: \"invalid-argument\"; } | { readonly tag: \"name-unresolvable\"; } | { readonly tag: \"temporary-resolver-failure\"; } | { readonly tag: \"permanent-resolver-failure\"; } | { readonly tag: \"other\"; readonly val: (string | undefined); }"
+        }
+      },
+      "operations": [
+        {
+          "wit": "resolve-addresses",
+          "ts": "resolveAddresses",
+          "kind": "async-freestanding",
+          "async": true,
+          "params": [
+            {
+              "name": "name",
+              "type": "string"
+            }
+          ],
+          "result": "Result<readonly (IpAddress)[], ErrorCode>"
+        }
+      ]
+    },
+    {
+      "package": "wasi:random",
+      "version": "0.3.2",
+      "interface": "insecure-seed",
+      "namespace": "WasiRandomInsecureSeed",
+      "types": {},
+      "operations": [
+        {
+          "wit": "get-insecure-seed",
+          "ts": "getInsecureSeed",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "readonly [U64, U64]"
+        }
+      ]
+    },
+    {
+      "package": "wasi:random",
+      "version": "0.3.2",
+      "interface": "insecure",
+      "namespace": "WasiRandomInsecure",
+      "types": {},
+      "operations": [
+        {
+          "wit": "get-insecure-random-bytes",
+          "ts": "getInsecureRandomBytes",
+          "kind": "freestanding",
+          "async": false,
+          "params": [
+            {
+              "name": "max-len",
+              "type": "U64"
+            }
+          ],
+          "result": "Uint8Array"
+        },
+        {
+          "wit": "get-insecure-random-u64",
+          "ts": "getInsecureRandomU64",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "U64"
+        }
+      ]
+    },
+    {
+      "package": "wasi:random",
+      "version": "0.3.2",
+      "interface": "random",
+      "namespace": "WasiRandomRandom",
+      "types": {},
+      "operations": [
+        {
+          "wit": "get-random-bytes",
+          "ts": "getRandomBytes",
+          "kind": "freestanding",
+          "async": false,
+          "params": [
+            {
+              "name": "max-len",
+              "type": "U64"
+            }
+          ],
+          "result": "Uint8Array"
+        },
+        {
+          "wit": "get-random-u64",
+          "ts": "getRandomU64",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "U64"
+        }
+      ]
+    },
+    {
+      "package": "wasi:cli",
+      "version": "0.3.2",
+      "interface": "environment",
+      "namespace": "WasiCliEnvironment",
+      "types": {},
+      "operations": [
+        {
+          "wit": "get-environment",
+          "ts": "getEnvironment",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "readonly (readonly [string, string])[]"
+        },
+        {
+          "wit": "get-arguments",
+          "ts": "getArguments",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "readonly (string)[]"
+        },
+        {
+          "wit": "get-initial-cwd",
+          "ts": "getInitialCwd",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "(string | undefined)"
+        }
+      ]
+    },
+    {
+      "package": "wasi:cli",
+      "version": "0.3.2",
+      "interface": "exit",
+      "namespace": "WasiCliExit",
+      "types": {},
+      "operations": [
+        {
+          "wit": "exit",
+          "ts": "exit",
+          "kind": "freestanding",
+          "async": false,
+          "params": [
+            {
+              "name": "status",
+              "type": "Result<void, void>"
+            }
+          ],
+          "result": "void"
+        },
+        {
+          "wit": "exit-with-code",
+          "ts": "exitWithCode",
+          "kind": "freestanding",
+          "async": false,
+          "params": [
+            {
+              "name": "status-code",
+              "type": "U8"
+            }
+          ],
+          "result": "void"
+        }
+      ]
+    },
+    {
+      "package": "wasi:cli",
+      "version": "0.3.2",
+      "interface": "run",
+      "namespace": "WasiCliRun",
+      "types": {},
+      "operations": [
+        {
+          "wit": "run",
+          "ts": "run",
+          "kind": "async-freestanding",
+          "async": true,
+          "params": [],
+          "result": "Result<void, void>"
+        }
+      ]
+    },
+    {
+      "package": "wasi:cli",
+      "version": "0.3.2",
+      "interface": "types",
+      "namespace": "WasiCliTypes",
+      "types": {
+        "error-code": {
+          "kind": {
+            "enum": {
+              "cases": [
+                {
+                  "name": "io",
+                  "docs": {
+                    "contents": "Input/output error"
+                  }
+                },
+                {
+                  "name": "illegal-byte-sequence",
+                  "docs": {
+                    "contents": "Invalid or incomplete multibyte or wide character"
+                  }
+                },
+                {
+                  "name": "pipe",
+                  "docs": {
+                    "contents": "Broken pipe"
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "\"io\" | \"illegal-byte-sequence\" | \"pipe\""
+        }
+      },
+      "operations": []
+    },
+    {
+      "package": "wasi:cli",
+      "version": "0.3.2",
+      "interface": "stdin",
+      "namespace": "WasiCliStdin",
+      "types": {
+        "error-code": {
+          "kind": {
+            "type": 87
+          },
+          "ts": "WasiCliTypes.ErrorCode"
+        }
+      },
+      "operations": [
+        {
+          "wit": "read-via-stream",
+          "ts": "readViaStream",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "readonly [Stream<U8>, Future<Result<void, ErrorCode>>]"
+        }
+      ]
+    },
+    {
+      "package": "wasi:cli",
+      "version": "0.3.2",
+      "interface": "stdout",
+      "namespace": "WasiCliStdout",
+      "types": {
+        "error-code": {
+          "kind": {
+            "type": 87
+          },
+          "ts": "WasiCliTypes.ErrorCode"
+        }
+      },
+      "operations": [
+        {
+          "wit": "write-via-stream",
+          "ts": "writeViaStream",
+          "kind": "freestanding",
+          "async": false,
+          "params": [
+            {
+              "name": "data",
+              "type": "Stream<U8>"
+            }
+          ],
+          "result": "Future<Result<void, ErrorCode>>"
+        }
+      ]
+    },
+    {
+      "package": "wasi:cli",
+      "version": "0.3.2",
+      "interface": "stderr",
+      "namespace": "WasiCliStderr",
+      "types": {
+        "error-code": {
+          "kind": {
+            "type": 87
+          },
+          "ts": "WasiCliTypes.ErrorCode"
+        }
+      },
+      "operations": [
+        {
+          "wit": "write-via-stream",
+          "ts": "writeViaStream",
+          "kind": "freestanding",
+          "async": false,
+          "params": [
+            {
+              "name": "data",
+              "type": "Stream<U8>"
+            }
+          ],
+          "result": "Future<Result<void, ErrorCode>>"
+        }
+      ]
+    },
+    {
+      "package": "wasi:cli",
+      "version": "0.3.2",
+      "interface": "terminal-input",
+      "namespace": "WasiCliTerminalInput",
+      "types": {
+        "terminal-input": {
+          "kind": "resource",
+          "ts": "TerminalInput"
+        }
+      },
+      "operations": []
+    },
+    {
+      "package": "wasi:cli",
+      "version": "0.3.2",
+      "interface": "terminal-output",
+      "namespace": "WasiCliTerminalOutput",
+      "types": {
+        "terminal-output": {
+          "kind": "resource",
+          "ts": "TerminalOutput"
+        }
+      },
+      "operations": []
+    },
+    {
+      "package": "wasi:cli",
+      "version": "0.3.2",
+      "interface": "terminal-stdin",
+      "namespace": "WasiCliTerminalStdin",
+      "types": {
+        "terminal-input": {
+          "kind": {
+            "type": 99
+          },
+          "ts": "WasiCliTerminalInput.TerminalInput"
+        }
+      },
+      "operations": [
+        {
+          "wit": "get-terminal-stdin",
+          "ts": "getTerminalStdin",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "(Own<TerminalInput> | undefined)"
+        }
+      ]
+    },
+    {
+      "package": "wasi:cli",
+      "version": "0.3.2",
+      "interface": "terminal-stdout",
+      "namespace": "WasiCliTerminalStdout",
+      "types": {
+        "terminal-output": {
+          "kind": {
+            "type": 100
+          },
+          "ts": "WasiCliTerminalOutput.TerminalOutput"
+        }
+      },
+      "operations": [
+        {
+          "wit": "get-terminal-stdout",
+          "ts": "getTerminalStdout",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "(Own<TerminalOutput> | undefined)"
+        }
+      ]
+    },
+    {
+      "package": "wasi:cli",
+      "version": "0.3.2",
+      "interface": "terminal-stderr",
+      "namespace": "WasiCliTerminalStderr",
+      "types": {
+        "terminal-output": {
+          "kind": {
+            "type": 100
+          },
+          "ts": "WasiCliTerminalOutput.TerminalOutput"
+        }
+      },
+      "operations": [
+        {
+          "wit": "get-terminal-stderr",
+          "ts": "getTerminalStderr",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "(Own<TerminalOutput> | undefined)"
+        }
+      ]
+    },
+    {
+      "package": "wasi:http",
+      "version": "0.3.2",
+      "interface": "types",
+      "namespace": "WasiHttpTypes",
+      "types": {
+        "duration": {
+          "kind": {
+            "type": 0
+          },
+          "ts": "WasiClocksTypes.Duration"
+        },
+        "method": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "get",
+                  "type": null
+                },
+                {
+                  "name": "head",
+                  "type": null
+                },
+                {
+                  "name": "post",
+                  "type": null
+                },
+                {
+                  "name": "put",
+                  "type": null
+                },
+                {
+                  "name": "delete",
+                  "type": null
+                },
+                {
+                  "name": "connect",
+                  "type": null
+                },
+                {
+                  "name": "options",
+                  "type": null
+                },
+                {
+                  "name": "trace",
+                  "type": null
+                },
+                {
+                  "name": "patch",
+                  "type": null
+                },
+                {
+                  "name": "other",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"get\"; } | { readonly tag: \"head\"; } | { readonly tag: \"post\"; } | { readonly tag: \"put\"; } | { readonly tag: \"delete\"; } | { readonly tag: \"connect\"; } | { readonly tag: \"options\"; } | { readonly tag: \"trace\"; } | { readonly tag: \"patch\"; } | { readonly tag: \"other\"; readonly val: string; }"
+        },
+        "scheme": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "HTTP",
+                  "type": null
+                },
+                {
+                  "name": "HTTPS",
+                  "type": null
+                },
+                {
+                  "name": "other",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"HTTP\"; } | { readonly tag: \"HTTPS\"; } | { readonly tag: \"other\"; readonly val: string; }"
+        },
+        "DNS-error-payload": {
+          "kind": {
+            "record": {
+              "fields": [
+                {
+                  "name": "rcode",
+                  "type": 113
+                },
+                {
+                  "name": "info-code",
+                  "type": 114
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly rcode: (string | undefined); readonly infoCode: (U16 | undefined); }"
+        },
+        "TLS-alert-received-payload": {
+          "kind": {
+            "record": {
+              "fields": [
+                {
+                  "name": "alert-id",
+                  "type": 116
+                },
+                {
+                  "name": "alert-message",
+                  "type": 113
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly alertId: (U8 | undefined); readonly alertMessage: (string | undefined); }"
+        },
+        "field-size-payload": {
+          "kind": {
+            "record": {
+              "fields": [
+                {
+                  "name": "field-name",
+                  "type": 113
+                },
+                {
+                  "name": "field-size",
+                  "type": 118
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly fieldName: (string | undefined); readonly fieldSize: (U32 | undefined); }"
+        },
+        "error-code": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "DNS-timeout",
+                  "type": null
+                },
+                {
+                  "name": "DNS-error",
+                  "type": 115
+                },
+                {
+                  "name": "destination-not-found",
+                  "type": null
+                },
+                {
+                  "name": "destination-unavailable",
+                  "type": null
+                },
+                {
+                  "name": "destination-IP-prohibited",
+                  "type": null
+                },
+                {
+                  "name": "destination-IP-unroutable",
+                  "type": null
+                },
+                {
+                  "name": "connection-refused",
+                  "type": null
+                },
+                {
+                  "name": "connection-terminated",
+                  "type": null
+                },
+                {
+                  "name": "connection-timeout",
+                  "type": null
+                },
+                {
+                  "name": "connection-read-timeout",
+                  "type": null
+                },
+                {
+                  "name": "connection-write-timeout",
+                  "type": null
+                },
+                {
+                  "name": "connection-limit-reached",
+                  "type": null
+                },
+                {
+                  "name": "TLS-protocol-error",
+                  "type": null
+                },
+                {
+                  "name": "TLS-certificate-error",
+                  "type": null
+                },
+                {
+                  "name": "TLS-alert-received",
+                  "type": 117
+                },
+                {
+                  "name": "HTTP-request-denied",
+                  "type": null
+                },
+                {
+                  "name": "HTTP-request-length-required",
+                  "type": null
+                },
+                {
+                  "name": "HTTP-request-body-size",
+                  "type": 120
+                },
+                {
+                  "name": "HTTP-request-method-invalid",
+                  "type": null
+                },
+                {
+                  "name": "HTTP-request-URI-invalid",
+                  "type": null
+                },
+                {
+                  "name": "HTTP-request-URI-too-long",
+                  "type": null
+                },
+                {
+                  "name": "HTTP-request-header-section-size",
+                  "type": 118
+                },
+                {
+                  "name": "HTTP-request-header-size",
+                  "type": 121
+                },
+                {
+                  "name": "HTTP-request-trailer-section-size",
+                  "type": 118
+                },
+                {
+                  "name": "HTTP-request-trailer-size",
+                  "type": 119
+                },
+                {
+                  "name": "HTTP-response-incomplete",
+                  "type": null
+                },
+                {
+                  "name": "HTTP-response-header-section-size",
+                  "type": 118
+                },
+                {
+                  "name": "HTTP-response-header-size",
+                  "type": 119
+                },
+                {
+                  "name": "HTTP-response-body-size",
+                  "type": 120
+                },
+                {
+                  "name": "HTTP-response-trailer-section-size",
+                  "type": 118
+                },
+                {
+                  "name": "HTTP-response-trailer-size",
+                  "type": 119
+                },
+                {
+                  "name": "HTTP-response-transfer-coding",
+                  "type": 113
+                },
+                {
+                  "name": "HTTP-response-content-coding",
+                  "type": 113
+                },
+                {
+                  "name": "HTTP-response-timeout",
+                  "type": null
+                },
+                {
+                  "name": "HTTP-upgrade-failed",
+                  "type": null
+                },
+                {
+                  "name": "HTTP-protocol-error",
+                  "type": null
+                },
+                {
+                  "name": "loop-detected",
+                  "type": null
+                },
+                {
+                  "name": "configuration-error",
+                  "type": null
+                },
+                {
+                  "name": "internal-error",
+                  "type": 113,
+                  "docs": {
+                    "contents": "This is a catch-all error for anything that doesn't fit cleanly into a\nmore specific case. It also includes an optional string for an\nunstructured description of the error. Users should not depend on the\nstring for diagnosing errors, as it's not required to be consistent\nbetween implementations."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"DNS-timeout\"; } | { readonly tag: \"DNS-error\"; readonly val: DNSErrorPayload; } | { readonly tag: \"destination-not-found\"; } | { readonly tag: \"destination-unavailable\"; } | { readonly tag: \"destination-IP-prohibited\"; } | { readonly tag: \"destination-IP-unroutable\"; } | { readonly tag: \"connection-refused\"; } | { readonly tag: \"connection-terminated\"; } | { readonly tag: \"connection-timeout\"; } | { readonly tag: \"connection-read-timeout\"; } | { readonly tag: \"connection-write-timeout\"; } | { readonly tag: \"connection-limit-reached\"; } | { readonly tag: \"TLS-protocol-error\"; } | { readonly tag: \"TLS-certificate-error\"; } | { readonly tag: \"TLS-alert-received\"; readonly val: TLSAlertReceivedPayload; } | { readonly tag: \"HTTP-request-denied\"; } | { readonly tag: \"HTTP-request-length-required\"; } | { readonly tag: \"HTTP-request-body-size\"; readonly val: (U64 | undefined); } | { readonly tag: \"HTTP-request-method-invalid\"; } | { readonly tag: \"HTTP-request-URI-invalid\"; } | { readonly tag: \"HTTP-request-URI-too-long\"; } | { readonly tag: \"HTTP-request-header-section-size\"; readonly val: (U32 | undefined); } | { readonly tag: \"HTTP-request-header-size\"; readonly val: (FieldSizePayload | undefined); } | { readonly tag: \"HTTP-request-trailer-section-size\"; readonly val: (U32 | undefined); } | { readonly tag: \"HTTP-request-trailer-size\"; readonly val: FieldSizePayload; } | { readonly tag: \"HTTP-response-incomplete\"; } | { readonly tag: \"HTTP-response-header-section-size\"; readonly val: (U32 | undefined); } | { readonly tag: \"HTTP-response-header-size\"; readonly val: FieldSizePayload; } | { readonly tag: \"HTTP-response-body-size\"; readonly val: (U64 | undefined); } | { readonly tag: \"HTTP-response-trailer-section-size\"; readonly val: (U32 | undefined); } | { readonly tag: \"HTTP-response-trailer-size\"; readonly val: FieldSizePayload; } | { readonly tag: \"HTTP-response-transfer-coding\"; readonly val: (string | undefined); } | { readonly tag: \"HTTP-response-content-coding\"; readonly val: (string | undefined); } | { readonly tag: \"HTTP-response-timeout\"; } | { readonly tag: \"HTTP-upgrade-failed\"; } | { readonly tag: \"HTTP-protocol-error\"; } | { readonly tag: \"loop-detected\"; } | { readonly tag: \"configuration-error\"; } | { readonly tag: \"internal-error\"; readonly val: (string | undefined); }"
+        },
+        "header-error": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "invalid-syntax",
+                  "type": null,
+                  "docs": {
+                    "contents": "This error indicates that a `field-name` or `field-value` was\nsyntactically invalid when used with an operation that sets headers in a\n`fields`."
+                  }
+                },
+                {
+                  "name": "forbidden",
+                  "type": null,
+                  "docs": {
+                    "contents": "This error indicates that a forbidden `field-name` was used when trying\nto set a header in a `fields`."
+                  }
+                },
+                {
+                  "name": "immutable",
+                  "type": null,
+                  "docs": {
+                    "contents": "This error indicates that the operation on the `fields` was not\npermitted because the fields are immutable."
+                  }
+                },
+                {
+                  "name": "size-exceeded",
+                  "type": null,
+                  "docs": {
+                    "contents": "This error indicates that the operation would exceed an\nimplementation-defined limit on field sizes. This may apply to\nan individual `field-value`, a single `field-name` plus all its\nvalues, or the total aggregate size of all fields."
+                  }
+                },
+                {
+                  "name": "other",
+                  "type": 113,
+                  "docs": {
+                    "contents": "This is a catch-all error for anything that doesn't fit cleanly into a\nmore specific case. Implementations can use this to extend the error\ntype without breaking existing code. It also includes an optional\nstring for an unstructured description of the error. Users should not\ndepend on the string for diagnosing errors, as it's not required to be\nconsistent between implementations."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"invalid-syntax\"; } | { readonly tag: \"forbidden\"; } | { readonly tag: \"immutable\"; } | { readonly tag: \"size-exceeded\"; } | { readonly tag: \"other\"; readonly val: (string | undefined); }"
+        },
+        "request-options-error": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "not-supported",
+                  "type": null,
+                  "docs": {
+                    "contents": "Indicates the specified field is not supported by this implementation."
+                  }
+                },
+                {
+                  "name": "immutable",
+                  "type": null,
+                  "docs": {
+                    "contents": "Indicates that the operation on the `request-options` was not permitted\nbecause it is immutable."
+                  }
+                },
+                {
+                  "name": "other",
+                  "type": 113,
+                  "docs": {
+                    "contents": "This is a catch-all error for anything that doesn't fit cleanly into a\nmore specific case. Implementations can use this to extend the error\ntype without breaking existing code. It also includes an optional\nstring for an unstructured description of the error. Users should not\ndepend on the string for diagnosing errors, as it's not required to be\nconsistent between implementations."
+                  }
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"not-supported\"; } | { readonly tag: \"immutable\"; } | { readonly tag: \"other\"; readonly val: (string | undefined); }"
+        },
+        "field-name": {
+          "kind": {
+            "type": "string"
+          },
+          "ts": "string"
+        },
+        "field-value": {
+          "kind": {
+            "list": "u8"
+          },
+          "ts": "Uint8Array"
+        },
+        "fields": {
+          "kind": "resource",
+          "ts": "Fields"
+        },
+        "headers": {
+          "kind": {
+            "type": 127
+          },
+          "ts": "Fields"
+        },
+        "trailers": {
+          "kind": {
+            "type": 127
+          },
+          "ts": "Fields"
+        },
+        "request": {
+          "kind": "resource",
+          "ts": "Request"
+        },
+        "request-options": {
+          "kind": "resource",
+          "ts": "RequestOptions"
+        },
+        "status-code": {
+          "kind": {
+            "type": "u16"
+          },
+          "ts": "U16"
+        },
+        "response": {
+          "kind": "resource",
+          "ts": "Response"
+        }
+      },
+      "operations": [
+        {
+          "wit": "[constructor]fields",
+          "ts": "new",
+          "kind": {
+            "constructor": 127
+          },
+          "async": false,
+          "params": [],
+          "result": "Own<Fields>"
+        },
+        {
+          "wit": "[static]fields.from-list",
+          "ts": "fromList",
+          "kind": {
+            "static": 127
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "entries",
+              "type": "readonly (readonly [FieldName, FieldValue])[]"
+            }
+          ],
+          "result": "Result<Own<Fields>, HeaderError>"
+        },
+        {
+          "wit": "[method]fields.get",
+          "ts": "get",
+          "kind": {
+            "method": 127
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Fields>"
+            },
+            {
+              "name": "name",
+              "type": "FieldName"
+            }
+          ],
+          "result": "readonly (FieldValue)[]"
+        },
+        {
+          "wit": "[method]fields.has",
+          "ts": "has",
+          "kind": {
+            "method": 127
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Fields>"
+            },
+            {
+              "name": "name",
+              "type": "FieldName"
+            }
+          ],
+          "result": "boolean"
+        },
+        {
+          "wit": "[method]fields.set",
+          "ts": "set",
+          "kind": {
+            "method": 127
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Fields>"
+            },
+            {
+              "name": "name",
+              "type": "FieldName"
+            },
+            {
+              "name": "value",
+              "type": "readonly (FieldValue)[]"
+            }
+          ],
+          "result": "Result<void, HeaderError>"
+        },
+        {
+          "wit": "[method]fields.delete",
+          "ts": "delete",
+          "kind": {
+            "method": 127
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Fields>"
+            },
+            {
+              "name": "name",
+              "type": "FieldName"
+            }
+          ],
+          "result": "Result<void, HeaderError>"
+        },
+        {
+          "wit": "[method]fields.get-and-delete",
+          "ts": "getAndDelete",
+          "kind": {
+            "method": 127
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Fields>"
+            },
+            {
+              "name": "name",
+              "type": "FieldName"
+            }
+          ],
+          "result": "Result<readonly (FieldValue)[], HeaderError>"
+        },
+        {
+          "wit": "[method]fields.append",
+          "ts": "append",
+          "kind": {
+            "method": 127
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Fields>"
+            },
+            {
+              "name": "name",
+              "type": "FieldName"
+            },
+            {
+              "name": "value",
+              "type": "FieldValue"
+            }
+          ],
+          "result": "Result<void, HeaderError>"
+        },
+        {
+          "wit": "[method]fields.copy-all",
+          "ts": "copyAll",
+          "kind": {
+            "method": 127
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Fields>"
+            }
+          ],
+          "result": "readonly (readonly [FieldName, FieldValue])[]"
+        },
+        {
+          "wit": "[method]fields.clone",
+          "ts": "clone",
+          "kind": {
+            "method": 127
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Fields>"
+            }
+          ],
+          "result": "Own<Fields>"
+        },
+        {
+          "wit": "[static]request.new",
+          "ts": "new",
+          "kind": {
+            "static": 130
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "headers",
+              "type": "Own<Headers>"
+            },
+            {
+              "name": "contents",
+              "type": "(Stream<U8> | undefined)"
+            },
+            {
+              "name": "trailers",
+              "type": "Future<Result<(Own<Trailers> | undefined), ErrorCode>>"
+            },
+            {
+              "name": "options",
+              "type": "(Own<RequestOptions> | undefined)"
+            }
+          ],
+          "result": "readonly [Own<Request>, Future<Result<void, ErrorCode>>]"
+        },
+        {
+          "wit": "[method]request.get-method",
+          "ts": "getMethod",
+          "kind": {
+            "method": 130
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Request>"
+            }
+          ],
+          "result": "Method"
+        },
+        {
+          "wit": "[method]request.set-method",
+          "ts": "setMethod",
+          "kind": {
+            "method": 130
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Request>"
+            },
+            {
+              "name": "method",
+              "type": "Method"
+            }
+          ],
+          "result": "Result<void, void>"
+        },
+        {
+          "wit": "[method]request.get-path-with-query",
+          "ts": "getPathWithQuery",
+          "kind": {
+            "method": 130
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Request>"
+            }
+          ],
+          "result": "(string | undefined)"
+        },
+        {
+          "wit": "[method]request.set-path-with-query",
+          "ts": "setPathWithQuery",
+          "kind": {
+            "method": 130
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Request>"
+            },
+            {
+              "name": "path-with-query",
+              "type": "(string | undefined)"
+            }
+          ],
+          "result": "Result<void, void>"
+        },
+        {
+          "wit": "[method]request.get-scheme",
+          "ts": "getScheme",
+          "kind": {
+            "method": 130
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Request>"
+            }
+          ],
+          "result": "(Scheme | undefined)"
+        },
+        {
+          "wit": "[method]request.set-scheme",
+          "ts": "setScheme",
+          "kind": {
+            "method": 130
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Request>"
+            },
+            {
+              "name": "scheme",
+              "type": "(Scheme | undefined)"
+            }
+          ],
+          "result": "Result<void, void>"
+        },
+        {
+          "wit": "[method]request.get-authority",
+          "ts": "getAuthority",
+          "kind": {
+            "method": 130
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Request>"
+            }
+          ],
+          "result": "(string | undefined)"
+        },
+        {
+          "wit": "[method]request.set-authority",
+          "ts": "setAuthority",
+          "kind": {
+            "method": 130
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Request>"
+            },
+            {
+              "name": "authority",
+              "type": "(string | undefined)"
+            }
+          ],
+          "result": "Result<void, void>"
+        },
+        {
+          "wit": "[method]request.get-options",
+          "ts": "getOptions",
+          "kind": {
+            "method": 130
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Request>"
+            }
+          ],
+          "result": "(Own<RequestOptions> | undefined)"
+        },
+        {
+          "wit": "[method]request.get-headers",
+          "ts": "getHeaders",
+          "kind": {
+            "method": 130
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Request>"
+            }
+          ],
+          "result": "Own<Headers>"
+        },
+        {
+          "wit": "[static]request.consume-body",
+          "ts": "consumeBody",
+          "kind": {
+            "static": 130
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "this",
+              "type": "Own<Request>"
+            },
+            {
+              "name": "res",
+              "type": "Future<Result<void, ErrorCode>>"
+            }
+          ],
+          "result": "readonly [Stream<U8>, Future<Result<(Own<Trailers> | undefined), ErrorCode>>]"
+        },
+        {
+          "wit": "[constructor]request-options",
+          "ts": "new",
+          "kind": {
+            "constructor": 131
+          },
+          "async": false,
+          "params": [],
+          "result": "Own<RequestOptions>"
+        },
+        {
+          "wit": "[method]request-options.get-connect-timeout",
+          "ts": "getConnectTimeout",
+          "kind": {
+            "method": 131
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<RequestOptions>"
+            }
+          ],
+          "result": "(Duration | undefined)"
+        },
+        {
+          "wit": "[method]request-options.set-connect-timeout",
+          "ts": "setConnectTimeout",
+          "kind": {
+            "method": 131
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<RequestOptions>"
+            },
+            {
+              "name": "duration",
+              "type": "(Duration | undefined)"
+            }
+          ],
+          "result": "Result<void, RequestOptionsError>"
+        },
+        {
+          "wit": "[method]request-options.get-first-byte-timeout",
+          "ts": "getFirstByteTimeout",
+          "kind": {
+            "method": 131
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<RequestOptions>"
+            }
+          ],
+          "result": "(Duration | undefined)"
+        },
+        {
+          "wit": "[method]request-options.set-first-byte-timeout",
+          "ts": "setFirstByteTimeout",
+          "kind": {
+            "method": 131
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<RequestOptions>"
+            },
+            {
+              "name": "duration",
+              "type": "(Duration | undefined)"
+            }
+          ],
+          "result": "Result<void, RequestOptionsError>"
+        },
+        {
+          "wit": "[method]request-options.get-between-bytes-timeout",
+          "ts": "getBetweenBytesTimeout",
+          "kind": {
+            "method": 131
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<RequestOptions>"
+            }
+          ],
+          "result": "(Duration | undefined)"
+        },
+        {
+          "wit": "[method]request-options.set-between-bytes-timeout",
+          "ts": "setBetweenBytesTimeout",
+          "kind": {
+            "method": 131
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<RequestOptions>"
+            },
+            {
+              "name": "duration",
+              "type": "(Duration | undefined)"
+            }
+          ],
+          "result": "Result<void, RequestOptionsError>"
+        },
+        {
+          "wit": "[method]request-options.clone",
+          "ts": "clone",
+          "kind": {
+            "method": 131
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<RequestOptions>"
+            }
+          ],
+          "result": "Own<RequestOptions>"
+        },
+        {
+          "wit": "[static]response.new",
+          "ts": "new",
+          "kind": {
+            "static": 133
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "headers",
+              "type": "Own<Headers>"
+            },
+            {
+              "name": "contents",
+              "type": "(Stream<U8> | undefined)"
+            },
+            {
+              "name": "trailers",
+              "type": "Future<Result<(Own<Trailers> | undefined), ErrorCode>>"
+            }
+          ],
+          "result": "readonly [Own<Response>, Future<Result<void, ErrorCode>>]"
+        },
+        {
+          "wit": "[method]response.get-status-code",
+          "ts": "getStatusCode",
+          "kind": {
+            "method": 133
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Response>"
+            }
+          ],
+          "result": "StatusCode"
+        },
+        {
+          "wit": "[method]response.set-status-code",
+          "ts": "setStatusCode",
+          "kind": {
+            "method": 133
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Response>"
+            },
+            {
+              "name": "status-code",
+              "type": "StatusCode"
+            }
+          ],
+          "result": "Result<void, void>"
+        },
+        {
+          "wit": "[method]response.get-headers",
+          "ts": "getHeaders",
+          "kind": {
+            "method": 133
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Response>"
+            }
+          ],
+          "result": "Own<Headers>"
+        },
+        {
+          "wit": "[static]response.consume-body",
+          "ts": "consumeBody",
+          "kind": {
+            "static": 133
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "this",
+              "type": "Own<Response>"
+            },
+            {
+              "name": "res",
+              "type": "Future<Result<void, ErrorCode>>"
+            }
+          ],
+          "result": "readonly [Stream<U8>, Future<Result<(Own<Trailers> | undefined), ErrorCode>>]"
+        }
+      ]
+    },
+    {
+      "package": "wasi:http",
+      "version": "0.3.2",
+      "interface": "handler",
+      "namespace": "WasiHttpHandler",
+      "types": {
+        "request": {
+          "kind": {
+            "type": 130
+          },
+          "ts": "WasiHttpTypes.Request"
+        },
+        "response": {
+          "kind": {
+            "type": 133
+          },
+          "ts": "WasiHttpTypes.Response"
+        },
+        "error-code": {
+          "kind": {
+            "type": 122
+          },
+          "ts": "WasiHttpTypes.ErrorCode"
+        }
+      },
+      "operations": [
+        {
+          "wit": "handle",
+          "ts": "handle",
+          "kind": "async-freestanding",
+          "async": true,
+          "params": [
+            {
+              "name": "request",
+              "type": "Own<Request>"
+            }
+          ],
+          "result": "Result<Own<Response>, ErrorCode>"
+        }
+      ]
+    },
+    {
+      "package": "wasi:http",
+      "version": "0.3.2",
+      "interface": "client",
+      "namespace": "WasiHttpClient",
+      "types": {
+        "request": {
+          "kind": {
+            "type": 130
+          },
+          "ts": "WasiHttpTypes.Request"
+        },
+        "response": {
+          "kind": {
+            "type": 133
+          },
+          "ts": "WasiHttpTypes.Response"
+        },
+        "error-code": {
+          "kind": {
+            "type": 122
+          },
+          "ts": "WasiHttpTypes.ErrorCode"
+        }
+      },
+      "operations": [
+        {
+          "wit": "send",
+          "ts": "send",
+          "kind": "async-freestanding",
+          "async": true,
+          "params": [
+            {
+              "name": "request",
+              "type": "Own<Request>"
+            }
+          ],
+          "result": "Result<Own<Response>, ErrorCode>"
+        }
+      ]
+    },
+    {
+      "package": "walos:runtime",
+      "version": "0.3.2",
+      "interface": "io",
+      "namespace": "WalosRuntimeIo",
+      "types": {
+        "error-code": {
+          "kind": {
+            "type": 87
+          },
+          "ts": "WasiCliTypes.ErrorCode"
+        },
+        "descriptor": {
+          "kind": {
+            "type": 23
+          },
+          "ts": "WasiFilesystemTypes.Descriptor"
+        },
+        "filesize": {
+          "kind": {
+            "type": 9
+          },
+          "ts": "WasiFilesystemTypes.Filesize"
+        },
+        "filesystem-error": {
+          "kind": {
+            "type": 20
+          },
+          "ts": "WasiFilesystemTypes.ErrorCode"
+        },
+        "input-endpoint": {
+          "kind": "resource",
+          "ts": "InputEndpoint"
+        },
+        "output-endpoint": {
+          "kind": "resource",
+          "ts": "OutputEndpoint"
+        }
+      },
+      "operations": [
+        {
+          "wit": "[method]input-endpoint.read-via-stream",
+          "ts": "readViaStream",
+          "kind": {
+            "method": 181
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<InputEndpoint>"
+            }
+          ],
+          "result": "readonly [Stream<U8>, Future<Result<void, ErrorCode>>]"
+        },
+        {
+          "wit": "[method]output-endpoint.when-writable",
+          "ts": "whenWritable",
+          "kind": {
+            "method": 182
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<OutputEndpoint>"
+            },
+            {
+              "name": "minimum",
+              "type": "U64"
+            }
+          ],
+          "result": "Future<Result<U64, ErrorCode>>"
+        },
+        {
+          "wit": "[method]output-endpoint.write-via-stream",
+          "ts": "writeViaStream",
+          "kind": {
+            "method": 182
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<OutputEndpoint>"
+            },
+            {
+              "name": "data",
+              "type": "Stream<U8>"
+            }
+          ],
+          "result": "Future<Result<void, ErrorCode>>"
+        },
+        {
+          "wit": "read-via-descriptor",
+          "ts": "readViaDescriptor",
+          "kind": "async-freestanding",
+          "async": true,
+          "params": [
+            {
+              "name": "file",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "offset",
+              "type": "Filesize"
+            }
+          ],
+          "result": "Result<Own<InputEndpoint>, FilesystemError>"
+        },
+        {
+          "wit": "write-via-descriptor",
+          "ts": "writeViaDescriptor",
+          "kind": "async-freestanding",
+          "async": true,
+          "params": [
+            {
+              "name": "file",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "offset",
+              "type": "Filesize"
+            },
+            {
+              "name": "append",
+              "type": "boolean"
+            }
+          ],
+          "result": "Result<Own<OutputEndpoint>, FilesystemError>"
+        },
+        {
+          "wit": "get-stdin",
+          "ts": "getStdin",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "Own<InputEndpoint>"
+        },
+        {
+          "wit": "get-stdout",
+          "ts": "getStdout",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "Own<OutputEndpoint>"
+        },
+        {
+          "wit": "get-stderr",
+          "ts": "getStderr",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "Own<OutputEndpoint>"
+        },
+        {
+          "wit": "create-pipe",
+          "ts": "createPipe",
+          "kind": "async-freestanding",
+          "async": true,
+          "params": [],
+          "result": "readonly [Own<InputEndpoint>, Own<OutputEndpoint>]"
+        }
+      ]
+    },
+    {
+      "package": "walos:runtime",
+      "version": "0.3.2",
+      "interface": "process",
+      "namespace": "WalosRuntimeProcess",
+      "types": {
+        "descriptor": {
+          "kind": {
+            "type": 23
+          },
+          "ts": "WasiFilesystemTypes.Descriptor"
+        },
+        "input-endpoint": {
+          "kind": {
+            "type": 181
+          },
+          "ts": "WalosRuntimeIo.InputEndpoint"
+        },
+        "output-endpoint": {
+          "kind": {
+            "type": 182
+          },
+          "ts": "WalosRuntimeIo.OutputEndpoint"
+        },
+        "spawn-error": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "invalid-descriptor",
+                  "type": null
+                },
+                {
+                  "name": "invalid-stream",
+                  "type": null
+                },
+                {
+                  "name": "initialization",
+                  "type": "string"
+                },
+                {
+                  "name": "timeout",
+                  "type": null
+                },
+                {
+                  "name": "cancelled",
+                  "type": null
+                },
+                {
+                  "name": "busy",
+                  "type": null
+                },
+                {
+                  "name": "internal",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"invalid-descriptor\"; } | { readonly tag: \"invalid-stream\"; } | { readonly tag: \"initialization\"; readonly val: string; } | { readonly tag: \"timeout\"; } | { readonly tag: \"cancelled\"; } | { readonly tag: \"busy\"; } | { readonly tag: \"internal\"; readonly val: string; }"
+        },
+        "exit-result": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "exited",
+                  "type": "u32"
+                },
+                {
+                  "name": "trap",
+                  "type": "string"
+                },
+                {
+                  "name": "terminated",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"exited\"; readonly val: U32; } | { readonly tag: \"trap\"; readonly val: string; } | { readonly tag: \"terminated\"; readonly val: string; }"
+        },
+        "wait-error": {
+          "kind": {
+            "variant": {
+              "cases": [
+                {
+                  "name": "already-consumed",
+                  "type": null
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly tag: \"already-consumed\"; }"
+        },
+        "child-process": {
+          "kind": "resource",
+          "ts": "ChildProcess"
+        }
+      },
+      "operations": [
+        {
+          "wit": "[method]child-process.pid",
+          "ts": "pid",
+          "kind": {
+            "method": 203
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<ChildProcess>"
+            }
+          ],
+          "result": "U32"
+        },
+        {
+          "wit": "[method]child-process.wait",
+          "ts": "wait",
+          "kind": {
+            "async-method": 203
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<ChildProcess>"
+            }
+          ],
+          "result": "Result<ExitResult, WaitError>"
+        },
+        {
+          "wit": "[method]child-process.request-stop",
+          "ts": "requestStop",
+          "kind": {
+            "async-method": 203
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<ChildProcess>"
+            }
+          ],
+          "result": "void"
+        },
+        {
+          "wit": "spawn",
+          "ts": "spawn",
+          "kind": "async-freestanding",
+          "async": true,
+          "params": [
+            {
+              "name": "executable",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "argv",
+              "type": "readonly (string)[]"
+            },
+            {
+              "name": "env",
+              "type": "readonly (readonly [string, string])[]"
+            },
+            {
+              "name": "stdin",
+              "type": "(Own<InputEndpoint> | undefined)"
+            },
+            {
+              "name": "stdout",
+              "type": "(Own<OutputEndpoint> | undefined)"
+            },
+            {
+              "name": "stderr",
+              "type": "(Own<OutputEndpoint> | undefined)"
+            }
+          ],
+          "result": "Result<Own<ChildProcess>, SpawnError>"
+        }
+      ]
+    }
+  ]
+}

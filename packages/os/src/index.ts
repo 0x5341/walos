@@ -10,6 +10,13 @@ import {
   type WalosState,
 } from './types.js';
 export * from './types.js';
+export {
+  HostProcessContext,
+  type HostDescriptor,
+  type HostInput,
+  type HostOutput,
+  type HostChildProcess,
+} from './host-process.js';
 
 /** A session with one logical Host process and no automatically started applications. */
 export class Walos implements AsyncDisposable {

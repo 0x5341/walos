@@ -57,7 +57,49 @@ The shared resource graph increases held-worker JS heap; these measurements do
 not establish RSS or sustained-memory growth. No fixed performance threshold was
 introduced. Pipe bytes and local filesystem I/O retain their direct data paths.
 
-## Remaining gates
+## Step 2 gate: passed
 
-Step 2 (official WIT public API replacement) and Step 3 (real P3 Component execution)
-are not yet complete. No P3 execution support is claimed by the Step 1 gate.
+The public API is now generated from the pinned 0.3.2 graph: 26 standard
+interfaces and two Walos interfaces, with 143 operations. Standard Results,
+resources, native Future/Stream contracts and explicit Host wrappers replace the
+old public groups. P1/P2 keep their standard binary ABI and borrow the new Context.
+Walos's custom P1/P2 ABI names changed intentionally; its fixtures were rebuilt.
+HTTP, sockets, timezone and unsupported filesystem operations throw identifiable
+errors from the common Context. The completeness inventory is checked in CI.
+
+| Check | Result |
+| --- | --- |
+| `npm run check` (build, public types, Runtime boundaries, generated WIT API) | pass |
+| `npm run check:wit` plus generated diff; `npm run check:wit:p3` | pass |
+| `npm run build:apps` | pass |
+| Full development browser suite | 136 passed, 2 production-only skipped |
+| Additional focused raw API, cancellation, errors, P1/P2 and ownership checks | pass |
+| Production browser suite | 2 passed |
+| Pages build and serving check | pass |
+| Statistics tests and one-trial benchmark | pass |
+
+A final focused test preserves the WIT `read-only` filesystem error variant
+through the common service and ABI conversions. Dedicated channels test bounded
+writes, EOF and cancellation; real P1/P2 probes verify common unimplemented Traps.
+No legacy test was removed or skipped to accommodate these changes.
+
+## Step 2 measurements
+
+Same browser and machine as Step 1; jco upgraded to 1.39.0 to parse the official
+P3 WIT. P1/P2 fixtures still use wasi-sdk 27.0. One retained sample per scenario.
+
+| Scenario / metric | Step 1 | Step 2 | Change |
+| --- | ---: | ---: | ---: |
+| p1/startup-cold / startupMs | 63.35 | 57.91 | -8.6% |
+| p1/startup-warm / startupMs | 41.00 | 41.67 | +1.6% |
+| p2/startup-cold / startupMs | 193.83 | 214.92 | +10.9% |
+| p2/startup-warm / startupMs | 102.02 | 116.61 | +14.3% |
+| p1/memory-loaded / jsHeapUsedBytes | 565612.00 | 769560.00 | +36.1% |
+| p2/memory-loaded / jsHeapUsedBytes | 1618708.00 | 1808240.00 | +11.7% |
+
+[Step 2 raw samples](benchmarks/runtime-step2.json) include OPFS and Pipe paths.
+These single samples describe observed costs; they cannot establish performance
+trends. The extra public projection and ABI resource views add allocations; no
+fixed threshold is applied. Data still flows through local OPFS and direct Ports.
+
+Step 3 has not yet begun at this gate. P3 execution is not claimed here.

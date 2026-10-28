@@ -24,8 +24,9 @@ for (const format of ['p1', 'p2'] as const) {
         const disposal = runtime[Symbol.asyncDispose]();
         const sameDisposal = disposal === runtime[Symbol.asyncDispose]();
         await disposal;
-        const [[root]] = context.fs.getDirectories();
-        const type = root.getType();
+        const [[root]] = context.wasi.filesystem.preopens.getDirectories();
+        const result = await root.getType();
+        const type = result.tag === 'ok' ? result.val.tag : result.val.tag;
         await root[Symbol.asyncDispose]();
         return {
           code,
@@ -67,7 +68,7 @@ for (const format of ['p1', 'p2'] as const) {
         );
         await runtime[Symbol.asyncDispose]();
         await runtime[Symbol.asyncDispose]();
-        return { failed, pwd: context.env.get('PWD') };
+        return { failed, pwd: context.wasi.cli.environment.getInitialCwd() };
       } finally {
         await os.dispose();
       }

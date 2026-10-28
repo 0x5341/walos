@@ -1,4 +1,5 @@
 import { ServiceError, type ProcessContext } from '../types.js';
+import { createAbiView, AbiOutput } from './abi-view.js';
 import { loadComponent } from './component.js';
 import { WasiExit, PendingDrops, type Runtime } from './runtime.js';
 import { errno } from './abi-errors.js';
@@ -6,7 +7,7 @@ import type { ProcessMetrics } from './protocol.js';
 
 /** Component resource wrappers contain ABI handles only, never OS implementations. */
 export class Wasi2 implements Runtime {
-  private context!: ProcessContext;
+  private context!: ReturnType<typeof createAbiView>;
   private component?: Awaited<ReturnType<typeof loadComponent>>;
   private stopping = false;
   private started = false;
@@ -14,7 +15,7 @@ export class Wasi2 implements Runtime {
   private drops = new PendingDrops();
   constructor(private metrics?: ProcessMetrics) {}
   async initialize(bytes: Uint8Array, context: ProcessContext) {
-    this.context = context;
+    this.context = createAbiView(context);
     const start = performance.now();
     if (this.metrics) this.metrics.component = {};
     this.component = await loadComponent(bytes, this.imports(), this.metrics?.component);
@@ -42,19 +43,27 @@ export class Wasi2 implements Runtime {
     }
   }
   private drop(value: AsyncDisposable) {
-    this.drops.add(value[Symbol.asyncDispose]());
+    this.drops.add(value instanceof AbiOutput ? value.finish() : value[Symbol.asyncDispose]());
   }
   imports(): Record<string, any> {
     const context = this.context,
       adapter = this;
     const fail = (error: unknown, kind: string): never => {
       if (!(error instanceof ServiceError)) throw error;
-      if (kind === 'fs')
+      if (kind === 'fs') {
+        if (
+          error.cause &&
+          typeof error.cause === 'object' &&
+          'tag' in error.cause &&
+          error.cause.tag === 'read-only'
+        )
+          throw 'read-only';
         throw error.code === 'invalid-resource'
           ? 'bad-descriptor'
           : error.code === 'broken-pipe'
             ? 'pipe'
             : error.code;
+      }
       if (kind === 'stream')
         throw error.code === 'closed'
           ? { tag: 'closed' }
@@ -132,10 +141,10 @@ export class Wasi2 implements Runtime {
         return call(() => this.value.checkWrite(), 'stream');
       }
       write(bytes: Uint8Array) {
-        return call(() => this.value.write(bytes), 'stream');
+        return call(() => this.value.enqueue(bytes), 'stream');
       }
       flush() {
-        return call(() => this.value.flush(), 'stream');
+        return call(() => this.value.startFlush(), 'stream');
       }
       blockingFlush() {
         return call(() => this.value.blockingFlush(), 'stream');
@@ -157,10 +166,10 @@ export class Wasi2 implements Runtime {
           await this.write(bytes.subarray(offset, offset + count));
           offset += count;
         }
-        await this.flush();
+        await this.blockingFlush();
       }
       writeZeroes(length: bigint) {
-        return this.write(new Uint8Array(Number(length)));
+        return call(() => this.value.enqueueZeroes(length), 'stream');
       }
       blockingWriteZeroesAndFlush(length: bigint) {
         if (length > 4096n) throw new Error('blocking-write-zeroes-and-flush exceeds 4096 bytes');
@@ -278,6 +287,7 @@ export class Wasi2 implements Runtime {
       return connected ? (index === 0 ? new TerminalInput() : new TerminalOutput()) : undefined;
     };
     return {
+      __unsupportedSocket: context.unsupportedSocket,
       'wasi:cli/environment': {
         getArguments: () => [...context.args],
         getEnvironment: () => context.env.entries().map(({ key, value }) => [key, value]),
@@ -337,7 +347,7 @@ export class Wasi2 implements Runtime {
         getInsecureRandomU64: context.random.getInsecureRandomU64,
       },
       'wasi:random/insecure-seed': { insecureSeed: context.random.insecureSeed },
-      'walos:runtime/process': {
+      'walos:runtime-p2/process': {
         ChildProcess,
         spawn: (
           executable: Descriptor,
@@ -361,7 +371,7 @@ export class Wasi2 implements Runtime {
             (value) => new ChildProcess(value),
           ),
       },
-      'walos:runtime/ipc': {
+      'walos:runtime-p2/ipc': {
         createPipe: () =>
           call(
             () => context.io.createPipe(),

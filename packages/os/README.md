@@ -1,14 +1,14 @@
 # @walos/os
 
 A browser OS with one logical Host process and explicit WASI Preview 1/2 processes.
-The v0.2 API is a breaking change. Creating an OS starts no shell, installs no
+The v0.3 API is a breaking change. Creating an OS starts no shell, installs no
 commands, and leaves existing OPFS user content unchanged.
 
 ```ts
-import { Walos, ServiceError } from '@walos/os';
+import { HostProcessContext, Walos, ServiceError } from '@walos/os';
 
 await using os = await Walos.create({ env: { PWD: '/', PATH: '/bin' }, argv: [] });
-const host = os.getHostProcess(); // synchronous; always the same Host
+await using host = new HostProcessContext(os.getHostProcess()); // explicitly borrows the raw Context
 const [[root]] = host.fs.getDirectories();
 await using directory = root;
 await using executable = await directory.openAt({}, 'app.wasm', {}, { read: true });
@@ -39,11 +39,10 @@ All Host read/write/file operations returning promises must be awaited before
 moving their stream. Moving a busy stream consumes it and rejects with `busy`.
 File output `flush()` commits writes locally; disposal also confirms completion.
 
-The raw API is descriptor-relative and byte-oriented. Convenience operations such
-as path-based spawn, `readFile`, `writeAll`, and AsyncIterable belong in optional
-consumer wrappers. Public types, including `ProcessContext`, `FileDescriptor`,
-`InputStream`, `OutputStream`, `ChildProcess`, `Exit`, and `ServiceError`, are exported
-from the package root. Browser handles, MessagePorts and RPC structures are internal.
+The raw API follows WASI 0.3.2 packages/interfaces and preserves Result, Future
+and Stream. HostDescriptor, HostInput, HostOutput and HostChildProcess are explicit
+wrapper views; the former P2-style public resource type names are removed.
+ProcessContext, the WIT namespaces, Exit and ServiceError are exported at the root. Browser handles, MessagePorts and RPC structures are internal.
 
 - Only Host creation supplies a missing `PWD=/`. Child argv/env are explicit copied
   snapshots; empty argv is valid. Child PWD is never inherited, validated or filled in
@@ -80,3 +79,11 @@ HTTPS (or localhost) for OPFS. Current Chromium JSPI is required for Wasm execut
 The production preview tests use `script-src 'self' 'wasm-unsafe-eval'` and
 `worker-src 'self'`, with same-origin assets/fetches; no JavaScript `unsafe-eval` or
 Blob module permission is required. Cross-origin isolation is optional for the OS.
+
+
+The underlying `getHostProcess()` always returns the raw WASI 0.3.2 Context.
+`HostProcessContext` is a separately constructed borrowing wrapper; import it
+explicitly from `@walos/os`. Its disposal releases its generated resources and
+does not dispose the Context or stop processes. Standard P1/P2 binaries remain
+supported; Walos custom ABI consumers need to recompile. See the repository API,
+migration and coverage documents for Result/Future/Stream and unsupported APIs.

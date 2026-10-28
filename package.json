@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "npm run build:os && vite --host 127.0.0.1",
     "build:apps": "node scripts/build-apps.mjs",
-    "check": "npm run build:os && tsc --noEmit && npm run check:public && npm run check:runtime",
+    "check": "npm run build:os && tsc --noEmit && npm run check:public && npm run check:runtime && npm run check:wasi",
     "build": "npm run build:apps && npm run check && vite build",
     "test": "playwright test",
     "preview": "vite preview --host 127.0.0.1",
@@ -21,10 +21,13 @@
     "benchmark": "npm run build:os && node benchmarks/build.mjs && tsc --noEmit -p benchmarks/tsconfig.json && node benchmarks/run.mjs",
     "test:benchmark": "node --test benchmarks/stats.test.mjs",
     "check:public": "tsc -p tests/tsconfig.public.json",
-    "check:runtime": "node scripts/check-runtime-boundaries.mjs"
+    "check:runtime": "node scripts/check-runtime-boundaries.mjs",
+    "generate:wasi": "node scripts/generate-wasi-api.mjs && node scripts/generate-wasi-coverage.mjs",
+    "check:wasi": "node scripts/generate-wasi-api.mjs --check && node scripts/generate-wasi-coverage.mjs --check",
+    "check:wit:p3": "jco types wit/p3 --all-features -o work/wit-p3-generated"
   },
   "devDependencies": {
-    "@bytecodealliance/jco": "1.15.1",
+    "@bytecodealliance/jco": "1.39.0",
     "@playwright/test": "1.56.1",
     "prettier": "3.6.2",
     "typescript": "5.9.3",

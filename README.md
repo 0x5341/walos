@@ -5,15 +5,15 @@ Preview 1/2 processes. P2 Components run with **jsco only**. OPFS file I/O stays
 local to the Host/Process Worker; bounded Pipe DATA travels over direct MessagePorts.
 Only run trusted applications: Worker boundaries do not enforce capability isolation.
 
-`@walos/os` **v0.2.0 is a breaking change**. OS creation starts no Shell,
+`@walos/os` **v0.3.0 is a breaking change**. OS creation starts no Shell,
 installs no commands and preserves user OPFS files. The workbench in `src/main.ts`
 installs its own demo binaries, spawns the C Shell and connects explicit byte pipes.
 
 ```ts
-import { Walos } from '@walos/os';
+import { Walos, HostProcessContext } from '@walos/os';
 
 await using os = await Walos.create({ env: { PWD: '/', PATH: '/bin' } });
-const host = os.getHostProcess();
+await using host = new HostProcessContext(os.getHostProcess());
 const [[root]] = host.fs.getDirectories();
 await using directory = root;
 // The consumer has already placed app.wasm in OPFS.
@@ -90,7 +90,7 @@ npm run benchmark -- --trials 3
 
 `CHROMIUM_PATH` can select a system browser. `npm run check:wit` regenerates types
 under `work/wit-generated`; compare with `wit/generated`. `npm run build:apps`
-regenerates C bindings and P1/P2 fixtures for `walos:runtime@0.2.0`.
+regenerates C bindings and P1/P2 fixtures for `walos:runtime-p2@0.3.2`.
 Jco remains **build tooling** for WIT/component fixture generation, not an execution
 engine. Component caches and `clearComponentCache` are removed without deleting
 existing OPFS cache directories or user contents.
@@ -108,3 +108,12 @@ Unsupported WASI features remain outside this change (#6/#7). JS Process executi
 is deferred to #34; no generic execution-runtime abstraction is introduced.
 
 `cat` uses [sbase](apps/vendor/sbase/README.md). License: [AGPL-3.0-only](LICENSE).
+
+
+The raw Host Context follows pinned WASI 0.3.2 WIT. Construct
+`new HostProcessContext(os.getHostProcess())` explicitly for convenience FS/Pipe
+operations. See [API](docs/process-context-api.md),
+[migration](docs/process-context-migration.md), and
+[coverage](docs/wasi-p3-coverage.md). The P3 Runtime execution gate is tracked in
+[validation](docs/runtime-validation.md); API availability alone is not execution
+support. `bash scripts/setup-runtime-tools.sh` installs the pinned P3 tooling.

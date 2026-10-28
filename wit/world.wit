@@ -1,4 +1,4 @@
-package walos:runtime@0.2.0;
+package walos:runtime-p2@0.3.2;
 
 interface process {
     use wasi:filesystem/types@0.2.0.{descriptor};

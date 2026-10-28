@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
 for (const failure of ['construct', 'send', 'error', 'messageerror'] as const)
   test(`create rolls back partial initialization after ${failure}`, async ({ page }) => {
     const result = await page.evaluate(async (failure) => {
-      const { Walos } = await import('/packages/os/dist/index.js');
+      const { Walos, HostProcessContext } = await import('/packages/os/dist/index.js');
       let created = 0,
         terminated = 0;
       const NativeWorker = Worker;
@@ -57,7 +57,7 @@ test('Core loss rejects outstanding RPCs, invalidates Host resources, and releas
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { Walos, install } = await import('/tests/fixtures/host-harness.ts');
+    const { Walos, HostProcessContext, install } = await import('/tests/fixtures/host-harness.ts');
     const NativeWorker = Worker;
     let core: Worker | undefined;
     let terminated = 0;
@@ -72,7 +72,7 @@ test('Core loss rejects outstanding RPCs, invalidates Host resources, and releas
       }
     };
     const os = await Walos.create();
-    const h = os.getHostProcess();
+    const h = new HostProcessContext(os.getHostProcess());
     const errors: string[] = [];
     os.subscribe((e) => {
       if (e.type === 'error') errors.push(e.error.code);
@@ -107,9 +107,9 @@ test('Core loss rejects outstanding RPCs, invalidates Host resources, and releas
 });
 test('disposal wakes a pending pipe read, pipe write and poll without a peer', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const { Walos } = await import('/tests/fixtures/host-harness.ts');
+    const { Walos, HostProcessContext } = await import('/tests/fixtures/host-harness.ts');
     const os = await Walos.create();
-    const h = os.getHostProcess();
+    const h = new HostProcessContext(os.getHostProcess());
     const [reader, writer] = await h.io.createPipe();
     const [empty, unused] = await h.io.createPipe();
     for (let i = 0; i < 4; i++) {
@@ -130,7 +130,7 @@ test('dispose is reentrant from a state listener and acknowledges the same compl
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { Walos } = await import('/packages/os/dist/index.js');
+    const { Walos, HostProcessContext } = await import('/packages/os/dist/index.js');
     const os = await Walos.create();
     let nested: Promise<void> | undefined;
     os.subscribe((event) => {

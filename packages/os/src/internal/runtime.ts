@@ -7,9 +7,7 @@ export interface Runtime extends AsyncDisposable {
   requestStop(): void;
 }
 
-export class WasiExit {
-  constructor(readonly code: number) {}
-}
+export { ProcessExit as WasiExit } from '../types.js';
 
 /** Canonical resource drops are synchronous; their release acknowledgements drain later. */
 export class PendingDrops {

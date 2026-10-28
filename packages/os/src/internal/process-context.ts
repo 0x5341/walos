@@ -1,17 +1,22 @@
 import {
   ServiceError,
+  UnimplementedWasiError,
   type ErrorCode,
   type ProcessContext,
-  type InputStream as PublicInput,
-  type OutputStream as PublicOutput,
-  type FileDescriptor,
-  type EnvironmentEntry,
   type Exit,
-  type ChildProcess as PublicChild,
-  type DescriptorFlags,
-  type OpenFlags,
-  type PathFlags,
 } from '../types.js';
+import type {
+  ServiceModel,
+  InputStream as PublicInput,
+  OutputStream as PublicOutput,
+  FileDescriptor,
+  EnvironmentEntry,
+  ChildProcess as PublicChild,
+  DescriptorFlags,
+  OpenFlags,
+  PathFlags,
+} from './service-model.js';
+import { createProcessApi } from './wasi-services.js';
 import { Rpc, RpcFailure, transferables, type Spec, type StreamRef } from './protocol.js';
 import { Filesystem } from './fs.js';
 import { Descriptor, DirectoryEntryStream, P2Filesystem } from './p2-fs.js';
@@ -21,6 +26,7 @@ import { createRandom, environment, monotonicClock, wallClock } from './services
 import { browserPlatform, type PlatformBackend } from './platform.js';
 
 export const serviceError = (error: unknown): ServiceError => {
+  if (error instanceof UnimplementedWasiError) throw error;
   if (error instanceof ServiceError) return error;
   if (error instanceof RpcFailure)
     return new ServiceError(error.kind, error.message, { cause: error });
@@ -38,6 +44,7 @@ export const serviceError = (error: unknown): ServiceError => {
           ? 'access'
           : (error as ErrorCode),
       error,
+      { cause: error },
     );
   const errno =
     error && typeof error === 'object' && 'errno' in error
@@ -93,13 +100,8 @@ export interface ContextBootstrap {
 export class ProcessContextImpl implements ProcessContext {
   readonly pid!: ProcessContext['pid'];
   readonly ppid!: ProcessContext['ppid'];
-  readonly args!: ProcessContext['args'];
-  readonly env!: ProcessContext['env'];
-  readonly fs!: ProcessContext['fs'];
-  readonly io!: ProcessContext['io'];
-  readonly process!: ProcessContext['process'];
-  readonly clock!: ProcessContext['clock'];
-  readonly random!: ProcessContext['random'];
+  readonly wasi!: ProcessContext['wasi'];
+  readonly walos!: ProcessContext['walos'];
   constructor(services: ProcessContext) {
     Object.defineProperties(this, Object.getOwnPropertyDescriptors(services));
     Object.freeze(this);
@@ -128,6 +130,7 @@ export class ProcessServices {
   private permits = new WeakMap<object, number>();
   private standard: { stream: Awaited<ReturnType<typeof connect>>; shared: SharedStream }[] = [];
   readonly context: ProcessContext;
+  private closeApi: () => Promise<void>;
   constructor(
     private bootstrap: ContextBootstrap,
     private rpc: Rpc,
@@ -158,7 +161,7 @@ export class ProcessServices {
           ]),
         ),
       ) as T;
-    this.context = new ProcessContextImpl({
+    const model: ServiceModel = Object.freeze({
       pid,
       ppid,
       args: Object.freeze([...argv]),
@@ -213,6 +216,9 @@ export class ProcessServices {
       }),
       random: guarded(random),
     });
+    const api = createProcessApi(model);
+    this.context = new ProcessContextImpl(api.context);
+    this.closeApi = api.dispose;
   }
   private release = (s: StreamResource, moved: boolean) => {
     this.streams.delete(s);
@@ -327,6 +333,10 @@ export class ProcessServices {
     };
     const view = Object.freeze({
       isTerminal: s.stream.ref.kind === 'tty',
+      subscribeCapacity: (minimum: number) =>
+        r.run(() => this.pollable(s.subscribeCapacity(minimum))),
+      trackOperation: (task: Promise<unknown>, cancel: () => void) =>
+        r.trackOperation(task, cancel),
       checkWrite: () =>
         r.run(() => {
           const permit = Number(s.checkWrite());
@@ -524,7 +534,8 @@ export class ProcessServices {
   }
   private async close() {
     this.closing = true;
-    const results = await Promise.allSettled([...this.resources].map((r) => r.dispose()));
+    const results = await Promise.allSettled([this.closeApi()]);
+    results.push(...(await Promise.allSettled([...this.resources].map((r) => r.dispose()))));
     await Promise.allSettled([...this.pending]);
     results.push(...(await Promise.allSettled([...this.resources].map((r) => r.dispose()))));
     this.fs.close();
@@ -549,6 +560,17 @@ class Resource {
   private live = true;
   private disposal?: Promise<void>;
   private pending = new Set<Promise<unknown>>();
+  private cancellations = new Map<Promise<unknown>, () => void>();
+  trackOperation(task: Promise<unknown>, cancel: () => void) {
+    this.pending.add(task);
+    this.cancellations.set(task, cancel);
+    this.owner.track(task);
+    const done = () => {
+      this.pending.delete(task);
+      this.cancellations.delete(task);
+    };
+    void task.then(done, done);
+  }
   moved?: () => StreamRef;
   onDrop?: () => void;
   constructor(
@@ -594,6 +616,7 @@ class Resource {
     if (!this.live) return Promise.resolve();
     this.live = false;
     this.onDrop?.();
+    for (const cancel of this.cancellations.values()) cancel();
     this.disposal = call(async () => {
       try {
         if (this.drainFirst && this.pending.size) await Promise.allSettled([...this.pending]);
