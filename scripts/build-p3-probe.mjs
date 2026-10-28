@@ -59,5 +59,24 @@ for (const [name, entry, importName] of [
 }
 console.log('Verified P3 0.3.2 native async CLI, streams, futures and negative world fixtures.');
 
-for (const name of ['p3-cat', 'p3-lifecycle-parent'])
-  copyFileSync('public/bin/p3-probe.wasm', `public/bin/${name}.wasm`);
+copyFileSync('public/bin/p3-probe.wasm', 'public/bin/p3-lifecycle-parent.wasm');
+
+// The installed cat is a command with file operands, independent of the stdin-only probe.
+execFileSync(
+  `${sdk}/bin/clang`,
+  [
+    '--target=wasm32-wasip3',
+    '-mexec-model=reactor',
+    '-O2',
+    '-Wall',
+    '-Wextra',
+    '-Werror',
+    `-I${out}`,
+    'apps/p3-cat.c',
+    `${out}/command.c`,
+    `${out}/command_component_type.o`,
+    '-o',
+    'public/bin/p3-cat.wasm',
+  ],
+  { stdio: 'inherit' },
+);

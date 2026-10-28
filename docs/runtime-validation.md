@@ -213,3 +213,32 @@ Pipe payloads still bypass Core; OPFS data stays local.
 The first final pack attempt could not write this sandbox's default home npm cache.
 The workspace-cache command above completed successfully; no permission escalation
 or package-content change was required.
+
+## Follow-up: p3-cat file operands (#46)
+
+Reproduced in the demo Shell before the fix: after writing a file, `p2-cat /home/...`
+printed its content while `p3-cat /home/...` printed nothing and returned to the
+prompt. The installed p3-cat was a copy of the stdin-only runtime probe and ignored
+file operands. It is now compiled independently from `apps/p3-cat.c` against the
+same official native async 0.3.2 bindings. It reads absolute/PWD-relative paths,
+concatenates operands, retains stdin/`-`, and reports failures on stderr with exit 1.
+
+The added error cases also exposed a native Future representation mismatch. jsco
+wraps resolved/rejected `future<result<T,E>>` payloads in ok/err; the adapter had
+passed an already-tagged Result, hiding errors and misrepresenting non-void success
+payloads. The adapter now translates only Future payloads to that convention.
+Raw Context Results and async-function Results remain tagged. Real C probes verify
+an is-directory completion error and a nonzero u64 writable-capacity success.
+
+Validation (Chromium 154 via `CHROMIUM_PATH=/usr/bin/chromium`):
+
+- The initial demo regression failed on p3-cat after the same p2-cat command passed.
+- 39 focused demo, P2/P3 cat, native async and error tests passed after correction.
+- Final `npm run check` and `node scripts/build-p3-probe.mjs` passed.
+- Final development browser suite: 241 passed, 5 production-only skipped.
+- Final production suite: 5 passed, including P2/P3 file operands.
+- Final Pages smoke test: passed, including real Shell file output from p3-cat at
+  the `/walos/` subpath and reload persistence.
+- Cat coverage includes relative/parent paths, multiple/empty files, UTF-8 names,
+  NUL bytes, a 1 MiB binary with a delayed Pipe reader, stdin and mixed P2/P3 pipes,
+  stderr separation and continuing after a missing operand.

@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 test.beforeEach(async ({ page }) => {
   await page.goto('/tests/fixtures/library.html');
 });
-for (const name of ['cat', 'p2-cat'])
+for (const name of ['cat', 'p2-cat', 'p3-cat'])
   test(`${name} keeps stderr separate from explicitly redirected stdout`, async ({ page }) => {
     const result = await page.evaluate(async (name) => {
       const { Walos, HostProcessContext, install, run } = await import(

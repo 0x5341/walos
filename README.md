@@ -63,6 +63,7 @@ files survive reload. Try:
 ```sh
 cd /home
 echo saved > note.txt
+p3-cat note.txt
 cat < note.txt | p3-cat | p2-sort
 p3-probe
 p2-pwd
