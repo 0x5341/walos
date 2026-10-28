@@ -39,3 +39,12 @@ dedicated Future/Stream abstractions. Regenerate with `npm run generate:wasi` an
 validate with `npm run check:wasi`, `check:wit` and `check:wit:p3`. Runtime tools are
 pinned by `scripts/setup-runtime-tools.sh`; the older P1/P2 fixture toolchain is
 retained for standard binary regression coverage.
+
+
+P3 executables must declare the official 0.3.2 CLI world. Runtime selection now
+reads component interface imports/exports, so a component header does not imply
+P2. Unsupported or mixed versions/worlds fail startup. Standard P1/P2 programs
+continue to work; P3 uses native async Canonical ABI, with `Result`, dedicated
+Future/Stream and Context-backed resource drops. Explicit stop produces terminated,
+while a guest exit code 130 remains exited(130). Internal JS Process execution and
+working HTTP/socket/timezone services are outside this migration.

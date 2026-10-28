@@ -1,7 +1,8 @@
 # walos
 
 A browser OS library with one logical Host ProcessContext and explicit WASI
-Preview 1/2 processes. P2 Components run with **jsco only**. OPFS file I/O stays
+Preview 1/2/3 processes. Components run with **jsco only**, including native
+async WASI 0.3.2 CLI components. OPFS file I/O stays
 local to the Host/Process Worker; bounded Pipe DATA travels over direct MessagePorts.
 Only run trusted applications: Worker boundaries do not enforce capability isolation.
 
@@ -41,12 +42,13 @@ npm run build:os
 npm pack --workspace @walos/os
 ```
 
-For the demo/tests, install checksum-pinned wasi-sdk 27 and wit-bindgen 0.46.0
-(Linux x86-64; other platforms may set `WASI_SDK_PATH` and `WIT_BINDGEN_PATH`):
+For demo/tests, install checksum-pinned wasi-sdk 27 (P1/P2), wasi-sdk 34 (P3),
+wit-bindgen 0.46/0.63 and wasm-tools 1.262 (Linux x86-64):
 
 ```sh
 bash scripts/setup-sdk.sh
 bash scripts/setup-wit-bindgen.sh
+bash scripts/setup-runtime-tools.sh
 npm run build:apps
 npm run dev
 ```
@@ -61,7 +63,8 @@ files survive reload. Try:
 ```sh
 cd /home
 echo saved > note.txt
-cat < note.txt | p2-cat | p2-sort
+cat < note.txt | p3-cat | p2-sort
+p3-probe
 p2-pwd
 export MESSAGE=hello
 echo $MESSAGE
@@ -84,13 +87,18 @@ npm test
 npm run test:production
 npm run test:pages
 npm run check:wit
+npm run check:wit:p3
 npm run test:benchmark
 npm run benchmark -- --trials 3
 ```
 
 `CHROMIUM_PATH` can select a system browser. `npm run check:wit` regenerates types
 under `work/wit-generated`; compare with `wit/generated`. `npm run build:apps`
-regenerates C bindings and P1/P2 fixtures for `walos:runtime-p2@0.3.2`.
+regenerates versioned custom P1/P2 bindings and the native P3 fixture from official
+`wit/p3` sources. Override P3 tools with `WASI_P3_SDK_PATH`, `WIT_BINDGEN_P3_PATH`
+and `WASM_TOOLS_PATH`. The P3 fixture uses generated 0.3.2 bindings directly:
+wasi-sdk 34's stock libc embeds 0.3.0 imports, which this Runtime rejects. It uses
+native async run, async imports, streams and futures; no P2 conversion is involved.
 Jco remains **build tooling** for WIT/component fixture generation, not an execution
 engine. Component caches and `clearComponentCache` are removed without deleting
 existing OPFS cache directories or user contents.
@@ -104,8 +112,11 @@ allow module workers and WebAssembly compilation.
 [Current performance comparison](docs/process-context-integration-performance.md) and the
 [historical engine comparison](docs/benchmarks/2026-10-25-engines.md) retain their
 original measurements; current measurements are linked from the migration notes.
-Unsupported WASI features remain outside this change (#6/#7). JS Process execution
-is deferred to #34; no generic execution-runtime abstraction is introduced.
+All official WASI 0.3.2 interfaces are public; HTTP, sockets, timezone and selected
+filesystem operations throw from the common Context. See the full
+[coverage table](docs/wasi-p3-coverage.md) and
+[step-by-step validation/performance record](docs/runtime-validation.md).
+JS Process execution remains deferred to #34.
 
 `cat` uses [sbase](apps/vendor/sbase/README.md). License: [AGPL-3.0-only](LICENSE).
 

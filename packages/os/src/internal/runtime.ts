@@ -9,6 +9,12 @@ export interface Runtime extends AsyncDisposable {
 
 export { ProcessExit as WasiExit } from '../types.js';
 
+export class RuntimeStopped extends Error {
+  constructor() {
+    super('stop requested');
+  }
+}
+
 /** Canonical resource drops are synchronous; their release acknowledgements drain later. */
 export class PendingDrops {
   private pending = new Set<Promise<unknown>>();

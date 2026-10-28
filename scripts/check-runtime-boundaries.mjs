@@ -5,6 +5,9 @@ import ts from 'typescript';
 // Runtime adapters may depend on format/ABI helpers, never OS implementations.
 const forbidden = new Set([
   'process-context.ts',
+  'wasi-services.ts',
+  'services.ts',
+  'service-model.ts',
   'platform.ts',
   'fs.ts',
   'p2-fs.ts',

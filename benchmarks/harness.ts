@@ -13,7 +13,7 @@ function deferred<T>() {
 async function prepare() {
   const root = await navigator.storage.getDirectory();
   const dir = await root.getDirectoryHandle('benchmark', { create: true });
-  for (const format of ['p1', 'p2']) {
+  for (const format of ['p1', 'p2', 'p3']) {
     try {
       await dir.getFileHandle(format);
     } catch (error) {
@@ -34,7 +34,7 @@ let active:
       finish: () => Promise<unknown>;
     }
   | undefined;
-async function launch(format: 'p1' | 'p2', mode: 'startup' | 'cpu' | 'hold') {
+async function launch(format: 'p1' | 'p2' | 'p3', mode: 'startup' | 'cpu' | 'hold') {
   if (active) throw new Error('Only one process measurement may run at a time');
   const root = await navigator.storage.getDirectory();
   const dir = await root.getDirectoryHandle('benchmark');

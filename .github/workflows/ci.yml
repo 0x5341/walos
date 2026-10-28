@@ -9,7 +9,7 @@ jobs:
   chromium:
     # Playwright 1.56.1 supports Ubuntu 24.04; ubuntu-latest can move to newer releases.
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -29,6 +29,7 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run test:production
+      - run: npm run test:pages
       - run: npm run test:benchmark
       # Check reproducibility/integrity, without hardware-dependent performance gates.
       - run: npm run benchmark -- --trials 1

@@ -5,7 +5,7 @@ const rows = api.interfaces.flatMap((iface) =>
   iface.operations.map((operation) => {
     let status = 'implemented';
     if (iface.package === 'wasi:cli' && iface.interface === 'run')
-      status = 'Runtime entrypoint (P3 gate pending)';
+      status = 'Runtime entrypoint (native async)';
     else if (
       iface.package === 'wasi:http' ||
       iface.package === 'wasi:sockets' ||

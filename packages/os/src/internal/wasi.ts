@@ -8,7 +8,7 @@ import {
 } from './abi-view.js';
 import type { DescriptorStat } from './service-model.js';
 import { errno } from './abi-errors.js';
-import { WasiExit, PendingDrops, type Runtime } from './runtime.js';
+import { WasiExit, RuntimeStopped, PendingDrops, type Runtime } from './runtime.js';
 import type { ProcessMetrics } from './protocol.js';
 export { WasiExit } from './runtime.js';
 
@@ -67,7 +67,7 @@ export class Wasi implements Runtime {
     if (!this.entry || this.started) throw new Error('Runtime is uninitialized or already run');
     this.started = true;
     try {
-      if (this.stopping) throw new WasiExit(130);
+      if (this.stopping) throw new RuntimeStopped();
       await this.entry();
       return 0;
     } catch (error) {
@@ -113,7 +113,7 @@ export class Wasi implements Runtime {
   private host(fn: (...args: any[]) => unknown) {
     return new WebAssembly.Suspending(async (...args: any[]) => {
       try {
-        if (this.stopping) throw new WasiExit(130);
+        if (this.stopping) throw new RuntimeStopped();
         return await fn(...args);
       } catch (error) {
         if (

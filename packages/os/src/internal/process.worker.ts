@@ -1,10 +1,11 @@
 import { Rpc, type ToProcess, type ProcessMetrics } from './protocol.js';
 import { Wasi } from './wasi.js';
 import { Wasi2 } from './wasi2.js';
-import { executableFormat } from './component.js';
+import { executableKind, prepareComponent } from './component.js';
+import { Wasi3 } from './wasi3.js';
 import { ProcessServices } from './process-context.js';
 import { browserPlatform } from './platform.js';
-import type { Runtime } from './runtime.js';
+import { RuntimeStopped, type Runtime } from './runtime.js';
 import type { Exit } from '../types.js';
 
 const scope = self as unknown as DedicatedWorkerGlobalScope;
@@ -70,7 +71,12 @@ scope.onmessage = async (event) => {
     const readStart = performance.now();
     const bytes = new Uint8Array(await (await message.spec.file.getFile()).arrayBuffer());
     metrics = message.measure ? { readMs: performance.now() - readStart } : undefined;
-    const format = executableFormat(bytes);
+    if (metrics) metrics.component = {};
+    const prepared =
+      executableKind(bytes) === 'component'
+        ? await prepareComponent(bytes, metrics?.component)
+        : undefined;
+    const format = prepared?.format ?? 'p1';
     const adapterStart = performance.now();
     services = new ProcessServices(
       {
@@ -85,7 +91,12 @@ scope.onmessage = async (event) => {
       },
     );
     await services.init();
-    runtime = format === 'p2' ? new Wasi2(metrics) : new Wasi(metrics);
+    runtime =
+      format === 'p3'
+        ? new Wasi3(metrics, prepared)
+        : format === 'p2'
+          ? new Wasi2(metrics, prepared)
+          : new Wasi(metrics);
     if (stopping) runtime.requestStop();
     if (metrics) metrics.adapterMs = performance.now() - adapterStart;
     await runtime.initialize(bytes, services.context);
@@ -102,7 +113,10 @@ scope.onmessage = async (event) => {
     }
   } catch (error) {
     if (runStart !== undefined) runMs = performance.now() - runStart;
-    exit = { kind: 'trap', message: String(error) };
+    exit =
+      error instanceof RuntimeStopped
+        ? { kind: 'terminated', message: error.message }
+        : { kind: 'trap', message: String(error) };
   } finally {
     // Failure of the borrower must never prevent cleanup of its owner.
     const failures: unknown[] = [];

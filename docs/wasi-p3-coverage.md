@@ -113,7 +113,7 @@ borrowed descriptor. Native P1/P2 representations stay in ABI adapters.
 | wasi:cli/environment@0.3.2 | get-initial-cwd | implemented |
 | wasi:cli/exit@0.3.2 | exit | implemented |
 | wasi:cli/exit@0.3.2 | exit-with-code | implemented |
-| wasi:cli/run@0.3.2 | run | Runtime entrypoint (P3 gate pending) |
+| wasi:cli/run@0.3.2 | run | Runtime entrypoint (native async) |
 | wasi:cli/stdin@0.3.2 | read-via-stream | implemented |
 | wasi:cli/stdout@0.3.2 | write-via-stream | implemented |
 | wasi:cli/stderr@0.3.2 | write-via-stream | implemented |

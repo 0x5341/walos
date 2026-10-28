@@ -161,8 +161,8 @@ test('wait consumes its right on invocation; stop works during wait; handle drop
   expect(result.survived).toBe(true);
   expect(result.shutdown.kind).toBe('terminated');
 });
-for (const source of ['cat', 'p2-cat'])
-  for (const dest of ['cat', 'p2-cat'])
+for (const source of ['cat', 'p2-cat', 'p3-probe'])
+  for (const dest of ['cat', 'p2-cat', 'p3-probe'])
     test(`Host → ${source} → ${dest} → Host transfers 1 MiB with backpressure`, async ({
       page,
     }) => {
@@ -184,14 +184,14 @@ for (const source of ['cat', 'p2-cat'])
             const start = performance.now();
             const c1 = await h.process.spawn(
               a,
-              [source],
+              source === 'p3-probe' ? [source, 'cat'] : [source],
               [{ key: 'PWD', value: '/' }],
               stdin,
               producer,
             );
             const c2 = await h.process.spawn(
               b,
-              [dest],
+              dest === 'p3-probe' ? [dest, 'cat'] : [dest],
               [{ key: 'PWD', value: '/' }],
               middle,
               stdout,

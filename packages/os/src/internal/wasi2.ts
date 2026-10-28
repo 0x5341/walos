@@ -1,7 +1,7 @@
 import { ServiceError, type ProcessContext } from '../types.js';
 import { createAbiView, AbiOutput } from './abi-view.js';
-import { loadComponent } from './component.js';
-import { WasiExit, PendingDrops, type Runtime } from './runtime.js';
+import { loadComponent, type PreparedComponent } from './component.js';
+import { WasiExit, RuntimeStopped, PendingDrops, type Runtime } from './runtime.js';
 import { errno } from './abi-errors.js';
 import type { ProcessMetrics } from './protocol.js';
 
@@ -13,12 +13,20 @@ export class Wasi2 implements Runtime {
   private started = false;
   private disposal?: Promise<void>;
   private drops = new PendingDrops();
-  constructor(private metrics?: ProcessMetrics) {}
+  constructor(
+    private metrics?: ProcessMetrics,
+    private prepared?: PreparedComponent,
+  ) {}
   async initialize(bytes: Uint8Array, context: ProcessContext) {
     this.context = createAbiView(context);
     const start = performance.now();
-    if (this.metrics) this.metrics.component = {};
-    this.component = await loadComponent(bytes, this.imports(), this.metrics?.component);
+    if (this.metrics) this.metrics.component ??= {};
+    this.component = await loadComponent(
+      bytes,
+      this.imports(),
+      this.metrics?.component,
+      this.prepared,
+    );
     if (this.metrics) this.metrics.loadMs = performance.now() - start;
   }
   requestStop() {
@@ -28,7 +36,7 @@ export class Wasi2 implements Runtime {
     if (!this.component || this.started) throw new Error('Runtime is uninitialized or already run');
     this.started = true;
     try {
-      if (this.stopping) throw new WasiExit(130);
+      if (this.stopping) throw new RuntimeStopped();
       await this.component.run.run();
       return 0;
     } catch (error) {
@@ -95,7 +103,7 @@ export class Wasi2 implements Runtime {
       throw error;
     };
     const call = (fn: () => any, kind: string, lift: (value: any) => any = (x) => x) => {
-      if (this.stopping) throw new WasiExit(130);
+      if (this.stopping) throw new RuntimeStopped();
       try {
         const result = fn();
         return result instanceof Promise
@@ -385,7 +393,10 @@ export class Wasi2 implements Runtime {
     return (this.disposal ??= this.close());
   }
   private async close() {
-    this.component?.dispose();
-    await this.drops.drain();
+    try {
+      this.component?.dispose();
+    } finally {
+      await this.drops.drain();
+    }
   }
 }

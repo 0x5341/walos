@@ -84,6 +84,8 @@ async function start() {
       'p2-env',
       'p2-grep',
       'p2-sort',
+      'p3-probe',
+      'p3-cat',
     ]) {
       const response = await fetch(`${import.meta.env.BASE_URL}bin/${name}.wasm`);
       if (!response.ok) throw new Error(`Cannot install ${name}: ${response.status}`);

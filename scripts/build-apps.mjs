@@ -92,3 +92,5 @@ cc2('p2-cwd-probe', ['tests/fixtures/cwd.c'], ['-DWALOS_P2']);
 cc2('p2-fs-probe', ['tests/fixtures/filesystem.c']);
 cc2('p2-unimplemented-probe', ['tests/fixtures/unimplemented.c']);
 await import('./build-p2-probe.mjs');
+
+await import('./build-p3-probe.mjs');
