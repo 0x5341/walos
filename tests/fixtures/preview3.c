@@ -194,6 +194,14 @@ static bool filesystem(void) {
   wasi_filesystem_types_result_own_descriptor_error_code_t error;
   subtask(wasi_filesystem_types_method_descriptor_open_at(&missing,&error));
   CHECK(error.is_err && error.val.err.tag==WASI_FILESYSTEM_TYPES_ERROR_CODE_NO_ENTRY);
+  // An EOF stream can still complete with a filesystem error in its Future.
+  wasi_filesystem_types_method_descriptor_read_via_stream(root,0,&input);
+  st=completed(input.f0,wasi_filesystem_types_stream_u8_read(input.f0,buffer,sizeof(buffer)));
+  CHECK(COMMAND_WAITABLE_STATE(st)==COMMAND_WAITABLE_DROPPED);
+  wasi_filesystem_types_stream_u8_drop_readable(input.f0);
+  completed(input.f1,wasi_filesystem_types_future_result_void_error_code_read(input.f1,&write_result));
+  wasi_filesystem_types_future_result_void_error_code_drop_readable(input.f1);
+  CHECK(write_result.is_err && write_result.val.err.tag==WASI_FILESYSTEM_TYPES_ERROR_CODE_IS_DIRECTORY);
   return print("p3-fs-ok\n");
 }
 static bool spawn_one(wasi_filesystem_types_own_descriptor_t exe,char *name,walos_runtime_io_own_input_endpoint_t *in,
@@ -261,6 +269,12 @@ static bool processes(void) {
 static bool cancel_future(void) {
   walos_runtime_io_tuple2_own_input_endpoint_own_output_endpoint_t pipe;
   subtask(walos_runtime_io_create_pipe(&pipe));
+  walos_runtime_io_future_result_u64_error_code_t available=walos_runtime_io_method_output_endpoint_when_writable(
+    walos_runtime_io_borrow_output_endpoint(pipe.f1),1);
+  walos_runtime_io_result_u64_error_code_t capacity;
+  completed(available,walos_runtime_io_future_result_u64_error_code_read(available,&capacity));
+  walos_runtime_io_future_result_u64_error_code_drop_readable(available);
+  CHECK(!capacity.is_err && capacity.val.ok>0 && capacity.val.ok<=65536);
   walos_runtime_io_future_result_u64_error_code_t pending=walos_runtime_io_method_output_endpoint_when_writable(
     walos_runtime_io_borrow_output_endpoint(pipe.f1),65537);
   walos_runtime_io_future_result_u64_error_code_drop_readable(pending);
@@ -341,7 +355,6 @@ static bool execute(void) {
   return true;
 #else
   if (args.len && equals(args.ptr[0],"p3-lifecycle-parent")) return lifecycle(args);
-  if (args.len && equals(args.ptr[0],"p3-cat")) return relay();
   if (equals(mode,"future")) return cancel_future();
   if (equals(mode,"file-process")) return file_process();
   if (equals(mode,"services")) return services();

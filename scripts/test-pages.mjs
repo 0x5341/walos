@@ -47,7 +47,20 @@ try {
   assert.equal(await page.evaluate(() => crossOriginIsolated), false);
   await expect(page.getByRole('log')).toContainText('walos · WASI Preview 1', { timeout: 30000 });
   await expect(page.locator('#processes')).toContainText('Host');
-  await expect(page.getByLabel('Terminal input')).toBeEnabled();
+  const input = page.getByLabel('Terminal input'),
+    log = page.getByRole('log');
+  await expect(input).toBeEnabled();
+  async function command(line) {
+    const offset = (await log.textContent()).length;
+    await input.fill(line);
+    await input.press('Enter');
+    await expect
+      .poll(async () => (await log.textContent()).slice(offset).endsWith('\n/ $ '))
+      .toBe(true);
+    return (await log.textContent()).slice(offset);
+  }
+  await command('echo pages-p3-file > /home/pages-p3-file');
+  assert.match(await command('p3-cat /home/pages-p3-file'), /\npages-p3-file\n/);
   await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory();
     const writer = await (
@@ -67,7 +80,7 @@ try {
   );
   assert.deepEqual(errors, []);
   console.log(
-    'Pages smoke test passed: subpath assets, explicit Shell installation, reload persistence.',
+    'Pages smoke test passed: subpath assets, explicit Shell installation, P3 file operands, reload persistence.',
   );
 } finally {
   await browser?.close();

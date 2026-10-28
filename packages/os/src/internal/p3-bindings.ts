@@ -33,10 +33,21 @@ export function nativeImports(
     if (value instanceof Future || value instanceof Promise) {
       // A Future is consumed once; readiness and cancellation are separate.
       let cancelled = false;
-      const promise = Promise.resolve(value).then(lift, (error) => {
-        if (!cancelled) fault(error);
-        throw error;
-      });
+      const promise = Promise.resolve(value).then(
+        (result) => {
+          // jsco's future<result<T, E>> ABI uses Promise resolve/reject for ok/err.
+          // The Context keeps its tagged Result; only native Future payloads change
+          // representation here. Async function Results stay tagged.
+          if (value instanceof Future && result?.tag === 'ok') return lift(result.val);
+          if (value instanceof Future && result?.tag === 'err')
+            return Promise.reject(lift(result.val));
+          return lift(result);
+        },
+        (error) => {
+          if (!cancelled) fault(error);
+          throw error;
+        },
+      );
       const owned =
         value instanceof Future
           ? value

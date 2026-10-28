@@ -158,3 +158,11 @@ wasi-sdk 34.0's compiler/reactor support. Stock SDK libc references 0.3.0, so fi
 call generated imports directly. The build checks actual WIT and canonical async,
 stream and future instructions. Synthetic components are used only for rejection
 tests. Chromium JSPI is required; Node-only jsco hosts are excluded from the bundle.
+
+
+The installed `p3-cat` is built from `apps/p3-cat.c`, independently of the stdin-only
+runtime probe. It accepts file operands, uses initial-cwd only for relative paths,
+and retains native stdin, stream/future EOF, bounded writes and stderr diagnostics.
+The native binding translates Context `Future<Result<T,E>>` payloads to jsco's
+resolve(T)/reject(E) convention. Async function Results remain tagged; expected
+Future error variants are encoded as errors instead of being wrapped in success.

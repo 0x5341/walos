@@ -23,6 +23,33 @@ test('demo explicitly installs and runs Shell commands, mixed pipes, redirects a
   await command('cat /home/note.txt', 'persisted\n/ $');
 });
 
+test('demo p3-cat displays a file argument like p2-cat', async ({ page }) => {
+  await page.goto('/');
+  const input = page.getByLabel('Terminal input');
+  const log = page.getByRole('log');
+  await expect(input).toBeEnabled({ timeout: 30000 });
+  async function command(line: string, prompt = '/ $ ') {
+    const offset = (await log.textContent())!.length;
+    await input.fill(line);
+    await input.press('Enter');
+    await expect
+      .poll(async () => (await log.textContent())!.slice(offset).endsWith('\n' + prompt))
+      .toBe(true);
+    return (await log.textContent())!.slice(offset);
+  }
+  await command('echo p3-cat-file-payload > /home/p3-cat-file.txt');
+  expect(await command('p2-cat /home/p3-cat-file.txt')).toContain('\np3-cat-file-payload\n');
+  expect(await command('p3-cat /home/p3-cat-file.txt')).toContain('\np3-cat-file-payload\n');
+  await command('cd /home', '/home $ ');
+  expect(await command('p3-cat p3-cat-file.txt', '/home $ ')).toContain('\np3-cat-file-payload\n');
+  expect(await command('p3-cat p3-cat-file.txt p3-cat-file.txt | p2-cat', '/home $ ')).toContain(
+    '\np3-cat-file-payload\np3-cat-file-payload\n',
+  );
+  expect(await command('p2-cat p3-cat-file.txt | p3-cat', '/home $ ')).toContain(
+    '\np3-cat-file-payload\n',
+  );
+});
+
 test('jsco leaves preexisting component cache data untouched and removes the cache API', async ({
   page,
 }) => {
