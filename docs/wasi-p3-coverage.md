@@ -6,7 +6,7 @@ resource. Generated bindings are a comparison/ABI reference, not the public Cont
 
 All 28 interfaces and 143 operations have public TS types. CLI run
 is an export/Runtime entrypoint, not an OS import on Context. The optional timezone
-feature in the tag is included and traps. Type-only interfaces and all named
+feature uses browser Intl data; unavailable IDs or offsets return none. Offsets are limited to the JavaScript Date range. Type-only interfaces and all named
 types are included in the API inventory even when they have no operation row.
 
 Trap means the shared Context throws UnimplementedWasiError with the WIT operation
@@ -33,9 +33,9 @@ borrowed descriptor. Native P1/P2 representations stay in ABI adapters.
 | wasi:clocks/monotonic-clock@0.3.2 | wait-for | implemented |
 | wasi:clocks/system-clock@0.3.2 | now | implemented |
 | wasi:clocks/system-clock@0.3.2 | get-resolution | implemented |
-| wasi:clocks/timezone@0.3.2 | iana-id | Trap |
-| wasi:clocks/timezone@0.3.2 | utc-offset | Trap |
-| wasi:clocks/timezone@0.3.2 | to-debug-string | Trap |
+| wasi:clocks/timezone@0.3.2 | iana-id | implemented |
+| wasi:clocks/timezone@0.3.2 | utc-offset | implemented |
+| wasi:clocks/timezone@0.3.2 | to-debug-string | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.read-via-stream | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.write-via-stream | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.append-via-stream | implemented |

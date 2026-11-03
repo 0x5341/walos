@@ -110,6 +110,7 @@ export interface ProcessService {
   ): Promise<ChildProcess>;
 }
 export interface ClockService {
+  readonly timezone: import('../wasi-types.js').WasiClocksTimezone.Interface;
   readonly wall: { now(): Datetime; resolution(): Datetime };
   readonly monotonic: {
     now(): bigint;

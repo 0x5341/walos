@@ -242,3 +242,24 @@ Validation (Chromium 154 via `CHROMIUM_PATH=/usr/bin/chromium`):
 - Cat coverage includes relative/parent paths, multiple/empty files, UTF-8 names,
   NUL bytes, a 1 MiB binary with a delayed Pipe reader, stdin and mixed P2/P3 pipes,
   stderr separation and continuing after a missing operand.
+
+## Issue #49: browser timezone
+
+The shared Context now implements all three optional timezone operations using
+browser Intl data, read anew per call. TZ environment entries do not override the
+browser. Offsets are local minus UTC, in signed nanoseconds, including historical
+seconds. Intl failures, unknown offset representations, non-normalized instants
+and instants outside the JavaScript Date range return none. Debug strings are
+human-facing and may vary. Historical and future rules depend on browser tzdb.
+
+Native P3 probes call all three imports, verify a successful offset and verify
+none for an s64 instant outside the Date range. Browser API tests additionally
+cover UTC, Tokyo, Kathmandu, New York DST boundaries and Intl failure/recovery.
+
+Validation (2026-11-04): `npm run check` and `npm run build:apps` passed;
+full development suite: 246 passed, 6 production-only skipped; production suite:
+6 passed. The subsequently expanded timezone suite passed all 6 cases, including
+Paris's historical +00:09:21 and a pre-epoch instant. Node 22.23.4 was installed
+through mise. Chromium 141 used the Ubuntu 24.04 Playwright fallback on Ubuntu
+26.04 with libnspr4/libnss3/libasound2t64 extracted under /tmp; tests used
+LD_LIBRARY_PATH and PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64.

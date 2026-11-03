@@ -377,7 +377,21 @@ static bool execute(void) {
   if (equals(mode,"http")) { wasi_http_types_constructor_fields(); return true; }
   if (equals(mode,"socket")) { wasi_sockets_types_own_tcp_socket_t socket; wasi_sockets_types_error_code_t error;
     wasi_sockets_types_static_tcp_socket_create(WASI_SOCKETS_TYPES_IP_ADDRESS_FAMILY_IPV4,&socket,&error); return true; }
-  if (equals(mode,"timezone")) { command_string_t id; wasi_clocks_timezone_iana_id(&id); return true; }
+  if (equals(mode,"timezone")) {
+    command_string_t id;
+    CHECK(wasi_clocks_timezone_iana_id(&id));
+    command_string_free(&id);
+    wasi_clocks_timezone_to_debug_string(&id);
+    CHECK(id.len > 0);
+    command_string_free(&id);
+    wasi_clocks_timezone_instant_t instant = {.seconds = INT64_MAX, .nanoseconds = 0};
+    int64_t offset;
+    wasi_clocks_timezone_instant_t epoch = {.seconds = 0, .nanoseconds = 0};
+    CHECK(wasi_clocks_timezone_utc_offset(&epoch, &offset));
+    CHECK(offset > -86400000000000LL && offset < 86400000000000LL);
+    CHECK(!wasi_clocks_timezone_utc_offset(&instant, &offset));
+    return print("p3-timezone-ok\n");
+  }
   return print("native-p3-0.3.2\n");
 #endif
 }

@@ -88,3 +88,48 @@ export const createRandom = (): RandomService => {
     insecureSeed: () => [getInsecureRandomU64(), getInsecureRandomU64()] as const,
   });
 };
+
+/** Read the current browser zone on every call; do not retain stale formatters. */
+export const timezone = Object.freeze({
+  ianaId(): string | undefined {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-US', { timeZoneName: 'longOffset' });
+      formatter.formatToParts(0);
+      const id = formatter.resolvedOptions().timeZone;
+      return id && !/^[+-]/.test(id) ? id : undefined;
+    } catch {
+      return undefined;
+    }
+  },
+  utcOffset(when: { seconds: bigint; nanoseconds: number }): bigint | undefined {
+    try {
+      if (!Number.isInteger(when.nanoseconds) || when.nanoseconds < 0 || when.nanoseconds >= 1e9)
+        return undefined;
+      const ns = when.seconds * 1000000000n + BigInt(when.nanoseconds);
+      if (ns < -8640000000000000000000n || ns > 8640000000000000000000n) return undefined;
+      const ms = when.seconds * 1000n + BigInt(Math.floor(when.nanoseconds / 1e6));
+      const name = new Intl.DateTimeFormat('en-US-u-nu-latn', { timeZoneName: 'longOffset' })
+        .formatToParts(Number(ms))
+        .find((part) => part.type === 'timeZoneName')?.value;
+      if (name === 'GMT') return 0n;
+      const match = /^GMT([+-])(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(name ?? '');
+      if (!match) return undefined;
+      const [, sign, h, m, s = '0'] = match;
+      if (+h >= 24 || +m >= 60 || +s >= 60) return undefined;
+      return (
+        (BigInt(h) * 3600n + BigInt(m) * 60n + BigInt(s)) * 1000000000n * (sign === '-' ? -1n : 1n)
+      );
+    } catch {
+      return undefined;
+    }
+  },
+  toDebugString(): string {
+    const id = timezone.ianaId();
+    if (id) return id;
+    const offset = timezone.utcOffset({
+      seconds: BigInt(Math.floor(Date.now() / 1000)),
+      nanoseconds: 0,
+    });
+    return offset === undefined ? 'Timezone unavailable' : `UTC offset ${offset} ns`;
+  },
+});
