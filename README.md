@@ -33,6 +33,20 @@ without stopping the child. Use `child.requestStop()` for an explicit stop.
 
 ## Build and run
 
+With [mise](https://mise.jdx.dev/), the repository configuration selects Node 22
+(matching CI) and provides tasks for the existing npm commands and setup scripts:
+
+```sh
+mise install
+mise run setup          # npm ci + pinned WASI tools (Linux x86-64)
+mise run dev            # build demo applications and start Vite
+```
+
+For browser tests, run `mise run setup:browser` once, then `mise run test`.
+Chromium's system libraries must also be installed, or set `CHROMIUM_PATH` to a
+compatible system browser. Run `mise tasks` to list the available tasks.
+For OS-package-only development, use `mise run setup:npm` and `mise run build:os`.
+
 Requires Node 22.14+. **OS build/pack needs no WASI SDK, WIT generator, command
 binaries or demo assets**:
 
