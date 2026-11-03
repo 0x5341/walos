@@ -16,7 +16,7 @@ const mime = {
 };
 const server = createServer(async (request, response) => {
   const path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
-  const file = resolve(root, path.slice(prefix.length) || 'index.html');
+  const file = resolve(root, path.slice(prefix.length), path.endsWith('/') ? 'index.html' : '');
   if (!path.startsWith(prefix) || !file.startsWith(root + sep)) {
     response.writeHead(404).end();
     return;
@@ -78,6 +78,20 @@ try {
     }),
     'preserved',
   );
+  if (process.argv.includes('--with-docs')) {
+    await page.goto(`http://127.0.0.1:${server.address().port}${prefix}docs/`);
+    await expect(
+      page.getByRole('heading', { name: '@walos/os', exact: true }).first(),
+    ).toBeVisible();
+    await page.locator('a[href$="classes/Walos.html"]').first().click();
+    await expect(page.getByRole('heading', { name: 'Class Walos', exact: true })).toBeVisible();
+    await expect(page.locator('#create')).toBeAttached();
+    await expect(page.getByRole('link', { name: 'Demo', exact: true })).toHaveAttribute(
+      'href',
+      'https://0x5341.github.io/walos/',
+    );
+    console.log('API docs smoke test passed: subpath assets, public API links, Demo navigation.');
+  }
   assert.deepEqual(errors, []);
   console.log(
     'Pages smoke test passed: subpath assets, explicit Shell installation, P3 file operands, reload persistence.',

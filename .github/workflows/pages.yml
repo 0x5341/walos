@@ -1,4 +1,4 @@
-name: Deploy demo to GitHub Pages
+name: Deploy demo and API docs to GitHub Pages
 
 on:
   pull_request:
@@ -24,8 +24,10 @@ jobs:
       - run: bash scripts/setup-wit-bindgen.sh
       - run: bash scripts/setup-runtime-tools.sh
       - run: npm run build
+      # Vite cleans dist; generate docs afterwards so both sites share one artifact.
+      - run: npm run build:docs
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:pages
+      - run: npm run test:pages -- --with-docs
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
@@ -46,6 +48,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/configure-pages@v5
-      - name: Deploy demo
+      - name: Deploy demo and API docs
         id: deployment
         uses: actions/deploy-pages@v4
