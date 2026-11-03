@@ -1,45 +1,57 @@
 /** @module Interface walos:runtime-p2/process@0.3.2 **/
-export function spawn(executable: Descriptor, argv: Array<string>, env: Array<EnvironmentEntry>, stdin: InputStream | undefined, stdout: OutputStream | undefined, stderr: OutputStream | undefined): ChildProcess;
+export function spawn(
+  executable: Descriptor,
+  argv: Array<string>,
+  env: Array<EnvironmentEntry>,
+  stdin: InputStream | undefined,
+  stdout: OutputStream | undefined,
+  stderr: OutputStream | undefined,
+): ChildProcess;
 export type Descriptor = import('./wasi-filesystem-types.js').Descriptor;
 export type InputStream = import('./wasi-io-streams.js').InputStream;
 export type OutputStream = import('./wasi-io-streams.js').OutputStream;
 export interface EnvironmentEntry {
-  key: string,
-  value: string,
+  key: string;
+  value: string;
 }
-export type SpawnError = SpawnErrorInvalidDescriptor | SpawnErrorInvalidStream | SpawnErrorInitialization | SpawnErrorTimeout | SpawnErrorCancelled;
+export type SpawnError =
+  | SpawnErrorInvalidDescriptor
+  | SpawnErrorInvalidStream
+  | SpawnErrorInitialization
+  | SpawnErrorTimeout
+  | SpawnErrorCancelled;
 export interface SpawnErrorInvalidDescriptor {
-  tag: 'invalid-descriptor',
+  tag: 'invalid-descriptor';
 }
 export interface SpawnErrorInvalidStream {
-  tag: 'invalid-stream',
+  tag: 'invalid-stream';
 }
 export interface SpawnErrorInitialization {
-  tag: 'initialization',
-  val: string,
+  tag: 'initialization';
+  val: string;
 }
 export interface SpawnErrorTimeout {
-  tag: 'timeout',
+  tag: 'timeout';
 }
 export interface SpawnErrorCancelled {
-  tag: 'cancelled',
+  tag: 'cancelled';
 }
 export type ExitResult = ExitResultExited | ExitResultTrap | ExitResultTerminated;
 export interface ExitResultExited {
-  tag: 'exited',
-  val: number,
+  tag: 'exited';
+  val: number;
 }
 export interface ExitResultTrap {
-  tag: 'trap',
-  val: string,
+  tag: 'trap';
+  val: string;
 }
 export interface ExitResultTerminated {
-  tag: 'terminated',
-  val: string,
+  tag: 'terminated';
+  val: string;
 }
 export type WaitError = WaitErrorAlreadyConsumed;
 export interface WaitErrorAlreadyConsumed {
-  tag: 'already-consumed',
+  tag: 'already-consumed';
 }
 
 export class ChildProcess {

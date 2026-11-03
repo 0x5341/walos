@@ -114,8 +114,12 @@ for (const name of ['cwd-probe', 'p2-cwd-probe']) {
         await os.dispose();
       }
     }, name);
-    for (const result of results.slice(0, 3))
-      expect(result.exit).toEqual({ kind: 'exited', code: name.startsWith('p2-') ? 1 : 126 });
+    // libc main still uses the P2 result exit (1); constructor _Exit preserves 126.
+    for (const [index, result] of results.slice(0, 3).entries())
+      expect(result.exit).toEqual({
+        kind: 'exited',
+        code: name.startsWith('p2-') && index === 0 ? 1 : 126,
+      });
     expect(results[3]).toMatchObject({ exit: { kind: 'exited', code: 0 }, stdout: '/\n' });
   });
 }

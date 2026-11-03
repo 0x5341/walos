@@ -302,6 +302,9 @@ export class Wasi2 implements Runtime {
         initialCwd: () => context.env.get('PWD'),
       },
       'wasi:cli/exit': {
+        exitWithCode: (code: number) => {
+          throw new WasiExit(code);
+        },
         exit: (status: { tag: string }) => {
           throw new WasiExit(status.tag === 'ok' ? 0 : 1);
         },

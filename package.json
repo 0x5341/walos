@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.14"
+    "node": ">=26.13.0"
   },
   "scripts": {
     "dev": "npm run build:os && vite --host 127.0.0.1",
@@ -13,32 +13,64 @@
     "build": "npm run build:apps && npm run check && vite build",
     "test": "playwright test",
     "preview": "vite preview --host 127.0.0.1",
-    "check:wit": "node -e \"require('node:fs').rmSync('work/wit-generated',{recursive:true,force:true})\" && jco types wit -o work/wit-generated",
+    "check:wit": "node -e \"require('node:fs').rmSync('work/wit-generated',{recursive:true,force:true})\" && jco types wit -o work/wit-generated && node scripts/format-wit-types.mjs",
     "format": "prettier --write src packages/os/src packages/os/*.json tests scripts benchmarks *.ts *.json index.html",
     "test:production": "WALOS_TEST_BUILD=1 vite build && WALOS_TEST_BUILD=1 playwright test",
     "test:pages": "node scripts/test-pages.mjs",
     "build:os": "npm run build --workspace @walos/os",
-    "build:docs": "typedoc --options typedoc.json",
+    "build:docs": "npm run build --workspace @walos/docs-toolchain",
     "benchmark": "npm run build:os && node benchmarks/build.mjs && tsc --noEmit -p benchmarks/tsconfig.json && node benchmarks/run.mjs",
     "test:benchmark": "node --test benchmarks/stats.test.mjs",
     "check:public": "tsc -p tests/tsconfig.public.json",
-    "check:runtime": "node scripts/check-runtime-boundaries.mjs",
+    "check:runtime": "node --test scripts/check-runtime-boundaries.test.mjs && node scripts/check-runtime-boundaries.mjs",
     "generate:wasi": "node scripts/generate-wasi-api.mjs && node scripts/generate-wasi-coverage.mjs",
     "check:wasi": "node scripts/generate-wasi-api.mjs --check && node scripts/generate-wasi-coverage.mjs --check",
     "check:wit:p3": "jco types wit/p3 --all-features -o work/wit-p3-generated"
   },
   "devDependencies": {
-    "@bytecodealliance/jco": "1.39.0",
-    "@playwright/test": "1.56.1",
-    "prettier": "3.6.2",
-    "typedoc": "0.28.20",
-    "typescript": "5.9.3",
-    "vite": "7.1.12"
+    "@bytecodealliance/jco": "1.41.0",
+    "@playwright/test": "1.64.1",
+    "oxc-parser": "0.157.0",
+    "prettier": "3.9.10",
+    "typescript": "7.0.2",
+    "vite": "8.3.5"
   },
   "workspaces": [
     "packages/*"
   ],
   "dependencies": {
     "@walos/os": "*"
-  }
+  },
+  "overrides": {
+    "@bytecodealliance/jco-std": {
+      "minimatch": "11.0.4"
+    },
+    "@shikijs/engine-oniguruma": "4.6.0",
+    "@shikijs/langs": "4.6.0",
+    "@shikijs/themes": "4.6.0",
+    "@shikijs/types": "4.6.0",
+    "acorn": "8.19.0",
+    "argparse": "3.0.4",
+    "balanced-match": "5.0.0",
+    "commander": "15.0.0",
+    "entities": "9.0.0",
+    "es-module-lexer": "3.0.4",
+    "event-target-shim": "6.0.2",
+    "linkify-it": "6.1.0",
+    "markdown-it": "15.0.3",
+    "nanoid": "6.0.2",
+    "oxc-minify": "0.157.0",
+    "oxc-parser": "0.157.0",
+    "readable-stream": "4.8.0",
+    "regexpu-core": "6.5.3",
+    "regjsparser": "0.14.1",
+    "tr46": "7.0.0",
+    "uc.micro": "3.0.0",
+    "unicode-canonical-property-names-ecmascript": "3.0.0",
+    "unicode-property-aliases-ecmascript": "3.0.0",
+    "web-streams-polyfill": "4.5.0",
+    "webidl-conversions": "8.0.1",
+    "whatwg-url": "17.3.0"
+  },
+  "packageManager": "npm@12.2.1"
 }

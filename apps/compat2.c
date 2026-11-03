@@ -1,4 +1,5 @@
-/* wasi-sdk 27's libc still initializes cwd to /. Use the standard Preview 2
+#include <string.h>
+/* wasi-sdk's libc still initializes cwd to /. Use the standard Preview 2
  * initial-cwd interface before main, just as the P1 bridge initializes libc. */
 #include <stdlib.h>
 #include <stdio.h>

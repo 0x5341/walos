@@ -1,8 +1,8 @@
 package walos:runtime-p2@0.3.2;
 
 interface process {
-    use wasi:filesystem/types@0.2.0.{descriptor};
-    use wasi:io/streams@0.2.0.{input-stream, output-stream};
+    use wasi:filesystem/types@0.2.8.{descriptor};
+    use wasi:io/streams@0.2.8.{input-stream, output-stream};
     record environment-entry { key: string, value: string }
     variant spawn-error { invalid-descriptor, invalid-stream, initialization(string), timeout, cancelled }
     variant exit-result { exited(u32), trap(string), terminated(string) }
@@ -22,7 +22,7 @@ interface process {
     ) -> result<child-process, spawn-error>;
 }
 interface ipc {
-    use wasi:io/streams@0.2.0.{input-stream, output-stream};
+    use wasi:io/streams@0.2.8.{input-stream, output-stream};
     create-pipe: func() -> tuple<input-stream, output-stream>;
 }
 world command {

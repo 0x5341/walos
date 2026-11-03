@@ -3,12 +3,12 @@ import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node
 import { resolve } from 'node:path';
 import { componentNew, preview1AdapterReactorPath } from '@bytecodealliance/jco';
 
-const sdk = process.env.WASI_SDK_PATH || resolve('work/wasi-sdk-27.0-x86_64-linux');
+const sdk = process.env.WASI_SDK_PATH || resolve('work/wasi-sdk-34.0-x86_64-linux');
 const bindgen =
-  process.env.WIT_BINDGEN_PATH || resolve('work/wit-bindgen-0.46.0-x86_64-linux/wit-bindgen');
+  process.env.WIT_BINDGEN_PATH || resolve('work/wit-bindgen-0.63.0-x86_64-linux/wit-bindgen');
 if (!existsSync(bindgen))
   throw new Error(
-    'Run bash scripts/setup-wit-bindgen.sh or set WIT_BINDGEN_PATH to wit-bindgen 0.46.0',
+    'Run bash scripts/setup-wit-bindgen.sh or set WIT_BINDGEN_PATH to wit-bindgen 0.63.0',
   );
 for (const [world, source, wit, output] of [
   ['process-probe', 'process2', 'process2', 'p2-process-probe'],

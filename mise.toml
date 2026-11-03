@@ -1,6 +1,7 @@
 [tools]
-# Match CI and package.json's Node >=22.14 requirement.
-node = "22"
+# Match CI and package.json's Node >=26.13.0 requirement.
+"npm:npm" = "12.2.1"
+node = "26.13.0"
 
 [tasks."setup:npm"]
 description = "Install locked npm workspace dependencies"

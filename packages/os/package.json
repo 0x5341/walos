@@ -21,7 +21,7 @@
     "prepack": "npm run build"
   },
   "engines": {
-    "node": ">=22.14"
+    "node": ">=26.13.0"
   },
   "dependencies": {
     "@pavelsavara/jsco": "0.2.0-preview.2"

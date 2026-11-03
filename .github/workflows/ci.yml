@@ -7,15 +7,16 @@ permissions:
   contents: read
 jobs:
   chromium:
-    # Playwright 1.56.1 supports Ubuntu 24.04; ubuntu-latest can move to newer releases.
-    runs-on: ubuntu-24.04
+    # Playwright 1.64.1 supports Ubuntu 26.04; ubuntu-latest can move to newer releases.
+    runs-on: ubuntu-26.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: 22
+          node-version: 26.13.0
           cache: npm
+      - run: npm install --global npm@12.2.1
       - run: npm ci
       # The OS package must build/pack before any SDK or demo commands exist.
       - run: npm run build:os && npm pack --workspace @walos/os --dry-run
@@ -33,11 +34,11 @@ jobs:
       - run: npm run test:benchmark
       # Check reproducibility/integrity, without hardware-dependent performance gates.
       - run: npm run benchmark -- --trials 1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: benchmark-results
           path: work/benchmarks/latest.*
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7.0.2
         if: failure()
         with:
           name: browser-test-results

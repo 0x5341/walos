@@ -22,7 +22,7 @@ assert(
   '--trials must be an integer from 1 to 100',
 );
 const output = resolve(values.output);
-const sdk = process.env.WASI_SDK_PATH || resolve('work/wasi-sdk-27.0-x86_64-linux');
+const sdk = process.env.WASI_SDK_PATH || resolve('work/wasi-sdk-34.0-x86_64-linux');
 const cli = async (command, args) =>
   (await promisify(execFile)(command, args, { encoding: 'utf8' })).stdout.trim();
 const metadata = {
