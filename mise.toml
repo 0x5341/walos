@@ -1,0 +1,64 @@
+[tools]
+# Match CI and package.json's Node >=22.14 requirement.
+node = "22"
+
+[tasks."setup:npm"]
+description = "Install locked npm workspace dependencies"
+run = "npm ci"
+
+[tasks."setup:wasi"]
+description = "Install checksum-pinned WASI SDKs and binding/runtime tools (Linux x86-64)"
+# Run sequentially: all three scripts extract archives into work/.
+run = [
+  "bash scripts/setup-sdk.sh",
+  "bash scripts/setup-wit-bindgen.sh",
+  "bash scripts/setup-runtime-tools.sh",
+]
+
+[tasks."setup:browser"]
+description = "Install Chromium for Playwright tests"
+depends = ["setup:npm"]
+run = "npx playwright install chromium"
+
+[tasks.setup]
+description = "Set up npm dependencies and WASI tools for demo development"
+depends = ["setup:npm", "setup:wasi"]
+
+[tasks."build:apps"]
+description = "Build demo applications and WASI fixtures"
+run = "npm run build:apps"
+
+[tasks."build:os"]
+description = "Build the OS package without WASI tools"
+run = "npm run build:os"
+
+[tasks.dev]
+description = "Build demo applications and start Vite"
+depends = ["build:apps"]
+run = "npm run dev"
+
+[tasks.check]
+description = "Check TypeScript, public APIs, runtime boundaries and WASI coverage"
+run = "npm run check"
+
+[tasks.build]
+description = "Build demo applications, validate and build the production site"
+run = "npm run build"
+
+[tasks."build:docs"]
+description = "Generate API documentation"
+run = "npm run build:docs"
+
+[tasks.test]
+description = "Build demo applications and run Playwright tests"
+depends = ["build:apps"]
+run = "npm test"
+
+[tasks."test:production"]
+description = "Build demo applications and run production Playwright tests"
+depends = ["build:apps"]
+run = "npm run test:production"
+
+[tasks.format]
+description = "Format project sources with Prettier"
+run = "npm run format"
