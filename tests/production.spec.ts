@@ -48,3 +48,23 @@ for (const name of ['p2-cat', 'p3-cat'])
       stderr: '',
     });
   });
+
+test('bundled native P3 timezone', async ({ page }) => {
+  await page.goto('/tests/fixtures/production.html');
+  await page.waitForFunction(() => Boolean((window as any).testHost));
+  const result = await page.evaluate(async () => {
+    const h = (window as any).testHost;
+    const os = await h.Walos.create();
+    try {
+      const host = new h.HostProcessContext(os.getHostProcess());
+      return await h.run(host, await h.install(host, 'p3-probe'), ['p3-probe', 'timezone']);
+    } finally {
+      await os.dispose();
+    }
+  });
+  expect(result).toMatchObject({
+    exit: { kind: 'exited', code: 0 },
+    stdout: 'p3-timezone-ok\n',
+    stderr: '',
+  });
+});

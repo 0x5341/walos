@@ -134,7 +134,7 @@ allow module workers and WebAssembly compilation.
 [Current performance comparison](docs/process-context-integration-performance.md) and the
 [historical engine comparison](docs/benchmarks/2026-10-25-engines.md) retain their
 original measurements; current measurements are linked from the migration notes.
-All official WASI 0.3.2 interfaces are public; HTTP, sockets, timezone and selected
+All official WASI 0.3.2 interfaces are public; HTTP, sockets and selected
 filesystem operations throw from the common Context. See the full
 [coverage table](docs/wasi-p3-coverage.md) and
 [step-by-step validation/performance record](docs/runtime-validation.md).
@@ -150,3 +150,5 @@ operations. See [API](docs/process-context-api.md),
 [coverage](docs/wasi-p3-coverage.md). The P3 Runtime execution gate is tracked in
 [validation](docs/runtime-validation.md); API availability alone is not execution
 support. `bash scripts/setup-runtime-tools.sh` installs the pinned P3 tooling.
+
+Timezone APIs read the browser timezone on each call (TZ is ignored). Browser Intl/tzdb data and the JavaScript Date range limit offset queries; unavailable information returns none. Debug strings are for humans only.

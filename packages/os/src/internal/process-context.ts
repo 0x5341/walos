@@ -22,7 +22,7 @@ import { Filesystem } from './fs.js';
 import { Descriptor, DirectoryEntryStream, P2Filesystem } from './p2-fs.js';
 import { InputStream, OutputStream, Pollable, StreamResource, type SharedStream } from './p2-io.js';
 import { connect, FileStream, ioError } from './streams.js';
-import { createRandom, environment, monotonicClock, wallClock } from './services.js';
+import { createRandom, environment, monotonicClock, wallClock, timezone } from './services.js';
 import { browserPlatform, type PlatformBackend } from './platform.js';
 
 export const serviceError = (error: unknown): ServiceError => {
@@ -205,6 +205,7 @@ export class ProcessServices {
       }),
       clock: Object.freeze({
         wall: guarded(wallClock),
+        timezone: guarded(timezone),
         monotonic: guarded({
           now: monotonicClock.now,
           resolution: monotonicClock.resolution,

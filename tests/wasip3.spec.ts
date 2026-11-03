@@ -23,6 +23,7 @@ test('P3 official 0.3.2 native async CLI executes streams and futures', async ({
 });
 
 for (const [mode, output] of [
+  ['timezone', 'p3-timezone-ok\n'],
   ['future', 'p3-future-cancelled\n'],
   ['file-process', 'p3-file-process-ok\n'],
   ['services', 'p3-services-ok\n'],
@@ -77,7 +78,6 @@ for (const [mode, operation] of [
   ['fs-trap', 'wasi:filesystem/types@0.3.2/[method]descriptor.set-times'],
   ['http', 'wasi:http/types@0.3.2/[constructor]fields'],
   ['socket', 'wasi:sockets/types@0.3.2/[static]tcp-socket.create'],
-  ['timezone', 'wasi:clocks/timezone@0.3.2/iana-id'],
 ] as const)
   test(`P3 ${mode} preserves the shared unimplemented Trap`, async ({ page }) => {
     const result = await page.evaluate(async (mode) => {

@@ -513,6 +513,7 @@ export function createProcessApi(model: Model.ServiceModel): {
       () => pollable[Symbol.asyncDispose](),
     );
   Object.assign(standard.clocks, {
+    timezone: model.clock.timezone,
     monotonicClock: Object.freeze({
       now: model.clock.monotonic.now,
       getResolution: model.clock.monotonic.resolution,
