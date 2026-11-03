@@ -63,3 +63,22 @@ export async function publicExample(executable: FileDescriptor) {
   const error = new ServiceError('closed', 'EOF');
   console.log(error.code, error.cause);
 }
+
+export async function socketBackendExample(options: import('@walos/os').SocketBackendOptions) {
+  await using os = await Walos.create({ sockets: options });
+  const created = os.getHostProcess().wasi.sockets.types.tcpSocket.create('ipv4');
+  if (created.tag === 'ok') await created.val[Symbol.asyncDispose]();
+}
+const createSocketBackend: (
+  init: import('@walos/os').SocketBackendInit,
+) => Promise<import('@walos/os').SocketBackend> = async (init) => ({
+  types: {
+    tcpSocket: { create: () => ({ tag: 'err', val: { tag: 'not-supported' } }) },
+    udpSocket: { create: () => ({ tag: 'err', val: { tag: 'not-supported' } }) },
+  },
+  ipNameLookup: { resolveAddresses: async () => ({ tag: 'err', val: { tag: 'access-denied' } }) },
+  async [Symbol.asyncDispose]() {
+    if (init.signal.aborted) return;
+  },
+});
+void createSocketBackend;

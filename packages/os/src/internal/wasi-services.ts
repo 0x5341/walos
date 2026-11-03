@@ -241,7 +241,10 @@ function writeStream<E>(
   return future;
 }
 
-export function createProcessApi(model: Model.ServiceModel): {
+export function createProcessApi(
+  model: Model.ServiceModel,
+  sockets?: Pick<import('../types.js').SocketBackend, 'types' | 'ipNameLookup'>,
+): {
   context: ProcessContext;
   dispose: () => Promise<void>;
 } {
@@ -609,6 +612,11 @@ export function createProcessApi(model: Model.ServiceModel): {
       },
     }),
   };
+  if (sockets)
+    standard.sockets = {
+      types: sockets.types,
+      ipNameLookup: sockets.ipNameLookup,
+    };
   for (const pkg of Object.values(standard)) Object.freeze(pkg);
   return {
     context: {

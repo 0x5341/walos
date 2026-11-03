@@ -191,7 +191,7 @@ for (const name of ['unimplemented-probe', 'p2-unimplemented-probe'])
     if (result.exit.kind === 'trap') expect(result.exit.message).toContain(result.operation);
   });
 
-test('HTTP and socket APIs throw from the shared Context', async ({ page }) => {
+test('HTTP APIs throw from the shared Context', async ({ page }) => {
   const errors = await page.evaluate(async () => {
     const { Walos } = await import('/packages/os/dist/index.js');
     const os = await Walos.create();
@@ -200,7 +200,6 @@ test('HTTP and socket APIs throw from the shared Context', async ({ page }) => {
       const result = [];
       for (const call of [
         () => c.wasi.http.types.fields.new(),
-        () => c.wasi.sockets.types.tcpSocket.create('ipv4'),
       ])
         try {
           await call();
@@ -213,7 +212,7 @@ test('HTTP and socket APIs throw from the shared Context', async ({ page }) => {
       await os.dispose();
     }
   });
-  expect(errors).toHaveLength(2);
+  expect(errors).toHaveLength(1);
   for (const error of errors) expect(error).toMatchObject({ name: 'UnimplementedWasiError' });
 });
 

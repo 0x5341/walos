@@ -8,6 +8,7 @@ scope.onmessage = async (e) => {
   if (disposed) return;
   try {
     if (m.type === 'boot') {
+      manager.sockets = m.sockets;
       if (host !== undefined) throw new Error('Host already registered');
       host = manager.registerHost(m.argv, m.env, (reply, ports = []) =>
         scope.postMessage(reply, ports),

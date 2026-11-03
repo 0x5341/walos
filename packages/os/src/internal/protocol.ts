@@ -36,6 +36,7 @@ export type StreamRef =
       append: boolean;
     };
 export interface Spec {
+  sockets?: import('../types.js').SocketBackendOptions;
   file: FileSystemFileHandle;
   cwd?: FileSystemDirectoryHandle;
   cwdPath?: string;

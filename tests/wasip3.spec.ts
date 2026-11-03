@@ -77,7 +77,6 @@ for (const [mode, output] of [
 for (const [mode, operation] of [
   ['fs-trap', 'wasi:filesystem/types@0.3.2/[method]descriptor.set-times'],
   ['http', 'wasi:http/types@0.3.2/[constructor]fields'],
-  ['socket', 'wasi:sockets/types@0.3.2/[static]tcp-socket.create'],
 ] as const)
   test(`P3 ${mode} preserves the shared unimplemented Trap`, async ({ page }) => {
     const result = await page.evaluate(async (mode) => {

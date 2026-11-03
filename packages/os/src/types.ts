@@ -47,7 +47,37 @@ export type WalosEvent =
   | { type: 'processes'; processes: readonly ProcessInfo[] }
   | { type: 'exit'; pid: number; exit: Exit; durationMs: number }
   | { type: 'error'; error: ServiceError };
+/** Configuration copied into every process; config must be structured-cloneable. */
+export interface SocketBackendOptions {
+  readonly module: string;
+  readonly config?: unknown;
+}
+/** Pending resolver operations expose cancel to interrupt a dropped async import. */
+export type SocketOperation<T> = Promise<T> & { cancel?: () => void | PromiseLike<void> };
+export interface SocketBackend extends AsyncDisposable {
+  readonly types: import('./wasi-types.js').WasiSocketsTypes.Interface;
+  readonly ipNameLookup: {
+    resolveAddresses(
+      name: string,
+    ): SocketOperation<
+      import('./wasi-types.js').Result<
+        readonly import('./wasi-types.js').WasiSocketsTypes.IpAddress[],
+        import('./wasi-types.js').WasiSocketsIpNameLookup.ErrorCode
+      >
+    >;
+  };
+}
+export interface SocketBackendInit {
+  readonly config: unknown;
+  readonly pid: number;
+  readonly ppid: number | null;
+  readonly signal: AbortSignal;
+}
+export type SocketBackendFactory = (
+  init: SocketBackendInit,
+) => SocketBackend | Promise<SocketBackend>;
 export interface WalosOptions {
+  readonly sockets?: SocketBackendOptions;
   readonly env?: Readonly<Record<string, string>>;
   readonly argv?: readonly string[];
 }

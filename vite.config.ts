@@ -4,7 +4,20 @@ export default defineConfig({
   base: './',
   build: process.env.WALOS_TEST_BUILD
     ? {
-        rollupOptions: { input: { main: 'index.html', library: 'tests/fixtures/production.html' } },
+        rollupOptions: {
+          input: {
+            main: 'index.html',
+            library: 'tests/fixtures/production.html',
+            'socket-backend': 'tests/fixtures/socket-backend.ts',
+          },
+          preserveEntrySignatures: 'strict',
+          output: {
+            entryFileNames: (chunk) =>
+              chunk.name === 'socket-backend'
+                ? 'tests/fixtures/socket-backend.js'
+                : 'assets/[name]-[hash].js',
+          },
+        },
       }
     : undefined,
   worker: { format: 'es' },

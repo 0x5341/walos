@@ -10,14 +10,16 @@ feature uses browser Intl data; unavailable IDs or offsets return none. Offsets 
 types are included in the API inventory even when they have no operation row.
 
 Trap means the shared Context throws UnimplementedWasiError with the WIT operation
-path. No unsupported success or invented Result variant is returned. HTTP/socket
-resources are not fabricated: their constructors/factories trap, so no usable
-instances are provided. Their complete instance-method types remain public.
+path. No unsupported success or invented Result variant is returned. HTTP resources are not fabricated: their constructors trap.
+Sockets use a process-local injected backend; without one, creation and host-name
+lookup return access-denied. IP literals are parsed locally. Backend-dependent
+means transport, options and authorization depend on the configured backend.
+See [Sockets backend](sockets-backend.md) for the contract and test coverage.
 
 Partial filesystem behavior uses OPFS files/directories, optional timestamps,
 advisory no-op advice and existing unsupported flag results. Metadata hashes are
 computed from supported stat metadata. Hard/symbolic links and setting timestamps
-trap. No new HTTP/socket transport is implemented.
+trap. No built-in HTTP or external socket transport is implemented.
 
 Walos io endpoints are owned transfer capabilities. Their data operations use P3
 stream/future values; when-writable exposes a capacity Future, with a minimum
@@ -62,47 +64,47 @@ borrowed descriptor. Native P1/P2 representations stay in ABI adapters.
 | wasi:filesystem/types@0.3.2 | [method]descriptor.metadata-hash | partial |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.metadata-hash-at | partial |
 | wasi:filesystem/preopens@0.3.2 | get-directories | implemented |
-| wasi:sockets/types@0.3.2 | [static]tcp-socket.create | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.bind | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.connect | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.listen | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.send | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.receive | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-local-address | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-remote-address | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-is-listening | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-address-family | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-listen-backlog-size | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-keep-alive-enabled | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-keep-alive-enabled | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-keep-alive-idle-time | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-keep-alive-idle-time | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-keep-alive-interval | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-keep-alive-interval | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-keep-alive-count | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-keep-alive-count | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-hop-limit | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-hop-limit | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-receive-buffer-size | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-receive-buffer-size | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-send-buffer-size | Trap |
-| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-send-buffer-size | Trap |
-| wasi:sockets/types@0.3.2 | [static]udp-socket.create | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.bind | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.connect | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.disconnect | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.send | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.receive | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.get-local-address | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.get-remote-address | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.get-address-family | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.get-unicast-hop-limit | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.set-unicast-hop-limit | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.get-receive-buffer-size | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.set-receive-buffer-size | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.get-send-buffer-size | Trap |
-| wasi:sockets/types@0.3.2 | [method]udp-socket.set-send-buffer-size | Trap |
-| wasi:sockets/ip-name-lookup@0.3.2 | resolve-addresses | Trap |
+| wasi:sockets/types@0.3.2 | [static]tcp-socket.create | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.bind | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.connect | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.listen | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.send | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.receive | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-local-address | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-remote-address | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-is-listening | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-address-family | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-listen-backlog-size | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-keep-alive-enabled | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-keep-alive-enabled | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-keep-alive-idle-time | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-keep-alive-idle-time | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-keep-alive-interval | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-keep-alive-interval | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-keep-alive-count | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-keep-alive-count | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-hop-limit | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-hop-limit | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-receive-buffer-size | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-receive-buffer-size | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.get-send-buffer-size | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]tcp-socket.set-send-buffer-size | backend-dependent |
+| wasi:sockets/types@0.3.2 | [static]udp-socket.create | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.bind | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.connect | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.disconnect | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.send | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.receive | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.get-local-address | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.get-remote-address | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.get-address-family | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.get-unicast-hop-limit | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.set-unicast-hop-limit | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.get-receive-buffer-size | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.set-receive-buffer-size | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.get-send-buffer-size | backend-dependent |
+| wasi:sockets/types@0.3.2 | [method]udp-socket.set-send-buffer-size | backend-dependent |
+| wasi:sockets/ip-name-lookup@0.3.2 | resolve-addresses | backend-dependent |
 | wasi:random/insecure-seed@0.3.2 | get-insecure-seed | implemented |
 | wasi:random/insecure@0.3.2 | get-insecure-random-bytes | implemented |
 | wasi:random/insecure@0.3.2 | get-insecure-random-u64 | implemented |

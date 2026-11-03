@@ -183,6 +183,11 @@ export function nativeImports(
         try {
           guard();
           args = args.map(lower);
+          // Canonical list<u8> may arrive as a JS number array; Context uses bytes.
+          if (shape.package === 'wasi:sockets' && op.wit === '[method]udp-socket.send') {
+            args[1] = Uint8Array.from(args[1]);
+            args[2] ??= undefined;
+          }
           const kind = op.kind;
           const value =
             typeof kind === 'object' && ('method' in kind || 'async-method' in kind)
