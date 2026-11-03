@@ -17,6 +17,49 @@ export default defineConfig({
           futureDrop,
           'dropReadable(e,t){o.get(t)?.cancel?.();o.delete(t);r.delete(-2&t)}',
         );
+        // preview.2 groups imported resource aliases by export name, missing
+        // same-instance eq aliases (HTTP headers/trailers are aliases of fields).
+        // Canonicalize only explicit type equality; never relax handle checks.
+        const canonical = 'function Mo(e){';
+        const lookup = 'function Uo(e,t){';
+        if (!code.includes(canonical) || !code.includes(lookup))
+          throw new Error('Review jsco resource equality patch');
+        code = code.replace(canonical, 'function MoBase(e){').replace(
+          lookup,
+          `
+          function Mo(e) {
+            MoBase(e);
+            const ids = e.resolved.canonicalResourceIds;
+            e.indexes.componentInstances.forEach((instance, instanceIndex) => {
+              if (instance.tag !== 98) return;
+              const roots = [], groups = new Map();
+              let index = 0;
+              for (const declaration of instance.declarations) {
+                if (!uc(declaration)) continue;
+                let root = index;
+                if (declaration.tag === 106 && declaration.ty.tag === 124 && declaration.ty.value.tag === 127)
+                  root = roots[declaration.ty.value.value] ?? root;
+                roots[index++] = root;
+                if (declaration.tag !== 106 || declaration.ty.tag !== 124) continue;
+                const key = instanceIndex + ':' + declaration.name.name;
+                const keys = groups.get(root) ?? [];
+                keys.push(key);
+                groups.set(root, keys);
+              }
+              for (const keys of groups.values()) {
+                const id = keys.map(key => e.resourceAliasGroups.get(key)).find(id => id !== undefined);
+                if (id !== undefined) for (const key of keys) e.resourceAliasGroups.set(key, id);
+              }
+            });
+            e.indexes.componentTypes.forEach((type, index) => {
+              if (type.tag === 10 && type.kind === 3) {
+                const id = e.resourceAliasGroups.get(type.instance_index + ':' + type.name);
+                if (id !== undefined) ids.set(index, id);
+              }
+            });
+          }
+          function Uo(e,t){`,
+        );
         return code.replace(
           /import\(["']\.\/(?:cli|wasip3-node)\.js["']\)/g,
           'Promise.reject(new Error("Node-only jsco API unavailable in a browser"))',

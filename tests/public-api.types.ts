@@ -63,3 +63,23 @@ export async function publicExample(executable: FileDescriptor) {
   const error = new ServiceError('closed', 'EOF');
   console.log(error.code, error.cause);
 }
+
+export async function publicHttpExample(context: ProcessContext) {
+  const { Future } = await import('@walos/os');
+  const http = context.wasi.http;
+  const [request, sent] = http.types.request.new(
+    http.types.fields.new(), undefined, new Future({ tag: 'ok', val: undefined }), undefined,
+  );
+  request.setScheme({ tag: 'HTTPS' });
+  request.setAuthority('example.com');
+  const reply = await http.client.send(request);
+  if (reply.tag === 'ok') {
+    const [body, trailers] = http.types.response.consumeBody(
+      reply.val, new Future({ tag: 'ok', val: undefined }),
+    );
+    while (await body.read(65536)) {}
+    const result = await trailers;
+    if (result.tag === 'ok') await result.val?.[Symbol.asyncDispose]();
+  }
+  await sent;
+}
