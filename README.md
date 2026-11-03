@@ -104,9 +104,16 @@ Jco remains **build tooling** for WIT/component fixture generation, not an execu
 engine. Component caches and `clearComponentCache` are removed without deleting
 existing OPFS cache directories or user contents.
 
-[GitHub Pages](https://0x5341.github.io/walos/) deploys `dist` via
-`.github/workflows/pages.yml`. Select GitHub Actions in repository Pages settings.
-PRs build/test a subpath artifact; pushes to main deploy it. Production code uses
+[Demo](https://0x5341.github.io/walos/) and
+[@walos/os API documentation](https://0x5341.github.io/walos/docs/) are published
+via `.github/workflows/pages.yml`. The demo stays at the site root; TypeDoc generates
+the public API from `packages/os/src/index.ts` at `docs/` within the same Pages artifact.
+Select GitHub Actions in repository Pages settings.
+PRs build/test both pages; pushes to main deploy them, and manual runs on main can
+also deploy. To generate the API documentation locally (no WASI SDK required), run
+`npm ci` and `npm run build:docs`, then open `dist/docs/index.html`.
+When building both, run `npm run build` before `npm run build:docs` because Vite
+cleans `dist`. Production code uses
 relative asset URLs and does not require cross-origin isolation. Hosting/CSP must
 allow module workers and WebAssembly compilation.
 

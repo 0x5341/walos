@@ -1,0 +1,15 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "@walos/os",
+  "entryPoints": ["packages/os/src/index.ts"],
+  "tsconfig": "packages/os/tsconfig.json",
+  "readme": "packages/os/README.md",
+  "out": "dist/docs",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "githubPages": true,
+  "navigationLinks": {
+    "Demo": "https://0x5341.github.io/walos/",
+    "GitHub": "https://github.com/0x5341/walos"
+  }
+}

@@ -18,6 +18,7 @@
     "test:production": "WALOS_TEST_BUILD=1 vite build && WALOS_TEST_BUILD=1 playwright test",
     "test:pages": "node scripts/test-pages.mjs",
     "build:os": "npm run build --workspace @walos/os",
+    "build:docs": "typedoc --options typedoc.json",
     "benchmark": "npm run build:os && node benchmarks/build.mjs && tsc --noEmit -p benchmarks/tsconfig.json && node benchmarks/run.mjs",
     "test:benchmark": "node --test benchmarks/stats.test.mjs",
     "check:public": "tsc -p tests/tsconfig.public.json",
@@ -30,6 +31,7 @@
     "@bytecodealliance/jco": "1.39.0",
     "@playwright/test": "1.56.1",
     "prettier": "3.6.2",
+    "typedoc": "0.28.20",
     "typescript": "5.9.3",
     "vite": "7.1.12"
   },
