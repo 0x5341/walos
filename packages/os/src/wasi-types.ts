@@ -14,8 +14,7 @@ export type F64 = number;
 export type Own<T> = T;
 export type Borrow<T> = T;
 export type Result<T, E> =
-  | { readonly tag: 'ok'; readonly val: T }
-  | { readonly tag: 'err'; readonly val: E };
+  { readonly tag: 'ok'; readonly val: T } | { readonly tag: 'err'; readonly val: E };
 export interface ErrorContext extends AsyncDisposable {
   toDebugString(): string;
 }

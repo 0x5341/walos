@@ -1,6 +1,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, resolve, basename } from 'node:path';
-import ts from 'typescript';
+import { parseSync } from 'oxc-parser';
 
 // Runtime adapters may depend on format/ABI helpers, never OS implementations.
 const forbidden = new Set([
@@ -16,23 +16,26 @@ const forbidden = new Set([
   'core.ts',
   'protocol.ts',
 ]);
+export function* runtimeImports(file, source) {
+  const { program, errors } = parseSync(file, source);
+  if (errors.length) throw new Error(`Cannot parse ${file}: ${JSON.stringify(errors)}`);
+  for (const node of program.body) {
+    if (node.type !== 'ImportDeclaration') continue;
+    if (
+      node.importKind === 'type' ||
+      (node.specifiers.length > 0 &&
+        node.specifiers.every((specifier) => specifier.importKind === 'type'))
+    )
+      continue;
+    yield node.source.value;
+  }
+}
+
 const visited = new Set();
 function inspect(file, chain = []) {
   if (visited.has(file)) return;
   visited.add(file);
-  const ast = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
-  for (const node of ast.statements) {
-    if (!ts.isImportDeclaration(node) || !ts.isStringLiteral(node.moduleSpecifier)) continue;
-    const clause = node.importClause;
-    if (
-      clause?.isTypeOnly ||
-      (clause?.namedBindings &&
-        ts.isNamedImports(clause.namedBindings) &&
-        !clause.name &&
-        clause.namedBindings.elements.every((element) => element.isTypeOnly))
-    )
-      continue;
-    const specifier = node.moduleSpecifier.text;
+  for (const specifier of runtimeImports(file, readFileSync(file, 'utf8'))) {
     if (!specifier.startsWith('.')) continue;
     const dependency = resolve(dirname(file), specifier.replace(/\.js$/, '.ts'));
     if (forbidden.has(basename(dependency)))

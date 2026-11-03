@@ -33,7 +33,7 @@ without stopping the child. Use `child.requestStop()` for an explicit stop.
 
 ## Build and run
 
-With [mise](https://mise.jdx.dev/), the repository configuration selects Node 22
+With [mise](https://mise.jdx.dev/), the repository configuration selects Node 26.13.0 and npm 12.2.1
 (matching CI) and provides tasks for the existing npm commands and setup scripts:
 
 ```sh
@@ -47,7 +47,7 @@ Chromium's system libraries must also be installed, or set `CHROMIUM_PATH` to a
 compatible system browser. Run `mise tasks` to list the available tasks.
 For OS-package-only development, use `mise run setup:npm` and `mise run build:os`.
 
-Requires Node 22.14+. **OS build/pack needs no WASI SDK, WIT generator, command
+Requires Node 26.13.0+. **OS build/pack needs no WASI SDK, WIT generator, command
 binaries or demo assets**:
 
 ```sh
@@ -56,8 +56,8 @@ npm run build:os
 npm pack --workspace @walos/os
 ```
 
-For demo/tests, install checksum-pinned wasi-sdk 27 (P1/P2), wasi-sdk 34 (P3),
-wit-bindgen 0.46/0.63 and wasm-tools 1.262 (Linux x86-64):
+For demo/tests, install checksum-pinned wasi-sdk 34 (P1/P2/P3),
+wit-bindgen 0.63.0 and wasm-tools 1.263.0 (Linux x86-64):
 
 ```sh
 bash scripts/setup-sdk.sh
@@ -152,3 +152,7 @@ operations. See [API](docs/process-context-api.md),
 support. `bash scripts/setup-runtime-tools.sh` installs the pinned P3 tooling.
 
 Timezone APIs read the browser timezone on each call (TZ is ignored). Browser Intl/tzdb data and the JavaScript Date range limit offset queries; unavailable information returns none. Debug strings are for humans only.
+
+API documentation is built in the private `@walos/docs-toolchain` workspace with
+TypeDoc 0.28.20 and TypeScript 6.0.3. Project builds and type checks use TypeScript
+7.0.2 from the root workspace. `npm ci` installs both toolchains.

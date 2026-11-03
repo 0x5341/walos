@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { format, resolveConfig } from 'prettier';
 const tool =
-  process.env.WASM_TOOLS_PATH || resolve('work/wasm-tools-1.262.0-x86_64-linux/wasm-tools');
+  process.env.WASM_TOOLS_PATH || resolve('work/wasm-tools-1.263.0-x86_64-linux/wasm-tools');
 const pinned = JSON.parse(readFileSync('wit/p3/upstream-sha256.json', 'utf8'));
 for (const [path, digest] of Object.entries(pinned))
   if (

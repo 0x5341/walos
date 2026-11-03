@@ -3,7 +3,7 @@ import { mkdirSync, copyFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const sdk = process.env.WASI_P3_SDK_PATH || resolve('work/wasi-sdk-34.0-x86_64-linux');
 const tools =
-  process.env.WASM_TOOLS_PATH || resolve('work/wasm-tools-1.262.0-x86_64-linux/wasm-tools');
+  process.env.WASM_TOOLS_PATH || resolve('work/wasm-tools-1.263.0-x86_64-linux/wasm-tools');
 const bindgen =
   process.env.WIT_BINDGEN_P3_PATH || resolve('work/wit-bindgen-0.63.0-x86_64-linux/wit-bindgen');
 const out = 'work/p3-bindings';

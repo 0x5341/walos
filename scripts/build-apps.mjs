@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-const sdk = process.env.WASI_SDK_PATH || resolve('work/wasi-sdk-27.0-x86_64-linux');
+const sdk = process.env.WASI_SDK_PATH || resolve('work/wasi-sdk-34.0-x86_64-linux');
 if (!existsSync(`${sdk}/bin/clang`))
-  throw new Error('Set WASI_SDK_PATH to wasi-sdk 27 (see README.md)');
+  throw new Error('Set WASI_SDK_PATH to wasi-sdk 34 (see README.md)');
 mkdirSync('public/bin', { recursive: true });
 const cc = (name, files, extra = []) =>
   execFileSync(
