@@ -17,10 +17,11 @@ See [Sockets backend](sockets-backend.md) for the contract and test coverage.
 HTTP resources and client sending are implemented; handler.handle still traps.
 See [HTTP transport limitations](wasi-p3-http.md).
 
-Partial filesystem behavior uses OPFS files/directories, optional timestamps,
-advisory no-op advice and existing unsupported flag results. Metadata hashes are
-computed from supported stat metadata. Hard/symbolic links and setting timestamps
-trap. No built-in external socket transport is implemented.
+Filesystem uses a versioned logical namespace in caller-provided dedicated OPFS storage.
+Hard/symbolic links and timestamp mutation share object metadata across Host/P1/P2/P3.
+Advice is an intentional no-op. Integrity-sync open flags return unsupported.
+See [filesystem storage contract](filesystem-storage.md) for durability, timestamp
+and concurrency limits. No built-in external socket transport is implemented.
 
 Walos io endpoints are owned transfer capabilities. Their data operations use P3
 stream/future values; when-writable exposes a capacity Future, with a minimum
@@ -42,28 +43,28 @@ borrowed descriptor. Native P1/P2 representations stay in ABI adapters.
 | wasi:filesystem/types@0.3.2 | [method]descriptor.read-via-stream | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.write-via-stream | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.append-via-stream | implemented |
-| wasi:filesystem/types@0.3.2 | [method]descriptor.advise | partial |
+| wasi:filesystem/types@0.3.2 | [method]descriptor.advise | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.sync-data | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.get-flags | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.get-type | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.set-size | implemented |
-| wasi:filesystem/types@0.3.2 | [method]descriptor.set-times | Trap |
+| wasi:filesystem/types@0.3.2 | [method]descriptor.set-times | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.read-directory | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.sync | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.create-directory-at | implemented |
-| wasi:filesystem/types@0.3.2 | [method]descriptor.stat | partial |
-| wasi:filesystem/types@0.3.2 | [method]descriptor.stat-at | partial |
-| wasi:filesystem/types@0.3.2 | [method]descriptor.set-times-at | Trap |
-| wasi:filesystem/types@0.3.2 | [method]descriptor.link-at | Trap |
+| wasi:filesystem/types@0.3.2 | [method]descriptor.stat | implemented |
+| wasi:filesystem/types@0.3.2 | [method]descriptor.stat-at | implemented |
+| wasi:filesystem/types@0.3.2 | [method]descriptor.set-times-at | implemented |
+| wasi:filesystem/types@0.3.2 | [method]descriptor.link-at | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.open-at | partial |
-| wasi:filesystem/types@0.3.2 | [method]descriptor.readlink-at | Trap |
+| wasi:filesystem/types@0.3.2 | [method]descriptor.readlink-at | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.remove-directory-at | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.rename-at | implemented |
-| wasi:filesystem/types@0.3.2 | [method]descriptor.symlink-at | Trap |
+| wasi:filesystem/types@0.3.2 | [method]descriptor.symlink-at | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.unlink-file-at | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.is-same-object | implemented |
-| wasi:filesystem/types@0.3.2 | [method]descriptor.metadata-hash | partial |
-| wasi:filesystem/types@0.3.2 | [method]descriptor.metadata-hash-at | partial |
+| wasi:filesystem/types@0.3.2 | [method]descriptor.metadata-hash | implemented |
+| wasi:filesystem/types@0.3.2 | [method]descriptor.metadata-hash-at | implemented |
 | wasi:filesystem/preopens@0.3.2 | get-directories | implemented |
 | wasi:sockets/types@0.3.2 | [static]tcp-socket.create | backend-dependent |
 | wasi:sockets/types@0.3.2 | [method]tcp-socket.bind | backend-dependent |

@@ -7,10 +7,14 @@ for (const name of ['env', 'p2-env'])
     page,
   }) => {
     const result = await page.evaluate(async (name) => {
-      const { Walos, HostProcessContext, install, run } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
-      const os = await Walos.create({ env: { HOST_ONLY: 'secret', PWD: '/host' } });
+      const { Walos, HostProcessContext, install, run } =
+        await import('/tests/fixtures/host-harness.ts');
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+        env: { HOST_ONLY: 'secret', PWD: '/host' },
+      });
       try {
         const h = new HostProcessContext(os.getHostProcess());
         const exe = await install(h, name);
@@ -37,10 +41,13 @@ test('P2 generated WIT bindings spawn P2/P1 children, move file/pipe streams, wa
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { Walos, HostProcessContext, install, readAll } = await import(
-      '/tests/fixtures/host-harness.ts'
-    );
-    const os = await Walos.create();
+    const { Walos, HostProcessContext, install, readAll } =
+      await import('/tests/fixtures/host-harness.ts');
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const h = new HostProcessContext(os.getHostProcess());
       const [[root]] = h.fs.getDirectories();

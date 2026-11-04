@@ -48,3 +48,7 @@ continue to work; P3 uses native async Canonical ABI, with `Result`, dedicated
 Future/Stream and Context-backed resource drops. Explicit stop produces terminated,
 while a guest exit code 130 remains exited(130). Internal JS Process execution and
 working HTTP/socket/timezone services are outside this migration.
+
+The filesystem storage API now requires `Walos.create({ storage })`, where storage
+is a caller-provided dedicated OPFS directory handle. Existing physical layouts
+are not imported automatically. See [storage contract](filesystem-storage.md).

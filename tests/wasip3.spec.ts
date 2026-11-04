@@ -6,7 +6,11 @@ test('P3 official 0.3.2 native async CLI executes streams and futures', async ({
   const result = await page.evaluate(async () => {
     const { Walos, HostProcessContext, install, run } =
       await import('/tests/fixtures/host-harness.ts');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const h = new HostProcessContext(os.getHostProcess());
       return await run(h, await install(h, 'p3-probe'), ['p3-probe']);
@@ -23,11 +27,11 @@ test('P3 official 0.3.2 native async CLI executes streams and futures', async ({
 
 for (const [mode, output] of [
   ['timezone', 'p3-timezone-ok\n'],
-  ['http-invalid', 'p3-http-invalid-ok\n'],
   ['future', 'p3-future-cancelled\n'],
   ['file-process', 'p3-file-process-ok\n'],
   ['services', 'p3-services-ok\n'],
   ['fs', 'p3-fs-ok\n'],
+  ['fs-extended', 'p3-fs-extended-ok\n'],
   ['process', 'p3-process-ok\nnative-p3-0.3.2\n'],
 ] as const)
   test(`P3 native async ${mode}`, async ({ page }) => {
@@ -35,7 +39,11 @@ for (const [mode, output] of [
       async ({ mode }) => {
         const { Walos, HostProcessContext, install, run, readAll } =
           await import('/tests/fixtures/host-harness.ts');
-        const os = await Walos.create();
+        const os = await Walos.create({
+          storage: await (
+            await navigator.storage.getDirectory()
+          ).getDirectoryHandle('walos-v1', { create: true }),
+        });
         try {
           const h = new HostProcessContext(os.getHostProcess());
           const [[root]] = h.fs.getDirectories();
@@ -73,25 +81,6 @@ for (const [mode, output] of [
     );
     expect(result).toMatchObject({ exit: { kind: 'exited', code: 0 }, stdout: output, stderr: '' });
   });
-for (const [mode, operation] of [
-  ['fs-trap', 'wasi:filesystem/types@0.3.2/[method]descriptor.set-times'],
-] as const)
-  test(`P3 ${mode} preserves the shared unimplemented Trap`, async ({ page }) => {
-    const result = await page.evaluate(async (mode) => {
-      const { Walos, HostProcessContext, install, run } =
-        await import('/tests/fixtures/host-harness.ts');
-      const os = await Walos.create();
-      try {
-        const h = new HostProcessContext(os.getHostProcess());
-        return await run(h, await install(h, 'p3-probe'), ['p3-probe', mode]);
-      } finally {
-        await os.dispose();
-      }
-    }, mode);
-    expect(result.exit.kind).toBe('trap');
-    expect(result.exit).toMatchObject({ message: expect.stringContaining(operation) });
-  });
-
 for (const name of [
   'unknown-world',
   'wrong-version',
@@ -103,7 +92,11 @@ for (const name of [
     const result = await page.evaluate(async (name) => {
       const { Walos, HostProcessContext, install, readAll } =
         await import('/tests/fixtures/host-harness.ts');
-      const os = await Walos.create();
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         const h = new HostProcessContext(os.getHostProcess());
         const exe = await install(h, `p3-${name}`);
@@ -133,7 +126,11 @@ for (const [mode, exit] of [
     const result = await page.evaluate(async (mode) => {
       const { Walos, HostProcessContext, install, run } =
         await import('/tests/fixtures/host-harness.ts');
-      const os = await Walos.create();
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         const h = new HostProcessContext(os.getHostProcess());
         return await run(h, await install(h, 'p3-probe'), ['p3-probe', mode]);
@@ -147,7 +144,11 @@ test('P3 cancels a blocked native stream and completes its Future', async ({ pag
   const result = await page.evaluate(async () => {
     const { Walos, HostProcessContext, install, readAll } =
       await import('/tests/fixtures/host-harness.ts');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const h = new HostProcessContext(os.getHostProcess());
       const exe = await install(h, 'p3-probe');
@@ -172,7 +173,11 @@ for (const mode of ['wait', 'hang'])
     const result = await page.evaluate(async (mode) => {
       const { Walos, HostProcessContext, install } =
         await import('/tests/fixtures/host-harness.ts');
-      const os = await Walos.create();
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         const h = new HostProcessContext(os.getHostProcess()),
           exe = await install(h, 'p3-probe');
@@ -200,7 +205,11 @@ test('P3 native stdout propagates backpressure until its Pipe reader drains', as
   const result = await page.evaluate(async () => {
     const { Walos, HostProcessContext, install, readAll, writeAll } =
       await import('/tests/fixtures/host-harness.ts');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const h = new HostProcessContext(os.getHostProcess()),
         exe = await install(h, 'p3-probe');

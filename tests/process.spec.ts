@@ -545,6 +545,7 @@ for (const command of ['cat', 'p2-cat'])
             inputWriter = pipe![1];
           const pid = await pm.spawn(
             {
+              root,
               file: await bin.getFileHandle(command),
               cwd: root,
               cwdPath: '/',

@@ -32,14 +32,16 @@ export type StreamRef =
       id: number;
       direction: 'in' | 'out';
       file: FileSystemFileHandle;
+      storage?: FileSystemDirectoryHandle;
+      nodeId?: string;
+      pendingMetadata?: 'dirty' | 'recorded';
       position: number;
       append: boolean;
     };
 export interface Spec {
+  root: FileSystemDirectoryHandle;
   sockets?: import('../types.js').SocketBackendOptions;
   file: FileSystemFileHandle;
-  cwd?: FileSystemDirectoryHandle;
-  cwdPath?: string;
   argv: string[];
   env: Record<string, string>;
   stdio: (StreamRef | null)[];

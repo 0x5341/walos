@@ -102,7 +102,11 @@ test('native P3 sends HTTP and consumes body/trailer futures', async ({ page }) 
   const result = await page.evaluate(async (authority) => {
     const { Walos, HostProcessContext, install, run } =
       await import('/tests/fixtures/host-harness.ts');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('http-tests', { create: true }),
+    });
     try {
       const host = new HostProcessContext(os.getHostProcess());
       return await run(host, await install(host, 'p3-probe'), ['p3-probe', 'http', authority]);
@@ -120,7 +124,11 @@ for (const scenario of ['cors', 'timeout', 'cancel', 'dispose'] as const) {
       async ({ authority, scenario }) => {
         const { Walos, Future } = await import('/packages/os/dist/index.js');
         const { cancelAsync } = await import('/packages/os/dist/async.js');
-        const os = await Walos.create();
+        const os = await Walos.create({
+          storage: await (
+            await navigator.storage.getDirectory()
+          ).getDirectoryHandle('http-tests', { create: true }),
+        });
         const http = os.getHostProcess().wasi.http;
         const options = http.types.requestOptions.new();
         options.setBetweenBytesTimeout(20_000_000n);
@@ -169,7 +177,11 @@ test('native P3 streams a request body over HTTP/2', async ({ page }) => {
   const result = await page.evaluate(async (authority) => {
     const { Walos, HostProcessContext, install, run } =
       await import('/tests/fixtures/host-harness.ts');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('http-tests', { create: true }),
+    });
     try {
       const host = new HostProcessContext(os.getHostProcess());
       return await run(host, await install(host, 'p3-probe'), ['p3-probe', 'http-post', authority]);
@@ -185,7 +197,11 @@ test('stopping a native P3 process releases its pending HTTP connection', async 
   await page.goto('/tests/fixtures/library.html');
   await page.evaluate(async (authority) => {
     const { Walos, HostProcessContext, install } = await import('/tests/fixtures/host-harness.ts');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('http-tests', { create: true }),
+    });
     const host = new HostProcessContext(os.getHostProcess());
     const child = await host.process.spawn(
       await install(host, 'p3-probe'),

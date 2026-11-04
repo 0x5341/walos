@@ -8,7 +8,9 @@ commands, and leaves existing OPFS user content unchanged.
 ```ts
 import { HostProcessContext, Walos, ServiceError } from '@walos/os';
 
-await using os = await Walos.create({ env: { PWD: '/', PATH: '/bin' }, argv: [] });
+const storage = await (await navigator.storage.getDirectory())
+  .getDirectoryHandle('my-os-v1', { create: true });
+await using os = await Walos.create({ storage, env: { PWD: '/', PATH: '/bin' }, argv: [] });
 await using host = new HostProcessContext(os.getHostProcess()); // explicitly borrows the raw Context
 const [[root]] = host.fs.getDirectories();
 await using directory = root;
@@ -43,7 +45,7 @@ File output `flush()` commits writes locally; disposal also confirms completion.
 The raw API follows WASI 0.3.2 packages/interfaces and preserves Result, Future
 and Stream. HostDescriptor, HostInput, HostOutput and HostChildProcess are explicit
 wrapper views; the former P2-style public resource type names are removed.
-ProcessContext, the WIT namespaces, Exit and ServiceError are exported at the root. Browser handles, MessagePorts and RPC structures are internal.
+ProcessContext, the WIT namespaces, Exit and ServiceError are exported at the root. Only initialization accepts an OPFS directory handle; descriptor APIs keep browser handles, MessagePorts and RPC structures internal.
 
 - Only Host creation supplies a missing `PWD=/`. Child argv/env are explicit copied
   snapshots; empty argv is valid. Child PWD is never inherited, validated or filled in
@@ -58,7 +60,7 @@ ProcessContext, the WIT namespaces, Exit and ServiceError are exported at the ro
   resources have independent lifetimes and do not close the process connection.
 - `dispose()` and `Symbol.asyncDispose` on Walos are idempotent. They terminate owned
   processes, settle pending waits, release resources, and reject later Host operations.
-- `Walos.create()` works without JSPI. Starting Wasm requires a current browser with
+- `Walos.create({ storage })` works without JSPI. Starting Wasm requires a current browser with
   JSPI. Secure randomness uses Web Crypto (maximum 16 MiB per request); insecure
   randomness uses a separate non-cryptographic PRNG. Clock resolution is reported as
   1 ms and is subject to browser precision limits. Timers execute locally.
@@ -92,15 +94,19 @@ migration and coverage documents for Result/Future/Stream and unsupported APIs.
 P2/P3 classification inspects actual component imports/exports and versions. Mixed,
 unknown and unsupported worlds fail before READY. P3 requires exactly the 0.3.2
 CLI entrypoint and known 0.3.2 imports. `run` returns a normal code, while a stop
-is `terminated` and an unimplemented operation is a Trap. HTTP,
-links and setting timestamps are typed but trap; see the repository coverage table.
+is `terminated` and an unimplemented operation is a Trap. HTTP handler traps; sockets use a configured backend. HTTP client sending uses browser Fetch. Links and timestamp mutation use the common persistent filesystem; see the repository coverage table.
 The build carries a checked patch to the pinned engine's future-drop producer
 notification; native stream/future cancellation is verified with compiled components.
 
 Timezone APIs read the browser timezone on each call (TZ is ignored). Browser Intl/tzdb data and the JavaScript Date range limit offset queries; unavailable information returns none. Debug strings are for humans only.
 
+Filesystem storage now requires a caller-provided dedicated OPFS directory.
+Empty storage initializes format v1; existing walos storage reopens. Unknown data
+is rejected. Internal physical paths are not the WASI namespace; install files
+through the Host API. See [storage contract](../../docs/filesystem-storage.md) for migration and recovery limits.
+
 Sockets use an explicit per-process backend. Pass `sockets: { module, config }`
-to `Walos.create()`; each Host/Worker imports the module and calls its
+to `Walos.create({ storage, sockets })`; each Host/Worker imports the module and calls its
 `createSocketBackend` factory with cloned configuration and process identity.
 Without a backend, networking returns `access-denied`; IP literals resolve locally.
 See the [backend contract](../../docs/sockets-backend.md) for synchronization,

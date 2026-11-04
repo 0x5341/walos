@@ -10,7 +10,11 @@ for (const [zone, expected] of [
       await page.goto('/tests/fixtures/library.html');
       const result = await page.evaluate(async () => {
         const { Walos } = await import('/packages/os/dist/index.js');
-        const os = await Walos.create();
+        const os = await Walos.create({
+          storage: await (
+            await navigator.storage.getDirectory()
+          ).getDirectoryHandle('walos-v1', { create: true }),
+        });
         try {
           const tz = os.getHostProcess().wasi.clocks.timezone;
           return {
@@ -37,7 +41,11 @@ test.describe('DST', () => {
     await page.goto('/tests/fixtures/library.html');
     const offsets = await page.evaluate(async () => {
       const { Walos } = await import('/packages/os/dist/index.js');
-      const os = await Walos.create();
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         const tz = os.getHostProcess().wasi.clocks.timezone;
         return [
@@ -60,7 +68,11 @@ test('Intl failures return none and recover on the same Context', async ({ page 
   await page.goto('/tests/fixtures/library.html');
   const result = await page.evaluate(async () => {
     const { Walos } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     const original = Intl.DateTimeFormat;
     try {
       const tz = os.getHostProcess().wasi.clocks.timezone;
@@ -91,7 +103,11 @@ test.describe('historical offsets', () => {
     await page.goto('/tests/fixtures/library.html');
     const result = await page.evaluate(async () => {
       const { Walos } = await import('/packages/os/dist/index.js');
-      const os = await Walos.create();
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         const tz = os.getHostProcess().wasi.clocks.timezone;
         return {

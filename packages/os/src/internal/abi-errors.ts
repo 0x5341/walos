@@ -11,6 +11,8 @@ export function errno(error: unknown): number {
           busy: 10,
           exist: 20,
           invalid: 28,
+          loop: 32,
+          'cross-device': 75,
           io: 29,
           'is-directory': 31,
           'no-entry': 44,

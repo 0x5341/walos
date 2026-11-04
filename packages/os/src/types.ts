@@ -7,6 +7,8 @@ export type ErrorCode =
   | 'access'
   | 'busy'
   | 'exist'
+  | 'loop'
+  | 'cross-device'
   | 'invalid'
   | 'io'
   | 'no-entry'
@@ -77,6 +79,8 @@ export type SocketBackendFactory = (
   init: SocketBackendInit,
 ) => SocketBackend | Promise<SocketBackend>;
 export interface WalosOptions {
+  /** Dedicated empty directory or an existing walos filesystem. */
+  readonly storage: FileSystemDirectoryHandle;
   readonly sockets?: SocketBackendOptions;
   readonly env?: Readonly<Record<string, string>>;
   readonly argv?: readonly string[];

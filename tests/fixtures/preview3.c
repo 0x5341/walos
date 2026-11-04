@@ -144,6 +144,65 @@ static bool open_file(wasi_filesystem_types_borrow_descriptor_t root,char *path,
   if (result.is_err) return false;
   *out=result.val.ok; return true;
 }
+static bool filesystem_extended(void) {
+  wasi_filesystem_types_borrow_descriptor_t root=root_dir();
+  wasi_filesystem_types_own_descriptor_t file, other;
+  CHECK(open_file(root,"extended",WASI_FILESYSTEM_TYPES_OPEN_FLAGS_CREATE,
+    WASI_FILESYSTEM_TYPES_DESCRIPTOR_FLAGS_READ|WASI_FILESYSTEM_TYPES_DESCRIPTOR_FLAGS_WRITE,&file));
+  wasi_filesystem_types_borrow_descriptor_t fd=wasi_filesystem_types_borrow_descriptor(file);
+  wasi_filesystem_types_result_void_error_code_t r;
+  wasi_filesystem_types_method_descriptor_set_times_args_t times={.self=fd,
+    .data_access_timestamp={.tag=WASI_FILESYSTEM_TYPES_NEW_TIMESTAMP_TIMESTAMP,.val.timestamp={123,987654321}},
+    .data_modification_timestamp={.tag=WASI_FILESYSTEM_TYPES_NEW_TIMESTAMP_TIMESTAMP,.val.timestamp={456,123456789}}};
+  subtask(wasi_filesystem_types_method_descriptor_set_times(&times,&r)); CHECK(!r.is_err);
+  wasi_filesystem_types_result_descriptor_stat_error_code_t stat;
+  subtask(wasi_filesystem_types_method_descriptor_stat(fd,&stat)); CHECK(!stat.is_err);
+  CHECK(stat.val.ok.data_access_timestamp.is_some && stat.val.ok.data_access_timestamp.val.seconds==123);
+  CHECK(stat.val.ok.data_modification_timestamp.val.nanoseconds==123456789);
+  wasi_filesystem_types_method_descriptor_link_at_args_t link={root,0,text("extended"),root,text("hard")};
+  subtask(wasi_filesystem_types_method_descriptor_link_at(&link,&r)); CHECK(!r.is_err);
+  subtask(wasi_filesystem_types_method_descriptor_link_at(&link,&r)); CHECK(r.is_err && r.val.err.tag==WASI_FILESYSTEM_TYPES_ERROR_CODE_EXIST);
+  CHECK(open_file(root,"hard",0,WASI_FILESYSTEM_TYPES_DESCRIPTOR_FLAGS_READ,&other));
+  bool same=false; subtask(wasi_filesystem_types_method_descriptor_is_same_object(fd,wasi_filesystem_types_borrow_descriptor(other),&same)); CHECK(same);
+  subtask(wasi_filesystem_types_method_descriptor_stat(fd,&stat)); CHECK(!stat.is_err && stat.val.ok.link_count==2);
+  wasi_filesystem_types_method_descriptor_symlink_at_args_t sym={root,text("hard"),text("sym")};
+  subtask(wasi_filesystem_types_method_descriptor_symlink_at(&sym,&r)); CHECK(!r.is_err);
+  wasi_filesystem_types_result_string_error_code_t target;
+  subtask(wasi_filesystem_types_method_descriptor_readlink_at(root,text("sym"),&target)); CHECK(!target.is_err && equals(target.val.ok,"hard")); command_string_free(&target.val.ok);
+  subtask(wasi_filesystem_types_method_descriptor_stat_at(root,0,text("sym"),&stat)); CHECK(!stat.is_err && stat.val.ok.type.tag==WASI_FILESYSTEM_TYPES_DESCRIPTOR_TYPE_SYMBOLIC_LINK);
+  subtask(wasi_filesystem_types_method_descriptor_stat_at(root,WASI_FILESYSTEM_TYPES_PATH_FLAGS_SYMLINK_FOLLOW,text("sym"),&stat)); CHECK(!stat.is_err && stat.val.ok.link_count==2);
+  wasi_filesystem_types_result_metadata_hash_value_error_code_t hash, at;
+  subtask(wasi_filesystem_types_method_descriptor_metadata_hash(fd,&hash)); CHECK(!hash.is_err);
+  subtask(wasi_filesystem_types_method_descriptor_metadata_hash_at(root,WASI_FILESYSTEM_TYPES_PATH_FLAGS_SYMLINK_FOLLOW,text("sym"),&at));
+  CHECK(!at.is_err && hash.val.ok.lower==at.val.ok.lower && hash.val.ok.upper==at.val.ok.upper);
+  wasi_filesystem_types_method_descriptor_set_times_at_args_t atime={.self=root,.path_flags=0,.path=text("sym"),
+    .data_access_timestamp={.tag=WASI_FILESYSTEM_TYPES_NEW_TIMESTAMP_NOW},.data_modification_timestamp={.tag=WASI_FILESYSTEM_TYPES_NEW_TIMESTAMP_NO_CHANGE}};
+  subtask(wasi_filesystem_types_method_descriptor_set_times_at(&atime,&r)); CHECK(!r.is_err);
+  times.data_access_timestamp.tag=WASI_FILESYSTEM_TYPES_NEW_TIMESTAMP_NO_CHANGE;
+  times.data_modification_timestamp.val.timestamp.nanoseconds=1000000000;
+  subtask(wasi_filesystem_types_method_descriptor_set_times(&times,&r)); CHECK(r.is_err && r.val.err.tag==WASI_FILESYSTEM_TYPES_ERROR_CODE_INVALID);
+  times.data_modification_timestamp.val.timestamp.seconds=-1;
+  times.data_modification_timestamp.val.timestamp.nanoseconds=999999999;
+  subtask(wasi_filesystem_types_method_descriptor_set_times(&times,&r)); CHECK(!r.is_err);
+  subtask(wasi_filesystem_types_method_descriptor_stat(fd,&stat));
+  CHECK(!stat.is_err && stat.val.ok.data_modification_timestamp.val.seconds==-1 && stat.val.ok.data_modification_timestamp.val.nanoseconds==999999999);
+  sym.old_path=text("/absolute"); sym.new_path=text("bad");
+  subtask(wasi_filesystem_types_method_descriptor_symlink_at(&sym,&r)); CHECK(r.is_err && r.val.err.tag==WASI_FILESYSTEM_TYPES_ERROR_CODE_NOT_PERMITTED);
+  sym.old_path=text("cycle"); sym.new_path=text("cycle");
+  subtask(wasi_filesystem_types_method_descriptor_symlink_at(&sym,&r)); CHECK(!r.is_err);
+  subtask(wasi_filesystem_types_method_descriptor_stat_at(root,WASI_FILESYSTEM_TYPES_PATH_FLAGS_SYMLINK_FOLLOW,text("cycle"),&stat)); CHECK(stat.is_err && stat.val.err.tag==WASI_FILESYSTEM_TYPES_ERROR_CODE_LOOP);
+  subtask(wasi_filesystem_types_method_descriptor_advise(fd,0,0,WASI_FILESYSTEM_TYPES_ADVICE_NORMAL,&r)); CHECK(!r.is_err);
+  wasi_filesystem_types_method_descriptor_open_at_args_t unsupported={root,0,text("extended"),0,WASI_FILESYSTEM_TYPES_DESCRIPTOR_FLAGS_FILE_INTEGRITY_SYNC};
+  wasi_filesystem_types_result_own_descriptor_error_code_t opened;
+  subtask(wasi_filesystem_types_method_descriptor_open_at(&unsupported,&opened)); CHECK(opened.is_err && opened.val.err.tag==WASI_FILESYSTEM_TYPES_ERROR_CODE_UNSUPPORTED);
+  subtask(wasi_filesystem_types_method_descriptor_unlink_file_at(root,text("extended"),&r)); CHECK(!r.is_err);
+  subtask(wasi_filesystem_types_method_descriptor_unlink_file_at(root,text("hard"),&r)); CHECK(!r.is_err);
+  subtask(wasi_filesystem_types_method_descriptor_stat(fd,&stat)); CHECK(!stat.is_err && stat.val.ok.link_count==0);
+  subtask(wasi_filesystem_types_method_descriptor_stat_at(root,WASI_FILESYSTEM_TYPES_PATH_FLAGS_SYMLINK_FOLLOW,text("sym"),&stat)); CHECK(stat.is_err && stat.val.err.tag==WASI_FILESYSTEM_TYPES_ERROR_CODE_NO_ENTRY);
+  wasi_filesystem_types_descriptor_drop_own(other); wasi_filesystem_types_descriptor_drop_own(file);
+  return print("p3-fs-extended-ok\n");
+}
+
 static bool filesystem(void) {
   wasi_filesystem_types_borrow_descriptor_t root=root_dir();
   wasi_filesystem_types_own_descriptor_t file;
@@ -437,6 +496,19 @@ static bool execute(void) {
   if (equals(mode,"cat")) return relay();
   if (equals(mode,"cancel")) return cancel_input();
   if (equals(mode,"fs")) return filesystem();
+  if (equals(mode,"fs-extended")) return filesystem_extended();
+  if (equals(mode,"fs-race")) {
+    CHECK(args.len >= 3 && args.ptr[2].len < 16);
+    wasi_filesystem_types_borrow_descriptor_t root=root_dir();
+    for (int i=0;i<8;i++) {
+      char name[20]; memcpy(name,args.ptr[2].ptr,args.ptr[2].len); name[args.ptr[2].len]='-'; name[args.ptr[2].len+1]='0'+i; name[args.ptr[2].len+2]=0;
+      wasi_filesystem_types_method_descriptor_link_at_args_t link={root,0,text("shared"),root,text(name)};
+      wasi_filesystem_types_result_void_error_code_t r;
+      subtask(wasi_filesystem_types_method_descriptor_link_at(&link,&r)); CHECK(!r.is_err);
+    }
+    return true;
+  }
+
   if (equals(mode,"process")) return processes();
   if (equals(mode,"false")) return false;
   if (equals(mode,"exit130")) { wasi_cli_exit_exit_with_code(130); __builtin_trap(); }

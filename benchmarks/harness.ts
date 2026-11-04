@@ -1,3 +1,4 @@
+import { Store } from '../packages/os/dist/internal/fs-store.js';
 import { PortStream } from '../packages/os/dist/internal/streams.js';
 import type { FromProcess, Spec, StreamRef } from '../packages/os/dist/internal/protocol.js';
 
@@ -13,6 +14,7 @@ function deferred<T>() {
 async function prepare() {
   const root = await navigator.storage.getDirectory();
   const dir = await root.getDirectoryHandle('benchmark', { create: true });
+  await new Store(await dir.getDirectoryHandle('storage', { create: true })).initialize();
   for (const format of ['p1', 'p2', 'p3']) {
     try {
       await dir.getFileHandle(format);
@@ -36,8 +38,8 @@ let active:
   | undefined;
 async function launch(format: 'p1' | 'p2' | 'p3', mode: 'startup' | 'cpu' | 'hold') {
   if (active) throw new Error('Only one process measurement may run at a time');
-  const root = await navigator.storage.getDirectory();
-  const dir = await root.getDirectoryHandle('benchmark');
+  const dir = await (await navigator.storage.getDirectory()).getDirectoryHandle('benchmark');
+  const root = await dir.getDirectoryHandle('storage');
   const out = new MessageChannel();
   const output = new PortStream({
     kind: 'pipe',
@@ -66,9 +68,8 @@ async function launch(format: 'p1' | 'p2' | 'p3', mode: 'startup' | 'cpu' | 'hol
     ports.push(channel.port2);
   }
   const spec: Spec = {
+    root,
     file: await dir.getFileHandle(format),
-    cwd: root,
-    cwdPath: '/',
     argv: [format, mode],
     env: { PWD: '/' },
     stdio,

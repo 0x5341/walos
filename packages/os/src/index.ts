@@ -1,5 +1,5 @@
 import { ProcessServices, serviceError } from './internal/process-context.js';
-import { browserPlatform } from './internal/platform.js';
+import { Store } from './internal/fs-store.js';
 import { Rpc, RpcFailure, type CoreEvent } from './internal/protocol.js';
 import {
   ServiceError,
@@ -34,7 +34,7 @@ export class Walos implements AsyncDisposable {
     this.worker.postMessage(request, ports);
   });
   private constructor() {}
-  static async create(options: WalosOptions = {}): Promise<Walos> {
+  static async create(options: WalosOptions): Promise<Walos> {
     const os = new Walos();
     // Copy before the first await. Only Host creation supplies a missing PWD.
     const env = { ...options.env };
@@ -48,7 +48,9 @@ export class Walos implements AsyncDisposable {
       });
     try {
       os.currentState = 'booting';
-      const root = await browserPlatform.root();
+      const root = options.storage;
+      if (!root || root.kind !== 'directory') throw new TypeError('storage directory is required');
+      await new Store(root).initialize();
       const worker = (os.worker = new Worker(
         new URL('./internal/core.worker.js', import.meta.url),
         { type: 'module' },

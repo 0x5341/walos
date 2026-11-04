@@ -1,3 +1,4 @@
+import { Store } from './fs-store.js';
 import { ServiceError } from '../types.js';
 import { RpcFailure, type StreamRef } from './protocol.js';
 export class IoError extends Error {
@@ -258,8 +259,13 @@ class NullStream implements Stream {
 export class FileStream implements Stream {
   private access?: FileSystemSyncAccessHandle;
   private closed = false;
+  private dirty = false;
+  private recorded = false;
   private writer?: FileSystemWritableFileStream;
-  constructor(public ref: Extract<StreamRef, { kind: 'file' }>) {}
+  constructor(public ref: Extract<StreamRef, { kind: 'file' }>) {
+    this.dirty = !!ref.pendingMetadata;
+    this.recorded = ref.pendingMetadata === 'recorded';
+  }
   async open(syncRead = false) {
     if (syncRead && this.ref.direction === 'in')
       this.access = await this.ref.file.createSyncAccessHandle({ mode: 'read-only' });
@@ -310,24 +316,41 @@ export class FileStream implements Stream {
         data: b as Uint8Array<ArrayBuffer>,
       });
       this.ref.position += b.length;
+      if (b.length) {
+        this.dirty = true;
+        this.recorded = false;
+      }
+      await this.metadata(false);
       return b.length;
     }
-    return this.writeNow(b);
+    const count = this.writeNow(b);
+    await this.metadata(false);
+    return count;
   }
   writeNow(b: Uint8Array) {
     if (this.closed || !this.access) throw new IoError(8, 'not writable');
     if (this.ref.append) this.ref.position = this.access.getSize();
     const n = this.access.write(b, { at: this.ref.position });
     this.ref.position += n;
+    if (n) {
+      this.dirty = true;
+      this.recorded = false;
+    }
     return n;
   }
   async truncate(n: number) {
     if (this.writer) {
       await this.writer.truncate(n);
+      this.dirty = true;
+      this.recorded = false;
+      await this.metadata(false);
       return;
     }
     if (!this.access) throw new IoError(8, 'not writable');
     this.access.truncate(n);
+    this.dirty = true;
+    this.recorded = false;
+    await this.metadata(false);
   }
   flush() {
     if (this.ref.direction === 'out') this.access?.flush();
@@ -342,6 +365,13 @@ export class FileStream implements Stream {
       this.access = undefined;
     }
   }
+  private async metadata(committed = true) {
+    if (this.dirty && this.ref.storage && this.ref.nodeId) {
+      await new Store(this.ref.storage).changed(this.ref.nodeId, true, !this.recorded);
+      this.recorded = true;
+      if (committed) this.dirty = false;
+    }
+  }
   async flushAsync() {
     this.flush();
     if (this.writer) {
@@ -354,18 +384,21 @@ export class FileStream implements Stream {
           mode: 'exclusive',
         } as FileSystemCreateWritableOptions);
     }
+    await this.metadata();
   }
   async finish() {
     this.close();
     const writer = this.writer;
     this.writer = undefined;
     await writer?.close();
+    await this.metadata();
   }
   gone() {
     void this.finish();
   }
   detach() {
     this.close();
+    this.ref.pendingMetadata = this.dirty ? (this.recorded ? 'recorded' : 'dirty') : undefined;
     return this.ref;
   }
 }

@@ -7,10 +7,13 @@ test.beforeEach(async ({ page }) => {
 for (const name of ['cat', 'p2-cat', 'p3-cat'])
   test(`${name} keeps stderr separate from explicitly redirected stdout`, async ({ page }) => {
     const result = await page.evaluate(async (name) => {
-      const { Walos, HostProcessContext, install, run } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
-      const os = await Walos.create();
+      const { Walos, HostProcessContext, install, run } =
+        await import('/tests/fixtures/host-harness.ts');
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         return await run(
           new HostProcessContext(os.getHostProcess()),
@@ -28,10 +31,13 @@ for (const name of ['cat', 'p2-cat', 'p3-cat'])
 for (const name of ['fs-probe', 'p2-fs-probe'])
   test(`${name} uses Worker-local namespace operations`, async ({ page }) => {
     const result = await page.evaluate(async (name) => {
-      const { Walos, HostProcessContext, install, run } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
-      const os = await Walos.create();
+      const { Walos, HostProcessContext, install, run } =
+        await import('/tests/fixtures/host-harness.ts');
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         const h = new HostProcessContext(os.getHostProcess());
         const [[root]] = h.fs.getDirectories();
@@ -49,7 +55,11 @@ test('Host file writes persist across OS disposal and page reload, including tmp
 }) => {
   await page.evaluate(async () => {
     const { Walos, HostProcessContext } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     const h = new HostProcessContext(os.getHostProcess());
     const [[root]] = h.fs.getDirectories();
     await root.createDirectoryAt('tmp');
@@ -60,7 +70,11 @@ test('Host file writes persist across OS disposal and page reload, including tmp
   await page.reload();
   const result = await page.evaluate(async () => {
     const { Walos, HostProcessContext } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     const [[root]] = new HostProcessContext(os.getHostProcess()).fs.getDirectories();
     const file = await root.openAt({}, 'tmp/user', {}, { read: true });
     const [bytes] = await file.read(100n, 0n);

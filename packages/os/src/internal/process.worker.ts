@@ -4,7 +4,6 @@ import { Wasi2 } from './wasi2.js';
 import { executableKind, prepareComponent } from './component.js';
 import { Wasi3 } from './wasi3.js';
 import { ProcessServices } from './process-context.js';
-import { browserPlatform } from './platform.js';
 import { RuntimeStopped, type Runtime } from './runtime.js';
 import type { Exit } from '../types.js';
 
@@ -82,7 +81,7 @@ scope.onmessage = async (event) => {
     services = new ProcessServices(
       {
         ...message.spec,
-        root: await browserPlatform.root(),
+        root: message.spec.root,
         pid: message.pid,
         ppid: message.ppid ?? null,
       },

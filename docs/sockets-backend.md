@@ -4,7 +4,10 @@ TCP, UDP and name lookup use the pinned WASI 0.3.2 interfaces on the common
 ProcessContext. Configure a backend explicitly:
 
 ```ts
+const storage = await (await navigator.storage.getDirectory())
+  .getDirectoryHandle('my-os-v1', { create: true });
 const os = await Walos.create({
+  storage,
   sockets: {
     module: new URL('./socket-backend.js', import.meta.url).href,
     config: { endpoint: 'wss://your-relay.example' },

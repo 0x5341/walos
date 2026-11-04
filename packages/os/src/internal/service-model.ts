@@ -33,7 +33,7 @@ export interface IoService {
   readonly stderr: OutputStream;
   createPipe(): Promise<readonly [InputStream, OutputStream]>;
 }
-export type DescriptorType = 'directory' | 'regular-file';
+export type DescriptorType = 'directory' | 'regular-file' | 'symbolic-link';
 export interface DescriptorFlags {
   readonly read?: boolean;
   readonly write?: boolean;
@@ -57,6 +57,8 @@ export interface DescriptorStat {
   readonly linkCount: bigint;
   readonly size: bigint;
   readonly dataModificationTimestamp?: Datetime;
+  readonly dataAccessTimestamp?: Datetime;
+  readonly statusChangeTimestamp?: Datetime;
 }
 export interface DirectoryEntry {
   readonly name: string;
@@ -67,6 +69,20 @@ export interface DirectoryEntryStream extends AsyncDisposable {
 }
 /** Both file and directory descriptors use the P2 descriptor-relative model. */
 export interface FileDescriptor extends AsyncDisposable {
+  advise(offset?: bigint, length?: bigint, advice?: unknown): Promise<void>;
+  syncData(): Promise<void>;
+  setTimes(a: import('./fs-store.js').NewTime, m: import('./fs-store.js').NewTime): Promise<void>;
+  setTimesAt(
+    flags: PathFlags,
+    path: string,
+    a: import('./fs-store.js').NewTime,
+    m: import('./fs-store.js').NewTime,
+  ): Promise<void>;
+  linkAt(flags: PathFlags, path: string, to: FileDescriptor, newPath: string): Promise<void>;
+  readlinkAt(path: string): Promise<string>;
+  symlinkAt(old: string, path: string): Promise<void>;
+  metadataHash(): Promise<{ lower: bigint; upper: bigint }>;
+  metadataHashAt(flags: PathFlags, path: string): Promise<{ lower: bigint; upper: bigint }>;
   getType(): DescriptorType;
   getFlags(): DescriptorFlags;
   openAt(

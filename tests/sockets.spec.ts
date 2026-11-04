@@ -6,6 +6,9 @@ test('per-process socket backend: TCP streams, accept, UDP and resolution', asyn
   const result = await page.evaluate(async () => {
     const { Walos, createStream } = await import('/packages/os/dist/index.js');
     const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('socket-tests', { create: true }),
       sockets: { module: new URL('/tests/fixtures/socket-backend.ts', location.href).href },
     });
     const take = (r: any): any => {
@@ -85,7 +88,11 @@ test('per-process socket backend: TCP streams, accept, UDP and resolution', asyn
 test('default denies networking; literal parsing stays local', async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { Walos } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('socket-tests', { create: true }),
+    });
     try {
       const s = os.getHostProcess().wasi.sockets;
       return [
@@ -109,6 +116,9 @@ test('invalid backend and uncloneable config reject creation', async ({ page }) 
     for (const config of [{ fail: true }, { callback: () => {} }]) {
       try {
         const os = await Walos.create({
+          storage: await (
+            await navigator.storage.getDirectory()
+          ).getDirectoryHandle('socket-tests', { create: true }),
           sockets: {
             module: new URL('/tests/fixtures/socket-backend.ts', location.href).href,
             config,
@@ -129,13 +139,16 @@ for (const enabled of [false, true])
     const result = await page.evaluate(async (enabled) => {
       const { Walos, HostProcessContext, install, run } =
         await import('/tests/fixtures/host-harness.ts');
-      const os = await Walos.create(
-        enabled
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('socket-tests', { create: true }),
+        ...(enabled
           ? {
               sockets: { module: new URL('/tests/fixtures/socket-backend.ts', location.href).href },
             }
-          : {},
-      );
+          : {}),
+      });
       try {
         const host = new HostProcessContext(os.getHostProcess());
         return await run(host, await install(host, 'p3-probe'), [
@@ -157,7 +170,12 @@ test('backend state, IPv6, failures, cancellation and process cleanup', async ({
   const result = await page.evaluate(async () => {
     const { Walos, createStream } = await import('/packages/os/dist/index.js');
     const module = new URL('/tests/fixtures/socket-backend.ts', location.href).href;
-    const os = await Walos.create({ sockets: { module } });
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('socket-tests', { create: true }),
+      sockets: { module },
+    });
     const take = (r: any): any => {
       if (r.tag !== 'ok') throw new Error(JSON.stringify(r));
       return r.val;
@@ -252,6 +270,9 @@ test('backend config is snapshotted and factory/disposal run separately in Host 
     audit.onmessage = (e) => events.push(e.data);
     const config = { audit: name, token: 'original' };
     const creating = Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('socket-tests', { create: true }),
       sockets: { module: new URL('/tests/fixtures/socket-backend.ts', location.href).href, config },
     });
     config.token = 'mutated';
@@ -280,6 +301,9 @@ test('unsupported transport option stays a typed failure', async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { Walos } = await import('/packages/os/dist/index.js');
     const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('socket-tests', { create: true }),
       sockets: {
         module: new URL('/tests/fixtures/socket-backend.ts', location.href).href,
         config: { unsupportedMethod: 'setKeepAliveInterval' },

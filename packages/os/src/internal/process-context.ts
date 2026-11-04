@@ -1,3 +1,4 @@
+import type { NewTime } from './fs-store.js';
 import { SocketServices } from './sockets.js';
 import {
   ServiceError,
@@ -93,8 +94,6 @@ export interface ContextBootstrap {
   argv: readonly string[];
   env: Record<string, string>;
   stdio: (StreamRef | null)[];
-  cwd?: FileSystemDirectoryHandle;
-  cwdPath?: string;
   platform?: PlatformBackend;
 }
 
@@ -138,9 +137,9 @@ export class ProcessServices {
     private rpc: Rpc,
     readonly check: () => void,
   ) {
-    const { root, pid, ppid, argv, env, cwd, cwdPath } = bootstrap;
+    const { root, pid, ppid, argv, env } = bootstrap;
     this.fs = new P2Filesystem(
-      new Filesystem(root, cwd ?? root, cwdPath ?? '/', this.platform),
+      new Filesystem(root, this.platform),
       (s) => this.streams.add(s),
       (s, moved) => {
         this.streams.delete(s);
@@ -148,7 +147,6 @@ export class ProcessServices {
           this.releases.set(s, this.rpc.call({ op: 'stream-close', streamId: s.stream.ref.id }));
       },
     );
-    if (!cwd) this.fs.fs.descriptors.delete(4);
     const owner = this;
     const random = createRandom();
     const guarded = <T extends object>(object: T): T =>
@@ -420,13 +418,19 @@ export class ProcessServices {
         }),
       advise: (...args: unknown[]) => r.async(() => d.advise()),
       syncData: () => r.async(() => d.syncData()),
-      setTimes: (...args: unknown[]) => r.async(() => d.setTimes()),
-      setTimesAt: (...args: unknown[]) => r.async(() => d.setTimesAt()),
-      linkAt: (...args: unknown[]) => r.async(() => d.linkAt()),
-      readlinkAt: (...args: unknown[]) => r.async(() => d.readlinkAt()),
-      symlinkAt: (...args: unknown[]) => r.async(() => d.symlinkAt()),
+      setTimes: (a: NewTime, m: NewTime) => r.async(() => d.setTimes(a, m)),
+      setTimesAt: (f: PathFlags, p: string, a: NewTime, m: NewTime) =>
+        r.async(() => d.setTimesAt(f, p, a, m)),
+      linkAt: (f: PathFlags, p: string, to: FileDescriptor, np: string) =>
+        r.async(() => {
+          const target = this.descriptorViews.get(to);
+          if (!target) throw new ServiceError('invalid-resource', 'Foreign descriptor');
+          return d.linkAt(f, p, target, np);
+        }),
+      readlinkAt: (p: string) => r.async(() => d.readlinkAt(p)),
+      symlinkAt: (old: string, p: string) => r.async(() => d.symlinkAt(old, p)),
       metadataHash: () => r.async(() => d.metadataHash()),
-      metadataHashAt: (flags: unknown, path: string) =>
+      metadataHashAt: (flags: PathFlags, path: string) =>
         r.async(() => d.metadataHashAt(flags, path)),
       [Symbol.asyncDispose]: () => r.dispose(),
     });
@@ -440,7 +444,7 @@ export class ProcessServices {
         r.async(
           async () =>
             (await d.readDirectoryEntry()) as
-              { name: string; type: 'directory' | 'regular-file' } | undefined,
+              { name: string; type: 'directory' | 'regular-file' | 'symbolic-link' } | undefined,
         ),
       [Symbol.asyncDispose]: () => r.dispose(),
     });
@@ -485,6 +489,7 @@ export class ProcessServices {
       if (!d.data.file || !d.getFlags().read)
         throw new ServiceError('invalid-resource', 'Executable must be a readable file');
       spec = {
+        root: this.bootstrap.root,
         file: d.data.file,
         argv: [...argv],
         env: Object.fromEntries(env.map(({ key, value }) => [key, value])),

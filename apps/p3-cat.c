@@ -126,7 +126,7 @@ static bool copy_file(files_t *files, command_string_t operand) {
         return false;
       }
       wasi_filesystem_types_method_descriptor_open_at_args_t check = {
-        .self = dir, .path = {cwd.ptr + 1, cwd.len - 1},
+        .self = dir, .path = cwd.len == 1 ? (command_string_t){(uint8_t *)".", 1} : (command_string_t){cwd.ptr + 1, cwd.len - 1},
         .open_flags = WASI_FILESYSTEM_TYPES_OPEN_FLAGS_DIRECTORY,
         .flags = WASI_FILESYSTEM_TYPES_DESCRIPTOR_FLAGS_READ
       };
@@ -153,6 +153,7 @@ static bool copy_file(files_t *files, command_string_t operand) {
       command_string_free(&cwd);
     }
   }
+  if (!path.len) path = (command_string_t){(uint8_t *)".", 1};
   wasi_filesystem_types_method_descriptor_open_at_args_t args = {
     .self = dir, .path = path, .flags = WASI_FILESYSTEM_TYPES_DESCRIPTOR_FLAGS_READ
   };

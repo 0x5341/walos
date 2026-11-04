@@ -10,6 +10,7 @@ const forbidden = new Set([
   'service-model.ts',
   'platform.ts',
   'fs.ts',
+  'fs-store.ts',
   'p2-fs.ts',
   'p2-io.ts',
   'streams.ts',

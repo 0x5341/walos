@@ -8,7 +8,11 @@ for (const format of ['p1', 'p2', 'p3'] as const) {
       const path = `/packages/os/dist/internal/${format === 'p1' ? 'wasi' : format === 'p2' ? 'wasi2' : 'wasi3'}.js`;
       const module = await import(path);
       const contextModule = await import('/packages/os/dist/internal/' + 'process-context.js');
-      const os = await Walos.create();
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         const context = os.getHostProcess();
         const runtime =
@@ -67,7 +71,11 @@ for (const format of ['p1', 'p2', 'p3'] as const) {
       const { Walos } = await import('/tests/fixtures/host-harness.ts');
       const path = `/packages/os/dist/internal/${format === 'p1' ? 'wasi' : format === 'p2' ? 'wasi2' : 'wasi3'}.js`;
       const module = await import(path);
-      const os = await Walos.create();
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         const context = os.getHostProcess();
         const runtime =
