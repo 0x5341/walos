@@ -19,7 +19,7 @@ run = [
 [tasks."setup:browser"]
 description = "Install Chromium for Playwright tests"
 depends = ["setup:npm"]
-run = "npx playwright install chromium"
+run = "npx playwright install chromium --with-deps"
 
 [tasks.setup]
 description = "Set up npm dependencies and WASI tools for demo development"
