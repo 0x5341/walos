@@ -381,6 +381,78 @@ static bool lifecycle(command_list_string_t args) {
   if(equals(args.ptr[2],"trap")) __builtin_trap();
   return !equals(args.ptr[2],"nonzero");
 }
+static bool http_client(command_list_string_t args, bool invalid) {
+  wasi_http_types_future_result_option_own_trailers_error_code_writer_t trailer_writer;
+  wasi_http_types_future_result_option_own_trailers_error_code_t trailer =
+    wasi_http_types_future_result_option_own_trailers_error_code_new(&trailer_writer);
+  bool upload = args.len > 1 && equals(args.ptr[1], "http-post");
+  wasi_http_types_stream_u8_writer_t upload_writer;
+  wasi_http_types_stream_u8_t upload_stream = 0;
+  if (upload) upload_stream = wasi_http_types_stream_u8_new(&upload_writer);
+  wasi_http_types_tuple2_own_request_future_result_void_error_code_t request;
+  wasi_http_types_static_request_new(wasi_http_types_constructor_fields(), upload ? &upload_stream : NULL, trailer, NULL, &request);
+  wasi_http_types_result_option_own_trailers_error_code_t empty = {0};
+  CHECK(COMMAND_WAITABLE_STATE(completed(trailer_writer,
+    wasi_http_types_future_result_option_own_trailers_error_code_write(trailer_writer, &empty))) == COMMAND_WAITABLE_COMPLETED);
+  wasi_http_types_future_result_option_own_trailers_error_code_drop_writable(trailer_writer);
+  if (!invalid) {
+    CHECK(args.len > 2);
+    wasi_http_types_scheme_t scheme = {.tag = upload ? WASI_HTTP_TYPES_SCHEME_HTTPS : WASI_HTTP_TYPES_SCHEME_HTTP};
+    CHECK(wasi_http_types_method_request_set_scheme(wasi_http_types_borrow_request(request.f0), &scheme));
+    CHECK(wasi_http_types_method_request_set_authority(wasi_http_types_borrow_request(request.f0), &args.ptr[2]));
+    if (upload) {
+      wasi_http_types_method_t method = {.tag = WASI_HTTP_TYPES_METHOD_POST};
+      CHECK(wasi_http_types_method_request_set_method(wasi_http_types_borrow_request(request.f0), &method));
+    }
+    command_string_t path = text(args.len > 1 && equals(args.ptr[1], "http-pending") ? "/pending" : "/http-test");
+    CHECK(wasi_http_types_method_request_set_path_with_query(wasi_http_types_borrow_request(request.f0), &path));
+  }
+  wasi_http_client_result_own_response_error_code_t reply;
+  command_subtask_status_t sending = wasi_http_client_send(request.f0, &reply);
+  if (upload) {
+    uint8_t data[4096]; memset(data, 65, sizeof(data));
+    for (size_t i = 0; i < 32; i++) {
+      size_t offset = 0;
+      while (offset < sizeof(data)) {
+        command_waitable_status_t status = completed(upload_writer, wasi_http_types_stream_u8_write(upload_writer, data + offset, sizeof(data) - offset));
+        CHECK(COMMAND_WAITABLE_STATE(status) == COMMAND_WAITABLE_COMPLETED);
+        offset += COMMAND_WAITABLE_COUNT(status);
+      }
+    }
+    wasi_http_types_stream_u8_drop_writable(upload_writer);
+  }
+  subtask(sending);
+  wasi_http_types_result_void_error_code_t sent;
+  completed(request.f1, wasi_http_types_future_result_void_error_code_read(request.f1, &sent));
+  wasi_http_types_future_result_void_error_code_drop_readable(request.f1);
+  if (invalid) {
+    CHECK(reply.is_err && sent.is_err);
+    return print("p3-http-invalid-ok\n");
+  }
+  CHECK(!reply.is_err && !sent.is_err);
+  CHECK(wasi_http_types_method_response_get_status_code(wasi_http_types_borrow_response(reply.val.ok)) == 200);
+  wasi_http_types_future_result_void_error_code_writer_t handled_writer;
+  wasi_http_types_future_result_void_error_code_t handled = wasi_http_types_future_result_void_error_code_new(&handled_writer);
+  wasi_http_types_tuple2_stream_u8_future_result_option_own_trailers_error_code_t body;
+  wasi_http_types_static_response_consume_body(reply.val.ok, handled, &body);
+  uint8_t bytes[64]; size_t total = 0;
+  for (;;) {
+    command_waitable_status_t status = completed(body.f0, wasi_http_types_stream_u8_read(body.f0, bytes, sizeof(bytes)));
+    if (COMMAND_WAITABLE_STATE(status) == COMMAND_WAITABLE_DROPPED) break;
+    CHECK(COMMAND_WAITABLE_STATE(status) == COMMAND_WAITABLE_COMPLETED);
+    total += COMMAND_WAITABLE_COUNT(status);
+  }
+  CHECK(total == 7);
+  wasi_http_types_stream_u8_drop_readable(body.f0);
+  wasi_http_types_result_option_own_trailers_error_code_t trailers;
+  completed(body.f1, wasi_http_types_future_result_option_own_trailers_error_code_read(body.f1, &trailers));
+  CHECK(!trailers.is_err && !trailers.val.ok.is_some);
+  wasi_http_types_future_result_option_own_trailers_error_code_drop_readable(body.f1);
+  wasi_http_types_result_void_error_code_t success = {0};
+  completed(handled_writer, wasi_http_types_future_result_void_error_code_write(handled_writer, &success));
+  wasi_http_types_future_result_void_error_code_drop_writable(handled_writer);
+  return print("p3-http-ok\n");
+}
 static bool execute(void) {
   command_list_string_t args; wasi_cli_environment_get_arguments(&args);
   command_string_t mode=args.len>1?args.ptr[1]:text("hello");
@@ -441,7 +513,8 @@ static bool execute(void) {
     wasi_filesystem_types_result_void_error_code_t result;
     subtask(wasi_filesystem_types_method_descriptor_set_times(&args,&result)); return true;
   }
-  if (equals(mode,"http")) { wasi_http_types_constructor_fields(); return true; }
+  if (equals(mode,"http") || equals(mode,"http-post") || equals(mode,"http-pending")) return http_client(args, false);
+  if (equals(mode,"http-invalid")) return http_client(args, true);
   if (equals(mode,"socket")) { wasi_sockets_types_own_tcp_socket_t socket; wasi_sockets_types_error_code_t error;
     wasi_sockets_types_static_tcp_socket_create(WASI_SOCKETS_TYPES_IP_ADDRESS_FAMILY_IPV4,&socket,&error); return true; }
   if (equals(mode,"timezone")) {

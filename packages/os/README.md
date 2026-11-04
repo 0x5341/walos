@@ -94,7 +94,7 @@ migration and coverage documents for Result/Future/Stream and unsupported APIs.
 P2/P3 classification inspects actual component imports/exports and versions. Mixed,
 unknown and unsupported worlds fail before READY. P3 requires exactly the 0.3.2
 CLI entrypoint and known 0.3.2 imports. `run` returns a normal code, while a stop
-is `terminated` and an unimplemented operation is a Trap. HTTP and sockets trap. Links and timestamp mutation use the common persistent filesystem; see the repository coverage table.
+is `terminated` and an unimplemented operation is a Trap. HTTP handler and sockets trap. HTTP client sending uses browser Fetch. Links and timestamp mutation use the common persistent filesystem; see the repository coverage table.
 The build carries a checked patch to the pinned engine's future-drop producer
 notification; native stream/future cancellation is verified with compiled components.
 

@@ -82,7 +82,6 @@ for (const [mode, output] of [
     expect(result).toMatchObject({ exit: { kind: 'exited', code: 0 }, stdout: output, stderr: '' });
   });
 for (const [mode, operation] of [
-  ['http', 'wasi:http/types@0.3.2/[constructor]fields'],
   ['socket', 'wasi:sockets/types@0.3.2/[static]tcp-socket.create'],
 ] as const)
   test(`P3 ${mode} preserves the shared unimplemented Trap`, async ({ page }) => {

@@ -19,7 +19,7 @@ await using os = await Walos.create({ storage, env: { PWD: '/', PATH: '/bin' } }
 await using host = new HostProcessContext(os.getHostProcess());
 const [[root]] = host.fs.getDirectories();
 await using directory = root;
-// The consumer has already placed app.wasm in OPFS.
+// The consumer has already installed app.wasm through the Host API.
 await using executable = await directory.openAt({}, 'app.wasm', {}, { read: true });
 await using child = await host.process.spawn(
   executable, ['app'], [{ key: 'PWD', value: '/' }],
@@ -136,8 +136,8 @@ allow module workers and WebAssembly compilation.
 [Current performance comparison](docs/process-context-integration-performance.md) and the
 [historical engine comparison](docs/benchmarks/2026-10-25-engines.md) retain their
 original measurements; current measurements are linked from the migration notes.
-All official WASI 0.3.2 interfaces are public; HTTP, sockets and selected
-filesystem operations throw from the common Context. See the full
+All official WASI 0.3.2 interfaces are public; HTTP resources and client sending use browser Fetch with [documented limitations](docs/wasi-p3-http.md). HTTP handler and sockets throw from the common Context. Filesystem links and
+timestamp mutation use the shared persistent namespace. See the full
 [coverage table](docs/wasi-p3-coverage.md) and
 [step-by-step validation/performance record](docs/runtime-validation.md).
 JS Process execution remains deferred to #34.
