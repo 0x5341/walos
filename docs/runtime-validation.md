@@ -293,3 +293,33 @@ with `LD_LIBRARY_PATH=/tmp/walos-browser-libs/extracted/usr/lib/x86_64-linux-gnu
 Temporary Playwright configs selected ports 5274/4274 and the repository root as
 the server working directory to avoid a port used by another task; test matches
 and application configuration were unchanged.
+
+## HTTP resources and client (#54)
+
+The common Context implements HTTP fields, request, response, request-options and
+native async client sending. Browser limitations and error mappings are documented
+in [WASI P3 HTTP](wasi-p3-http.md); handler remains unsupported.
+
+`tests/http.spec.ts` exercises a compiled native P3 0.3.2 component against local
+HTTP and TLS HTTP/2 servers: response streams/trailer futures, a 128 KiB streaming
+upload and cancellation of an in-flight request by stopping its process. Host
+cases cover CORS rejection, inter-chunk timeout, send cancellation and OS disposal.
+The server verifies that stopping the process closes its pending connection.
+`http-invalid` in the native P3 suite verifies typed send and producer errors.
+`npm run test:http` covers byte-preserving fields, ownership, immutable views,
+local body/future ordering, cancellation, HTTP status errors and invalid URIs.
+
+The pinned jsco preview.2 needs two additional ABI corrections: explicit `eq`
+resource aliases in an imported interface share a canonical identity (HTTP
+headers/trailers alias fields), and option.none lowers to Context undefined.
+Incoming HTTP result futures are translated from native Promise payloads to the
+Context's tagged Results. The alias correction preserves resource type checks
+and fails the build if the pinned engine's patch points change.
+
+Validation on this branch: OS/app/production builds and `npm run check` passed;
+HTTP Node tests passed (10), the full development browser suite passed
+(254, with 6 production-only skips), focused raw API/P3/HTTP checks passed (38),
+and the bundled production suite passed (6). Local browser runs used isolated
+ports and existing extracted Chromium shared libraries. HTTP/2 tests generate
+short-lived local certificates with OpenSSL and enable certificate-error
+acceptance only in their test browser contexts.

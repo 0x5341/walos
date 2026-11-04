@@ -28,6 +28,7 @@ jobs:
       - run: npm run check:wit
       - run: diff -ru wit/generated work/wit-generated
       - run: npm run build
+      - run: npm run test:http
       - run: npm test
       - run: npm run test:production
       - run: npm run test:pages

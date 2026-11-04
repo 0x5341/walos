@@ -14,6 +14,8 @@ import type {
 } from '../wasi-types.js';
 import type * as Model from './service-model.js';
 import { apiShape } from './wasi-shape.js';
+import { createHttpTypes } from './http.js';
+import { createHttpClient } from './http-client.js';
 
 const ok = <T>(val: T): Result<T, never> => ({ tag: 'ok', val });
 const trap = (operation: string): never => {
@@ -471,6 +473,8 @@ export function createProcessApi(
     }
     group[iface.interface.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = Object.freeze(object);
   }
+  standard.http.types = createHttpTypes(scope);
+  standard.http.client = createHttpClient(scope);
   const terminal = (index: number) => {
     const value = index === 0 ? model.io.stdin : index === 1 ? model.io.stdout : model.io.stderr;
     const connected = (value as any).isTerminal;

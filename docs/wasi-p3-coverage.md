@@ -10,16 +10,17 @@ feature uses browser Intl data; unavailable IDs or offsets return none. Offsets 
 types are included in the API inventory even when they have no operation row.
 
 Trap means the shared Context throws UnimplementedWasiError with the WIT operation
-path. No unsupported success or invented Result variant is returned. HTTP resources are not fabricated: their constructors trap.
-Sockets use a process-local injected backend; without one, creation and host-name
+path. No unsupported success or invented Result variant is returned. Sockets use a process-local injected backend; without one, creation and host-name
 lookup return access-denied. IP literals are parsed locally. Backend-dependent
 means transport, options and authorization depend on the configured backend.
 See [Sockets backend](sockets-backend.md) for the contract and test coverage.
+HTTP resources and client sending are implemented; handler.handle still traps.
+See [HTTP transport limitations](wasi-p3-http.md).
 
 Partial filesystem behavior uses OPFS files/directories, optional timestamps,
 advisory no-op advice and existing unsupported flag results. Metadata hashes are
 computed from supported stat metadata. Hard/symbolic links and setting timestamps
-trap. No built-in HTTP or external socket transport is implemented.
+trap. No built-in external socket transport is implemented.
 
 Walos io endpoints are owned transfer capabilities. Their data operations use P3
 stream/future values; when-writable exposes a capacity Future, with a minimum
@@ -122,43 +123,43 @@ borrowed descriptor. Native P1/P2 representations stay in ABI adapters.
 | wasi:cli/terminal-stdin@0.3.2 | get-terminal-stdin | implemented |
 | wasi:cli/terminal-stdout@0.3.2 | get-terminal-stdout | implemented |
 | wasi:cli/terminal-stderr@0.3.2 | get-terminal-stderr | implemented |
-| wasi:http/types@0.3.2 | [constructor]fields | Trap |
-| wasi:http/types@0.3.2 | [static]fields.from-list | Trap |
-| wasi:http/types@0.3.2 | [method]fields.get | Trap |
-| wasi:http/types@0.3.2 | [method]fields.has | Trap |
-| wasi:http/types@0.3.2 | [method]fields.set | Trap |
-| wasi:http/types@0.3.2 | [method]fields.delete | Trap |
-| wasi:http/types@0.3.2 | [method]fields.get-and-delete | Trap |
-| wasi:http/types@0.3.2 | [method]fields.append | Trap |
-| wasi:http/types@0.3.2 | [method]fields.copy-all | Trap |
-| wasi:http/types@0.3.2 | [method]fields.clone | Trap |
-| wasi:http/types@0.3.2 | [static]request.new | Trap |
-| wasi:http/types@0.3.2 | [method]request.get-method | Trap |
-| wasi:http/types@0.3.2 | [method]request.set-method | Trap |
-| wasi:http/types@0.3.2 | [method]request.get-path-with-query | Trap |
-| wasi:http/types@0.3.2 | [method]request.set-path-with-query | Trap |
-| wasi:http/types@0.3.2 | [method]request.get-scheme | Trap |
-| wasi:http/types@0.3.2 | [method]request.set-scheme | Trap |
-| wasi:http/types@0.3.2 | [method]request.get-authority | Trap |
-| wasi:http/types@0.3.2 | [method]request.set-authority | Trap |
-| wasi:http/types@0.3.2 | [method]request.get-options | Trap |
-| wasi:http/types@0.3.2 | [method]request.get-headers | Trap |
-| wasi:http/types@0.3.2 | [static]request.consume-body | Trap |
-| wasi:http/types@0.3.2 | [constructor]request-options | Trap |
-| wasi:http/types@0.3.2 | [method]request-options.get-connect-timeout | Trap |
-| wasi:http/types@0.3.2 | [method]request-options.set-connect-timeout | Trap |
-| wasi:http/types@0.3.2 | [method]request-options.get-first-byte-timeout | Trap |
-| wasi:http/types@0.3.2 | [method]request-options.set-first-byte-timeout | Trap |
-| wasi:http/types@0.3.2 | [method]request-options.get-between-bytes-timeout | Trap |
-| wasi:http/types@0.3.2 | [method]request-options.set-between-bytes-timeout | Trap |
-| wasi:http/types@0.3.2 | [method]request-options.clone | Trap |
-| wasi:http/types@0.3.2 | [static]response.new | Trap |
-| wasi:http/types@0.3.2 | [method]response.get-status-code | Trap |
-| wasi:http/types@0.3.2 | [method]response.set-status-code | Trap |
-| wasi:http/types@0.3.2 | [method]response.get-headers | Trap |
-| wasi:http/types@0.3.2 | [static]response.consume-body | Trap |
+| wasi:http/types@0.3.2 | [constructor]fields | implemented |
+| wasi:http/types@0.3.2 | [static]fields.from-list | implemented |
+| wasi:http/types@0.3.2 | [method]fields.get | implemented |
+| wasi:http/types@0.3.2 | [method]fields.has | implemented |
+| wasi:http/types@0.3.2 | [method]fields.set | implemented |
+| wasi:http/types@0.3.2 | [method]fields.delete | implemented |
+| wasi:http/types@0.3.2 | [method]fields.get-and-delete | implemented |
+| wasi:http/types@0.3.2 | [method]fields.append | implemented |
+| wasi:http/types@0.3.2 | [method]fields.copy-all | implemented |
+| wasi:http/types@0.3.2 | [method]fields.clone | implemented |
+| wasi:http/types@0.3.2 | [static]request.new | implemented |
+| wasi:http/types@0.3.2 | [method]request.get-method | implemented |
+| wasi:http/types@0.3.2 | [method]request.set-method | implemented |
+| wasi:http/types@0.3.2 | [method]request.get-path-with-query | implemented |
+| wasi:http/types@0.3.2 | [method]request.set-path-with-query | implemented |
+| wasi:http/types@0.3.2 | [method]request.get-scheme | implemented |
+| wasi:http/types@0.3.2 | [method]request.set-scheme | implemented |
+| wasi:http/types@0.3.2 | [method]request.get-authority | implemented |
+| wasi:http/types@0.3.2 | [method]request.set-authority | implemented |
+| wasi:http/types@0.3.2 | [method]request.get-options | implemented |
+| wasi:http/types@0.3.2 | [method]request.get-headers | implemented |
+| wasi:http/types@0.3.2 | [static]request.consume-body | implemented |
+| wasi:http/types@0.3.2 | [constructor]request-options | implemented |
+| wasi:http/types@0.3.2 | [method]request-options.get-connect-timeout | partial |
+| wasi:http/types@0.3.2 | [method]request-options.set-connect-timeout | partial |
+| wasi:http/types@0.3.2 | [method]request-options.get-first-byte-timeout | partial |
+| wasi:http/types@0.3.2 | [method]request-options.set-first-byte-timeout | partial |
+| wasi:http/types@0.3.2 | [method]request-options.get-between-bytes-timeout | partial |
+| wasi:http/types@0.3.2 | [method]request-options.set-between-bytes-timeout | partial |
+| wasi:http/types@0.3.2 | [method]request-options.clone | implemented |
+| wasi:http/types@0.3.2 | [static]response.new | implemented |
+| wasi:http/types@0.3.2 | [method]response.get-status-code | implemented |
+| wasi:http/types@0.3.2 | [method]response.set-status-code | implemented |
+| wasi:http/types@0.3.2 | [method]response.get-headers | implemented |
+| wasi:http/types@0.3.2 | [static]response.consume-body | implemented |
 | wasi:http/handler@0.3.2 | handle | Trap |
-| wasi:http/client@0.3.2 | send | Trap |
+| wasi:http/client@0.3.2 | send | partial |
 | walos:runtime/io@0.3.2 | [method]input-endpoint.read-via-stream | implemented |
 | walos:runtime/io@0.3.2 | [method]output-endpoint.when-writable | implemented |
 | walos:runtime/io@0.3.2 | [method]output-endpoint.write-via-stream | implemented |

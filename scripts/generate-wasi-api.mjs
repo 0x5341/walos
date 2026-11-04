@@ -100,7 +100,7 @@ const functionName = (f) =>
       );
 function signature(f, iface, method = false) {
   const params = (method ? f.params.slice(1) : f.params)
-    .map((p) => `${camel(p.name)}: ${type(p.type, iface)}`)
+    .map((p) => `${p.name === 'this' ? 'resource' : camel(p.name)}: ${type(p.type, iface)}`)
     .join(', ');
   let result = type(f.result, iface);
   if (asyncKind(f)) result = `Promise<${result}>`;
