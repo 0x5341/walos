@@ -112,6 +112,8 @@ export function nativeImports(
     return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, lift(v)]));
   };
   const lower = (value: any): any => {
+    // jsco represents option.none as null; the Context uses undefined.
+    if (value === null) return undefined;
     if (!value || typeof value !== 'object' || ArrayBuffer.isView(value)) return value;
     if (typeof value[Symbol.asyncIterator] === 'function') {
       const iterator = value[Symbol.asyncIterator]();
@@ -183,6 +185,21 @@ export function nativeImports(
         try {
           guard();
           args = args.map(lower);
+          // Native future<result<T,E>> resolves/rejects its payload, whereas the
+          // shared Context uses explicit tagged Results in Future values.
+          if (shape.package === 'wasi:http' && shape.interface === 'types') {
+            const index = op.wit.endsWith('.new') ? 2 : op.wit.endsWith('.consume-body') ? 1 : -1;
+            if (index >= 0 && args[index] instanceof Future) {
+              const source = args[index] as Future<unknown>;
+              args[index] = new Future(
+                Promise.resolve(source).then(
+                  (val) => ({ tag: 'ok', val }),
+                  (val) => ({ tag: 'err', val }),
+                ),
+                () => source.cancel(),
+              );
+            }
+          }
           const kind = op.kind;
           const value =
             typeof kind === 'object' && ('method' in kind || 'async-method' in kind)

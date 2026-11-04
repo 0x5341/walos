@@ -532,7 +532,7 @@ export namespace WasiHttpTypes {
         options: Own<RequestOptions> | undefined,
       ): readonly [Own<Request>, Future<Result<void, ErrorCode>>];
       consumeBody(
-        this: Own<Request>,
+        resource: Own<Request>,
         res: Future<Result<void, ErrorCode>>,
       ): readonly [Stream<U8>, Future<Result<Own<Trailers> | undefined, ErrorCode>>];
     };
@@ -544,7 +544,7 @@ export namespace WasiHttpTypes {
         trailers: Future<Result<Own<Trailers> | undefined, ErrorCode>>,
       ): readonly [Own<Response>, Future<Result<void, ErrorCode>>];
       consumeBody(
-        this: Own<Response>,
+        resource: Own<Response>,
         res: Future<Result<void, ErrorCode>>,
       ): readonly [Stream<U8>, Future<Result<Own<Trailers> | undefined, ErrorCode>>];
     };
