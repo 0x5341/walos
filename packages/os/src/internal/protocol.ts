@@ -2,6 +2,7 @@ import type { Exit, ProcessInfo } from '../types.js';
 import type { ComponentMetrics } from './component.js';
 export type { Exit } from '../types.js';
 export type CoreEvent =
+  | { type: 'http-disconnected'; connection: number }
   | { type: 'processes'; processes: ProcessInfo[] }
   | { type: 'exit'; pid: number; exit: Exit; durationMs: number }
   | { type: 'booted'; pid: number }
@@ -39,6 +40,7 @@ export type StreamRef =
       append: boolean;
     };
 export interface Spec {
+  http?: { listen?: { port: number; path: string }; next?: number };
   root: FileSystemDirectoryHandle;
   sockets?: import('../types.js').SocketBackendOptions;
   file: FileSystemFileHandle;
@@ -47,6 +49,8 @@ export interface Spec {
   stdio: (StreamRef | null)[];
 }
 export type Operation =
+  | { op: 'http-connect'; pid?: number; url?: string }
+  | { op: 'http-close'; connection: number; cancel: boolean }
   | { op: 'spawn'; spec: Spec }
   | { op: 'cancel-spawn'; requestId: number }
   | { op: 'wait'; pid: number; release?: boolean }
@@ -56,7 +60,14 @@ export type Operation =
   | { op: 'stream-close'; streamId: number };
 export type Request = Operation & { type: 'request'; id: number };
 export type RpcError = {
-  kind: 'invalid-resource' | 'already-consumed' | 'startup' | 'timeout' | 'cancelled' | 'internal';
+  kind:
+    | 'invalid-resource'
+    | 'already-consumed'
+    | 'startup'
+    | 'timeout'
+    | 'cancelled'
+    | 'internal'
+    | 'busy';
   message: string;
 };
 export class RpcFailure extends Error {
@@ -84,6 +95,8 @@ export interface ProcessMetrics {
   component?: ComponentMetrics;
 }
 export type ToProcess =
+  | { type: 'http-incoming'; connection: number; port: MessagePort }
+  | { type: 'http-disconnected'; connection: number }
   | Reply
   | { type: 'start'; pid: number; ppid?: number | null; spec: Spec; measure?: boolean }
   | { type: 'stop' };

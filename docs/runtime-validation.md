@@ -298,7 +298,7 @@ and application configuration were unchanged.
 
 The common Context implements HTTP fields, request, response, request-options and
 native async client sending. Browser limitations and error mappings are documented
-in [WASI P3 HTTP](wasi-p3-http.md); handler remains unsupported.
+in [WASI P3 HTTP](wasi-p3-http.md). HTTP handler execution is covered by #55 below.
 
 `tests/http.spec.ts` exercises a compiled native P3 0.3.2 component against local
 HTTP and TLS HTTP/2 servers: response streams/trailer futures, a 128 KiB streaming
@@ -368,3 +368,44 @@ extracted under `work/browser-libs` and selected with `LD_LIBRARY_PATH`.
 `npm run test:benchmark` and `npm run benchmark -- --trials 1` also passed; the
 benchmark now supplies its own initialized storage handle. This checks artifact
 integrity and workload execution, without a hardware-dependent performance gate.
+
+## HTTP service, middleware and process-local client routing (#55)
+
+Dedicated HTTP startup accepts native `wasi:http/handler@0.3.2` exports, runs one
+instance per Worker and publishes optional localhost port/path prefixes. Both
+Host and native P3 `client.send` resolve through the same Core registry. Matching
+requests use direct MessagePorts with read credit capped at 64 KiB; only unmatched
+URLs reach Fetch. Middleware's imported handler has a fixed next-service link.
+The public API, serial exchange lifetime, fallback rules and browser ingress are
+specified in [WASI P3 HTTP](wasi-p3-http.md).
+
+`tests/fixtures/http-service.c` and `http-middleware.c` are real native async
+components compiled with the pinned WASI SDK 34 and wit-bindgen 0.63.0 against the
+official 0.3.2 WIT. `scripts/build-http-probe.mjs` validates their worlds and
+canonical ABI features. The CLI probe also starts a private service through the
+new Walos WIT API, directly calls its handler, stops it and checks one-shot wait.
+
+The browser tests cover streaming response-before-upload, backpressure, raw
+header bytes/duplicates, nonempty trailers, instance reuse, longest-prefix and
+port routing, duplicate/replacement registration, Fetch fallback, multiple
+middleware hops and short-circuit responses. Failure cases include native typed
+trailer errors, busy and recursive calls, traps, cancellation before/after
+response, dropped response bodies, producer cancellation, next-service exit,
+non-yielding Worker termination, client exit and OS disposal. Busy also remains
+active after EOF until the consumer's handling result arrives. A production
+bundle test invokes a published service from another native P3 process under the
+existing CSP.
+
+The pinned jsco preview.2 future table copied guest-written bytes without decoding
+their values for JS consumers. The checked browser build patch now decodes typed
+future payloads at write time, before guest memory is released, and preserves
+owned resources and result resolve/reject semantics. Native bindings also lower
+option.none inside future payloads, release moved HTTP resources and retain only
+unsettled inbound futures. The native nonempty-trailer and trailer-error cases
+exercise both success and failure through this ABI boundary.
+
+Validation (2026-11-04, Node 26.13.0, npm 12.2.1, Playwright Chromium):
+`npm run check` and HTTP Node tests (10) passed. The development suite passed
+(283, with 9 production-only skips); the final focused HTTP/service/P3 suite,
+including subsequent native startup and handling-completion cases, passed (44).
+The production bundle suite passed (9), including native process-to-service HTTP.

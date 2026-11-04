@@ -2,7 +2,7 @@
 
 A browser OS library with one logical Host ProcessContext and explicit WASI
 Preview 1/2/3 processes. Components run with **jsco only**, including native
-async WASI 0.3.2 CLI components. OPFS file I/O stays
+async WASI 0.3.2 CLI, HTTP service and middleware components. OPFS file I/O stays
 local to the Host/Process Worker; bounded Pipe DATA travels over direct MessagePorts.
 Only run trusted applications: Worker boundaries do not enforce capability isolation.
 
@@ -137,7 +137,9 @@ allow module workers and WebAssembly compilation.
 [historical engine comparison](docs/benchmarks/2026-10-25-engines.md) retain their
 original measurements; current measurements are linked from the migration notes.
 All official WASI 0.3.2 interfaces are public; HTTP resources and client sending use
-browser Fetch with [documented limitations](docs/wasi-p3-http.md). HTTP handler throws from the common Context. Filesystem links and timestamp
+browser Fetch and process-local HTTP service routing with
+[documented behavior and limitations](docs/wasi-p3-http.md). Native P3 HTTP service
+and middleware processes start through `host.http.start`. Filesystem links and timestamp
 mutation use the shared persistent namespace.
 Sockets support a [process-local injected backend](docs/sockets-backend.md);
 network access is denied by default. See the full

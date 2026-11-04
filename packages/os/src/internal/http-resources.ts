@@ -55,6 +55,17 @@ export class HttpRequest extends Message implements HTTP.Request {
       throw new ServiceError('busy', 'Drop HTTP request options before transferring request');
     super.move();
   }
+  /** Transfer the handle synchronously while an asynchronous route is resolved. */
+  transfer() {
+    this.check();
+    const request = new HttpRequest(this.headers, this.body, this.options);
+    request.method = { ...this.method };
+    request.path = this.path;
+    request.scheme = this.scheme && { ...this.scheme };
+    request.authority = this.authority;
+    this.move();
+    return request;
+  }
   consume() {
     // consume-body explicitly allows existing child options to remain valid.
     super.move();

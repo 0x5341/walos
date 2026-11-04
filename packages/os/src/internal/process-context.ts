@@ -1,5 +1,9 @@
 import type { NewTime } from './fs-store.js';
 import { SocketServices } from './sockets.js';
+import { HttpProcesses } from './http-processes.js';
+import { HttpRequest } from './http-resources.js';
+import { cancellable, cancelAsync } from '../async.js';
+import type { WalosRuntimeHttp as Http } from '../wasi-types.js';
 import {
   ServiceError,
   UnimplementedWasiError,
@@ -87,6 +91,7 @@ const size = (length: bigint) => {
 };
 /** Private process bootstrap. Runtime adapters receive only the resulting Context. */
 export interface ContextBootstrap {
+  http?: Spec['http'];
   sockets?: import('../types.js').SocketBackendOptions;
   root: FileSystemDirectoryHandle;
   pid: number;
@@ -131,6 +136,8 @@ export class ProcessServices {
   private permits = new WeakMap<object, number>();
   private standard: { stream: Awaited<ReturnType<typeof connect>>; shared: SharedStream }[] = [];
   readonly context: ProcessContext;
+  readonly http: HttpProcesses;
+  private httpServices = new WeakSet<Http.Service>();
   private closeApi: () => Promise<void>;
   constructor(
     private bootstrap: ContextBootstrap,
@@ -218,10 +225,96 @@ export class ProcessServices {
       random: guarded(random),
     });
     this.socketServices = new SocketServices(check);
-    const api = createProcessApi(model, this.socketServices);
+    this.http = new HttpProcesses(rpc, check);
+    const api = createProcessApi(model, this.socketServices, {
+      send: (request) => this.http.send(request),
+      handle: (request) => {
+        if (bootstrap.http?.next === undefined) {
+          return Promise.resolve(request[Symbol.asyncDispose]()).then(() => ({
+            tag: 'err',
+            val: { tag: 'configuration-error' },
+          }));
+        }
+        if (!(request instanceof HttpRequest))
+          throw new ServiceError('invalid-resource', 'Foreign HTTP request');
+        const pending = this.http.send(this.http.add(request.transfer()), bootstrap.http.next);
+        return cancellable(
+          pending.then((value) => value!),
+          () => cancelAsync(pending),
+        );
+      },
+      start: async (file, args, environment, listen, next, stdout, stderr) => {
+        let nextPid: number | undefined;
+        if (next) {
+          try {
+            nextPid = this.httpServices.has(next) ? next.pid() : -1;
+          } catch {
+            nextPid = -1;
+          }
+        }
+        const child = await this.spawn(file, args, environment, undefined, stdout, stderr, {
+          listen: listen && { ...listen },
+          next: nextPid,
+        });
+        let live = true;
+        const assert = () => {
+          if (!live) throw new ServiceError('invalid-resource', 'HTTP service handle disposed');
+        };
+        const service: Http.Service = {
+          pid: () => {
+            assert();
+            return child.pid();
+          },
+          handle: (request) => {
+            assert();
+            if (!(request instanceof HttpRequest))
+              throw new ServiceError('invalid-resource', 'Foreign HTTP request');
+            const operation = this.http.send(this.http.add(request.transfer()), child.pid(), true);
+            const finished =
+              (operation as Promise<unknown> & { finished?: Promise<void> }).finished ?? operation;
+            return Object.assign(
+              cancellable(
+                operation.then((value) => value!),
+                () => cancelAsync(operation),
+                finished,
+              ),
+              { finished },
+            );
+          },
+          wait: async () => {
+            assert();
+            try {
+              const exit = await child.wait();
+              return {
+                tag: 'ok',
+                val:
+                  exit.kind === 'exited'
+                    ? { tag: 'exited', val: exit.code }
+                    : { tag: exit.kind, val: exit.message },
+              } as const;
+            } catch (error) {
+              if (error instanceof ServiceError && error.code === 'already-consumed')
+                return { tag: 'err', val: { tag: 'already-consumed' } };
+              throw error;
+            }
+          },
+          requestStop: () => {
+            assert();
+            return child.requestStop();
+          },
+          [Symbol.asyncDispose]: () => {
+            live = false;
+            return child[Symbol.asyncDispose]();
+          },
+        };
+        this.httpServices.add(service);
+        return service;
+      },
+    });
     this.context = new ProcessContextImpl(api.context);
     this.closeApi = async () => {
       try {
+        await this.http[Symbol.asyncDispose]();
         await this.socketServices[Symbol.asyncDispose]();
       } finally {
         await api.dispose();
@@ -456,6 +549,7 @@ export class ProcessServices {
     stdin?: PublicInput,
     stdout?: PublicOutput,
     stderr?: PublicOutput,
+    http?: Spec['http'],
   ): Promise<PublicChild> {
     // All explicit endpoints move synchronously, including when another argument is invalid.
     const refs: (StreamRef | null)[] = [];
@@ -489,11 +583,21 @@ export class ProcessServices {
       if (!d.data.file || !d.getFlags().read)
         throw new ServiceError('invalid-resource', 'Executable must be a readable file');
       spec = {
+        http,
         root: this.bootstrap.root,
         file: d.data.file,
         argv: [...argv],
         env: Object.fromEntries(env.map(({ key, value }) => [key, value])),
-        stdio: refs,
+        stdio: http
+          ? refs.map(
+              (ref, index) =>
+                ref ?? {
+                  kind: 'null' as const,
+                  id: 0,
+                  direction: index === 0 ? ('in' as const) : ('out' as const),
+                },
+            )
+          : refs,
       };
     } catch (e) {
       return call(async () => {

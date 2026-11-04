@@ -5,6 +5,8 @@ import type {
   WasiFilesystemTypes as FS,
   WalosRuntimeIo as IO,
   WalosRuntimeProcess as Process,
+  WalosRuntimeHttp as Http,
+  WasiHttpTypes as HTTP,
 } from '../wasi-types.js';
 
 export function unwrap<T, E>(result: Result<T, E>): T {
@@ -567,6 +569,47 @@ export class AbiChild extends View<Process.ChildProcess> {
   }
 }
 
+export interface HttpStartOptions {
+  readonly listen?: { readonly port: number; readonly path?: string };
+  readonly next?: AbiHttpService;
+  readonly argv?: readonly string[];
+  readonly env?: readonly { readonly key: string; readonly value: string }[];
+  readonly stdout?: AbiOutput;
+  readonly stderr?: AbiOutput;
+}
+export class AbiHttpService extends View<Http.Service> {
+  pid() {
+    this.assert();
+    return this.resource.pid();
+  }
+  handle(request: HTTP.Request, options: { readonly signal?: AbortSignal } = {}) {
+    this.assert();
+    const pending = this.resource.handle(request);
+    const cancel = () => {
+      void cancelAsync(pending);
+    };
+    options.signal?.addEventListener('abort', cancel, { once: true });
+    if (options.signal?.aborted) cancel();
+    const finished =
+      (pending as Promise<unknown> & { finished?: Promise<void> }).finished ?? pending;
+    void finished
+      .finally(() => options.signal?.removeEventListener('abort', cancel))
+      .catch(() => {});
+    return pending;
+  }
+  async wait(): Promise<Exit> {
+    this.assert();
+    const exit = unwrap(await this.resource.wait());
+    return exit.tag === 'exited'
+      ? { kind: 'exited', code: exit.val }
+      : { kind: exit.tag, message: exit.val };
+  }
+  requestStop() {
+    this.assert();
+    return this.resource.requestStop();
+  }
+}
+
 /** Representation conversion only; it owns no Context, backend or OS services. */
 export function createAbiView(context: ProcessContext, own: OwnView = identity) {
   const environment = context.wasi.cli.environment;
@@ -678,6 +721,35 @@ export function createAbiView(context: ProcessContext, own: OwnView = identity) 
         });
       },
     },
+    http: {
+      start: (executable: AbiDescriptor, options: HttpStartOptions = {}) => {
+        const pending = context.walos.http.start(
+          executable?.resource ?? executable,
+          options.argv ?? [],
+          (options.env ?? []).map(({ key, value }) => [key, value] as const),
+          options.listen && { port: options.listen.port, path: options.listen.path ?? '/' },
+          options.next?.resource,
+          options.stdout?.resource,
+          options.stderr?.resource,
+        );
+        for (const output of [options.stdout, options.stderr])
+          if (output?.namespace === context) output.moved();
+        return pending.then((result) => {
+          if (result.tag === 'err') {
+            const error = result.val;
+            throw new ServiceError(
+              error.tag === 'initialization'
+                ? 'startup'
+                : error.tag === 'invalid-descriptor' || error.tag === 'invalid-stream'
+                  ? 'invalid-resource'
+                  : error.tag,
+              'val' in error ? error.val : error.tag,
+            );
+          }
+          return new AbiHttpService(result.val, own, context);
+        });
+      },
+    },
     clock: {
       wall: {
         now: context.wasi.clocks.systemClock.now,
@@ -704,9 +776,7 @@ export function createAbiView(context: ProcessContext, own: OwnView = identity) 
     },
     unsupportedSocket: (iface: string, _operation: string, args: unknown[]) => {
       const family = args.find((value) => value === 'ipv4' || value === 'ipv6') as
-        | 'ipv4'
-        | 'ipv6'
-        | undefined;
+        'ipv4' | 'ipv6' | undefined;
       if (iface.includes('udp'))
         return context.wasi.sockets.types.udpSocket.create(family ?? 'ipv4');
       if (iface.includes('ip-name-lookup'))

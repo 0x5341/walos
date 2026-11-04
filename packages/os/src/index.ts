@@ -16,6 +16,8 @@ export {
   type HostInput,
   type HostOutput,
   type HostChildProcess,
+  type HostHttpService,
+  type HttpStartOptions,
 } from './host-process.js';
 
 /** A session with one logical Host process and no automatically started applications. */
@@ -139,6 +141,10 @@ export class Walos implements AsyncDisposable {
     this.emit({ type: 'error', error });
   }
   private receive(message: CoreEvent) {
+    if (message.type === 'http-disconnected') {
+      this.host?.http.disconnected(message.connection);
+      return;
+    }
     if (message.type === 'disposed') {
       this.resolveDispose?.();
       return;

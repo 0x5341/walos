@@ -1,8 +1,106 @@
 # WASI 0.3.2 HTTP
 
-The common Context implements `wasi:http/types` resources and `client.send` for
-Host callers and native async P3 CLI components. `handler.handle` remains an
-unimplemented trap. No P2 HTTP adapter or server is provided.
+The common Context implements `wasi:http/types`, `client.send` and linked
+`handler.handle` for Host callers and native async P3 components. Dedicated HTTP
+processes export `wasi:http/handler@0.3.2`; CLI spawn rejects these components.
+No P2 HTTP adapter is provided.
+
+## HTTP processes and browser ingress
+
+```ts
+await using host = new HostProcessContext(os.getHostProcess());
+// executable and middleware are readable Host descriptors installed by the caller.
+await using service = await host.http.start(executable);
+await using entry = await host.http.start(middleware, {
+  next: service,
+  listen: { port: 3000, path: '/api' },
+});
+const http = host.context.wasi.http;
+const [request, sent] = http.types.request.new(
+  http.types.fields.new(), undefined,
+  new Future({ tag: 'ok', val: undefined }), undefined,
+);
+request.setScheme({ tag: 'HTTP' });
+request.setAuthority('localhost:3000');
+request.setPathWithQuery('/api/users?q=1');
+const reply = await http.client.send(request);
+if (reply.tag === 'ok') {
+  const [body, trailers] = http.types.response.consumeBody(
+    reply.val, new Future({ tag: 'ok', val: undefined }),
+  );
+  while (await body.read(65536)) { /* consume response */ }
+  const ending = await trailers;
+  if (ending.tag === 'ok') await ending.val?.[Symbol.asyncDispose]();
+}
+await sent;
+await entry.requestStop();
+await entry.wait();
+await service.requestStop();
+await service.wait();
+```
+
+The raw API is `context.walos.http.start(executable, argv, env, listen, next,
+stdout, stderr)`. The Host wrapper accepts `argv`, `env`, `stdout`, `stderr`,
+`listen` and `next` in an options object. Descriptors and next-service handles are
+borrowed; explicit stdout/stderr endpoints move. Stdin is EOF. Omitted outputs
+use Null, as for CLI processes. Omitting `listen` creates a private service for
+direct `service.handle(request, { signal })` or middleware links. `listen.port`
+must be 1..65535; `listen.path` defaults to `/`. Paths must be canonical absolute
+URL paths without query/fragment; trailing slashes normalize away except at `/`.
+
+Host and all native P3 processes share one registry per Walos session. Explicit
+`http://localhost:<port>` requests choose the longest matching path prefix at a
+path-element boundary: `/api` matches `/api` and `/api/users`, not `/apix`.
+Queries do not participate in routing; the original path/query reaches the guest.
+Different prefixes may share a port. Duplicate registrations, including pending
+starts, fail; registration becomes visible only after READY and disappears on
+exit. A replacement never receives requests already bound to an older process.
+
+Only `http` and the URL hostname `localhost` use this registry. Missing scheme
+still defaults to HTTPS, and missing HTTP port is 80. With no matching live
+registration, `client.send` uses browser Fetch, including unmatched localhost
+ports/paths. After selecting an internal service, errors, busy, traps and stops
+never fall back to Fetch or retry. `https`, IP literals and other hostnames use
+Fetch directly. This routing is not a network or capability isolation boundary.
+
+Each service has its own Worker and serves one exchange at a time, without a
+queue. Busy lasts through request and response EOF, trailers and handling-result
+futures, even after `handle` returns. Direct Host calls reject with
+`ServiceError('busy')`; WASI `client.send`/handler calls return `internal-error`
+with a diagnostic. Middleware's imported handler is fixed to `next` at startup;
+an imported handler without `next` is an initialization error. Its `client.send`
+uses ordinary URL routing. Unlinked Context handler calls return
+`configuration-error`. Runtime validation rejects unknown/mixed WASI versions.
+
+Incoming browser requests are supplied explicitly by Host JavaScript. These
+ports are virtual within Walos: they do not open browser/OS TCP listeners, and
+ordinary browser `fetch()` does not enter the registry. Service Worker integration
+and external HTTP listeners are not provided.
+
+## Internal streaming and lifetime
+
+Processes connect through direct MessagePorts; Core carries only routing and
+lifetime control. A read grants up to 64 KiB of body credit. Request uploads and
+response downloads can progress together; `send` returns a response before upload
+EOF. Headers retain raw bytes, duplicates and order, and nonempty trailers work
+in both directions. Fetch-only method/header/CORS/upload restrictions do not apply
+internally. Request options travel with the message, but network timeout options
+are not applied to internal calls.
+
+HTTP errors remain tagged WASI errors; HTTP error statuses remain responses.
+Errors in guest-produced trailer futures keep their WASI error. Traps terminate
+the service and fail active exchanges. Cancelling send, dropping an active response
+body, cancelling a producer completion, or aborting a Host handle call interrupts
+the exchange and stops its target process to reclaim guest work. The Host signal
+remains connected after response headers, through exchange completion. Dropping
+an incoming request body can instead produce a short-circuit response.
+
+Peer exit, forced Worker termination and OS disposal settle pending reads and
+futures and reclaim ports. Cancelling a middleware exchange also cancels its
+active downstream work. Restart and retry are explicit. `wait()` is one-shot;
+dropping a service handle only releases the handle, while `requestStop()` stops
+the process and unregisters its route. Disposing the Host convenience wrapper
+does not stop services; disposing Walos does.
 
 Fields retain original casing, order, duplicate values and raw bytes locally.
 Comparison is case insensitive and clones are mutable deep copies. Message

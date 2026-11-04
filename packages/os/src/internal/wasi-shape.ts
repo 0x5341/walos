@@ -69,495 +69,6 @@ export const apiShape = [
     ],
   },
   {
-    package: 'wasi:filesystem',
-    interface: 'types',
-    operations: [
-      {
-        wit: '[method]descriptor.read-via-stream',
-        ts: 'readViaStream',
-        kind: {
-          method: 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.write-via-stream',
-        ts: 'writeViaStream',
-        kind: {
-          method: 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.append-via-stream',
-        ts: 'appendViaStream',
-        kind: {
-          method: 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.advise',
-        ts: 'advise',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.sync-data',
-        ts: 'syncData',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.get-flags',
-        ts: 'getFlags',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.get-type',
-        ts: 'getType',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.set-size',
-        ts: 'setSize',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.set-times',
-        ts: 'setTimes',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.read-directory',
-        ts: 'readDirectory',
-        kind: {
-          method: 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.sync',
-        ts: 'sync',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.create-directory-at',
-        ts: 'createDirectoryAt',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.stat',
-        ts: 'stat',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.stat-at',
-        ts: 'statAt',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.set-times-at',
-        ts: 'setTimesAt',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.link-at',
-        ts: 'linkAt',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.open-at',
-        ts: 'openAt',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.readlink-at',
-        ts: 'readlinkAt',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.remove-directory-at',
-        ts: 'removeDirectoryAt',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.rename-at',
-        ts: 'renameAt',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.symlink-at',
-        ts: 'symlinkAt',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.unlink-file-at',
-        ts: 'unlinkFileAt',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.is-same-object',
-        ts: 'isSameObject',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.metadata-hash',
-        ts: 'metadataHash',
-        kind: {
-          'async-method': 23,
-        },
-      },
-      {
-        wit: '[method]descriptor.metadata-hash-at',
-        ts: 'metadataHashAt',
-        kind: {
-          'async-method': 23,
-        },
-      },
-    ],
-  },
-  {
-    package: 'wasi:filesystem',
-    interface: 'preopens',
-    operations: [
-      {
-        wit: 'get-directories',
-        ts: 'getDirectories',
-        kind: 'freestanding',
-      },
-    ],
-  },
-  {
-    package: 'wasi:sockets',
-    interface: 'types',
-    operations: [
-      {
-        wit: '[static]tcp-socket.create',
-        ts: 'create',
-        kind: {
-          static: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.bind',
-        ts: 'bind',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.connect',
-        ts: 'connect',
-        kind: {
-          'async-method': 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.listen',
-        ts: 'listen',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.send',
-        ts: 'send',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.receive',
-        ts: 'receive',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.get-local-address',
-        ts: 'getLocalAddress',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.get-remote-address',
-        ts: 'getRemoteAddress',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.get-is-listening',
-        ts: 'getIsListening',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.get-address-family',
-        ts: 'getAddressFamily',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.set-listen-backlog-size',
-        ts: 'setListenBacklogSize',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.get-keep-alive-enabled',
-        ts: 'getKeepAliveEnabled',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.set-keep-alive-enabled',
-        ts: 'setKeepAliveEnabled',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.get-keep-alive-idle-time',
-        ts: 'getKeepAliveIdleTime',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.set-keep-alive-idle-time',
-        ts: 'setKeepAliveIdleTime',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.get-keep-alive-interval',
-        ts: 'getKeepAliveInterval',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.set-keep-alive-interval',
-        ts: 'setKeepAliveInterval',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.get-keep-alive-count',
-        ts: 'getKeepAliveCount',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.set-keep-alive-count',
-        ts: 'setKeepAliveCount',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.get-hop-limit',
-        ts: 'getHopLimit',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.set-hop-limit',
-        ts: 'setHopLimit',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.get-receive-buffer-size',
-        ts: 'getReceiveBufferSize',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.set-receive-buffer-size',
-        ts: 'setReceiveBufferSize',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.get-send-buffer-size',
-        ts: 'getSendBufferSize',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[method]tcp-socket.set-send-buffer-size',
-        ts: 'setSendBufferSize',
-        kind: {
-          method: 52,
-        },
-      },
-      {
-        wit: '[static]udp-socket.create',
-        ts: 'create',
-        kind: {
-          static: 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.bind',
-        ts: 'bind',
-        kind: {
-          method: 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.connect',
-        ts: 'connect',
-        kind: {
-          method: 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.disconnect',
-        ts: 'disconnect',
-        kind: {
-          method: 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.send',
-        ts: 'send',
-        kind: {
-          'async-method': 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.receive',
-        ts: 'receive',
-        kind: {
-          'async-method': 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.get-local-address',
-        ts: 'getLocalAddress',
-        kind: {
-          method: 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.get-remote-address',
-        ts: 'getRemoteAddress',
-        kind: {
-          method: 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.get-address-family',
-        ts: 'getAddressFamily',
-        kind: {
-          method: 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.get-unicast-hop-limit',
-        ts: 'getUnicastHopLimit',
-        kind: {
-          method: 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.set-unicast-hop-limit',
-        ts: 'setUnicastHopLimit',
-        kind: {
-          method: 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.get-receive-buffer-size',
-        ts: 'getReceiveBufferSize',
-        kind: {
-          method: 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.set-receive-buffer-size',
-        ts: 'setReceiveBufferSize',
-        kind: {
-          method: 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.get-send-buffer-size',
-        ts: 'getSendBufferSize',
-        kind: {
-          method: 53,
-        },
-      },
-      {
-        wit: '[method]udp-socket.set-send-buffer-size',
-        ts: 'setSendBufferSize',
-        kind: {
-          method: 53,
-        },
-      },
-    ],
-  },
-  {
-    package: 'wasi:sockets',
-    interface: 'ip-name-lookup',
-    operations: [
-      {
-        wit: 'resolve-addresses',
-        ts: 'resolveAddresses',
-        kind: 'async-freestanding',
-      },
-    ],
-  },
-  {
     package: 'wasi:random',
     interface: 'insecure-seed',
     operations: [
@@ -597,6 +108,495 @@ export const apiShape = [
         wit: 'get-random-u64',
         ts: 'getRandomU64',
         kind: 'freestanding',
+      },
+    ],
+  },
+  {
+    package: 'wasi:filesystem',
+    interface: 'types',
+    operations: [
+      {
+        wit: '[method]descriptor.read-via-stream',
+        ts: 'readViaStream',
+        kind: {
+          method: 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.write-via-stream',
+        ts: 'writeViaStream',
+        kind: {
+          method: 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.append-via-stream',
+        ts: 'appendViaStream',
+        kind: {
+          method: 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.advise',
+        ts: 'advise',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.sync-data',
+        ts: 'syncData',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.get-flags',
+        ts: 'getFlags',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.get-type',
+        ts: 'getType',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.set-size',
+        ts: 'setSize',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.set-times',
+        ts: 'setTimes',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.read-directory',
+        ts: 'readDirectory',
+        kind: {
+          method: 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.sync',
+        ts: 'sync',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.create-directory-at',
+        ts: 'createDirectoryAt',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.stat',
+        ts: 'stat',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.stat-at',
+        ts: 'statAt',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.set-times-at',
+        ts: 'setTimesAt',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.link-at',
+        ts: 'linkAt',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.open-at',
+        ts: 'openAt',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.readlink-at',
+        ts: 'readlinkAt',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.remove-directory-at',
+        ts: 'removeDirectoryAt',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.rename-at',
+        ts: 'renameAt',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.symlink-at',
+        ts: 'symlinkAt',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.unlink-file-at',
+        ts: 'unlinkFileAt',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.is-same-object',
+        ts: 'isSameObject',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.metadata-hash',
+        ts: 'metadataHash',
+        kind: {
+          'async-method': 25,
+        },
+      },
+      {
+        wit: '[method]descriptor.metadata-hash-at',
+        ts: 'metadataHashAt',
+        kind: {
+          'async-method': 25,
+        },
+      },
+    ],
+  },
+  {
+    package: 'wasi:filesystem',
+    interface: 'preopens',
+    operations: [
+      {
+        wit: 'get-directories',
+        ts: 'getDirectories',
+        kind: 'freestanding',
+      },
+    ],
+  },
+  {
+    package: 'wasi:sockets',
+    interface: 'types',
+    operations: [
+      {
+        wit: '[static]tcp-socket.create',
+        ts: 'create',
+        kind: {
+          static: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.bind',
+        ts: 'bind',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.connect',
+        ts: 'connect',
+        kind: {
+          'async-method': 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.listen',
+        ts: 'listen',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.send',
+        ts: 'send',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.receive',
+        ts: 'receive',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.get-local-address',
+        ts: 'getLocalAddress',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.get-remote-address',
+        ts: 'getRemoteAddress',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.get-is-listening',
+        ts: 'getIsListening',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.get-address-family',
+        ts: 'getAddressFamily',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.set-listen-backlog-size',
+        ts: 'setListenBacklogSize',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.get-keep-alive-enabled',
+        ts: 'getKeepAliveEnabled',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.set-keep-alive-enabled',
+        ts: 'setKeepAliveEnabled',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.get-keep-alive-idle-time',
+        ts: 'getKeepAliveIdleTime',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.set-keep-alive-idle-time',
+        ts: 'setKeepAliveIdleTime',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.get-keep-alive-interval',
+        ts: 'getKeepAliveInterval',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.set-keep-alive-interval',
+        ts: 'setKeepAliveInterval',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.get-keep-alive-count',
+        ts: 'getKeepAliveCount',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.set-keep-alive-count',
+        ts: 'setKeepAliveCount',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.get-hop-limit',
+        ts: 'getHopLimit',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.set-hop-limit',
+        ts: 'setHopLimit',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.get-receive-buffer-size',
+        ts: 'getReceiveBufferSize',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.set-receive-buffer-size',
+        ts: 'setReceiveBufferSize',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.get-send-buffer-size',
+        ts: 'getSendBufferSize',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[method]tcp-socket.set-send-buffer-size',
+        ts: 'setSendBufferSize',
+        kind: {
+          method: 54,
+        },
+      },
+      {
+        wit: '[static]udp-socket.create',
+        ts: 'create',
+        kind: {
+          static: 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.bind',
+        ts: 'bind',
+        kind: {
+          method: 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.connect',
+        ts: 'connect',
+        kind: {
+          method: 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.disconnect',
+        ts: 'disconnect',
+        kind: {
+          method: 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.send',
+        ts: 'send',
+        kind: {
+          'async-method': 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.receive',
+        ts: 'receive',
+        kind: {
+          'async-method': 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.get-local-address',
+        ts: 'getLocalAddress',
+        kind: {
+          method: 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.get-remote-address',
+        ts: 'getRemoteAddress',
+        kind: {
+          method: 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.get-address-family',
+        ts: 'getAddressFamily',
+        kind: {
+          method: 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.get-unicast-hop-limit',
+        ts: 'getUnicastHopLimit',
+        kind: {
+          method: 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.set-unicast-hop-limit',
+        ts: 'setUnicastHopLimit',
+        kind: {
+          method: 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.get-receive-buffer-size',
+        ts: 'getReceiveBufferSize',
+        kind: {
+          method: 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.set-receive-buffer-size',
+        ts: 'setReceiveBufferSize',
+        kind: {
+          method: 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.get-send-buffer-size',
+        ts: 'getSendBufferSize',
+        kind: {
+          method: 55,
+        },
+      },
+      {
+        wit: '[method]udp-socket.set-send-buffer-size',
+        ts: 'setSendBufferSize',
+        kind: {
+          method: 55,
+        },
+      },
+    ],
+  },
+  {
+    package: 'wasi:sockets',
+    interface: 'ip-name-lookup',
+    operations: [
+      {
+        wit: 'resolve-addresses',
+        ts: 'resolveAddresses',
+        kind: 'async-freestanding',
       },
     ],
   },
@@ -1087,6 +1087,45 @@ export const apiShape = [
       {
         wit: 'spawn',
         ts: 'spawn',
+        kind: 'async-freestanding',
+      },
+    ],
+  },
+  {
+    package: 'walos:runtime',
+    interface: 'http',
+    operations: [
+      {
+        wit: '[method]service.pid',
+        ts: 'pid',
+        kind: {
+          method: 225,
+        },
+      },
+      {
+        wit: '[method]service.handle',
+        ts: 'handle',
+        kind: {
+          'async-method': 225,
+        },
+      },
+      {
+        wit: '[method]service.wait',
+        ts: 'wait',
+        kind: {
+          'async-method': 225,
+        },
+      },
+      {
+        wit: '[method]service.request-stop',
+        ts: 'requestStop',
+        kind: {
+          'async-method': 225,
+        },
+      },
+      {
+        wit: 'start',
+        ts: 'start',
         kind: 'async-freestanding',
       },
     ],

@@ -55,9 +55,7 @@ export class Future<T> implements PromiseLike<T>, AsyncDisposable {
 }
 
 export type StreamRead<T> =
-  | { tag: 'data'; val: ArrayLike<T> }
-  | { tag: 'pending' }
-  | { tag: 'end' };
+  { tag: 'data'; val: ArrayLike<T> } | { tag: 'pending' } | { tag: 'end' };
 
 /** Owned readable end of a Component Model stream. No implicit iterator or Web Stream. */
 export interface Stream<T> extends AsyncDisposable {
@@ -178,10 +176,11 @@ const operationCancellations = new WeakMap<PromiseLike<unknown>, () => void | Pr
 export function cancellable<T>(
   operation: Promise<T>,
   cancel: () => void | PromiseLike<void>,
+  lifetime: PromiseLike<unknown> = operation,
 ): Promise<T> {
   operationCancellations.set(operation, cancel);
   const done = () => operationCancellations.delete(operation);
-  void operation.then(done, done);
+  void lifetime.then(done, done);
   return operation;
 }
 export function cancelAsync(operation: PromiseLike<unknown>): Promise<void> {

@@ -25,7 +25,7 @@
     "check:runtime": "node --test scripts/check-runtime-boundaries.test.mjs && node scripts/check-runtime-boundaries.mjs",
     "generate:wasi": "node scripts/generate-wasi-api.mjs && node scripts/generate-wasi-coverage.mjs",
     "check:wasi": "node scripts/generate-wasi-api.mjs --check && node scripts/generate-wasi-coverage.mjs --check",
-    "check:wit:p3": "jco types wit/p3 --all-features -o work/wit-p3-generated",
+    "check:wit:p3": "jco types wit/p3 --world-name command --all-features -o work/wit-p3-generated && jco types wit/p3 --world-name http-service --all-features -o work/wit-p3-generated/http-service && jco types wit/p3 --world-name http-middleware --all-features -o work/wit-p3-generated/http-middleware",
     "test:http": "npm run build:os && node --test scripts/http.test.mjs"
   },
   "devDependencies": {

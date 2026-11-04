@@ -1,4 +1,4 @@
-import { Future, cancelAsync, type Stream } from '../async.js';
+import { Future, cancelAsync, cancellable, type Stream } from '../async.js';
 import type { ProcessContext } from '../types.js';
 import type { PendingDrops } from './runtime.js';
 import { apiShape } from './wasi-shape.js';
@@ -162,8 +162,14 @@ export function nativeImports(
       };
       return track(stream);
     }
-    if (typeof value.then === 'function')
-      return track(new Future(Promise.resolve(value), () => value.cancel?.()));
+    if (typeof value.then === 'function') {
+      const future = track(new Future(Promise.resolve(value), () => value.cancel?.()));
+      const done = () => {
+        live.delete(future);
+      };
+      void Promise.resolve(future).then(done, done);
+      return future;
+    }
     // Canonical resource identity must survive borrow and own argument lowering.
     if (typeof value[Symbol.asyncDispose] === 'function' || typeof value.drop === 'function')
       return value;
@@ -193,25 +199,52 @@ export function nativeImports(
           // Native future<result<T,E>> resolves/rejects its payload, whereas the
           // shared Context uses explicit tagged Results in Future values.
           if (shape.package === 'wasi:http' && shape.interface === 'types') {
+            if (op.wit.endsWith('.new') || op.wit.endsWith('.consume-body')) live.delete(args[0]);
+            if (op.wit === '[static]request.new' && args[3]) live.delete(args[3]);
             const index = op.wit.endsWith('.new') ? 2 : op.wit.endsWith('.consume-body') ? 1 : -1;
             if (index >= 0 && args[index] instanceof Future) {
               const source = args[index] as Future<unknown>;
               args[index] = new Future(
                 Promise.resolve(source).then(
-                  (val) => ({ tag: 'ok', val }),
-                  (val) => ({ tag: 'err', val }),
+                  (val) => {
+                    // Trailer futures transfer an optional own<fields> as well.
+                    if (val && typeof (val as AsyncDisposable)[Symbol.asyncDispose] === 'function')
+                      live.delete(val as AsyncDisposable);
+                    return { tag: 'ok', val: lower(val) };
+                  },
+                  (val) => ({ tag: 'err', val: lower(val) }),
                 ),
                 () => source.cancel(),
               );
             }
           }
+          if (
+            shape.package === 'wasi:http' &&
+            (shape.interface === 'client' || shape.interface === 'handler')
+          )
+            live.delete(args[0]);
           const kind = op.kind;
-          const value =
+          let value =
             typeof kind === 'object' && ('method' in kind || 'async-method' in kind)
               ? args[0][op.ts](...args.slice(1))
               : typeof kind === 'object'
                 ? provider[resource][op.ts](...args)
                 : provider[op.ts](...args);
+          if (
+            shape.package === 'walos:runtime' &&
+            shape.interface === 'http' &&
+            op.wit === '[method]service.handle'
+          ) {
+            const pending = value as Promise<unknown>;
+            value = cancellable(
+              pending.catch((error) => {
+                if (error instanceof Error && 'code' in error && error.code === 'busy')
+                  return { tag: 'err', val: { tag: 'internal-error', val: error.message } };
+                throw error;
+              }),
+              () => cancelAsync(pending),
+            );
+          }
           return lift(value);
         } catch (error) {
           fault(error);
@@ -223,6 +256,11 @@ export function nativeImports(
   }
   return {
     imports,
+    lift,
+    lower,
+    release: (value: AsyncDisposable) => {
+      live.delete(value);
+    },
     dispose() {
       closing = true;
       for (const value of [...live]) drop(value);

@@ -175,6 +175,83 @@
       ]
     },
     {
+      "package": "wasi:random",
+      "version": "0.3.2",
+      "interface": "insecure-seed",
+      "namespace": "WasiRandomInsecureSeed",
+      "types": {},
+      "operations": [
+        {
+          "wit": "get-insecure-seed",
+          "ts": "getInsecureSeed",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "readonly [U64, U64]"
+        }
+      ]
+    },
+    {
+      "package": "wasi:random",
+      "version": "0.3.2",
+      "interface": "insecure",
+      "namespace": "WasiRandomInsecure",
+      "types": {},
+      "operations": [
+        {
+          "wit": "get-insecure-random-bytes",
+          "ts": "getInsecureRandomBytes",
+          "kind": "freestanding",
+          "async": false,
+          "params": [
+            {
+              "name": "max-len",
+              "type": "U64"
+            }
+          ],
+          "result": "Uint8Array"
+        },
+        {
+          "wit": "get-insecure-random-u64",
+          "ts": "getInsecureRandomU64",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "U64"
+        }
+      ]
+    },
+    {
+      "package": "wasi:random",
+      "version": "0.3.2",
+      "interface": "random",
+      "namespace": "WasiRandomRandom",
+      "types": {},
+      "operations": [
+        {
+          "wit": "get-random-bytes",
+          "ts": "getRandomBytes",
+          "kind": "freestanding",
+          "async": false,
+          "params": [
+            {
+              "name": "max-len",
+              "type": "U64"
+            }
+          ],
+          "result": "Uint8Array"
+        },
+        {
+          "wit": "get-random-u64",
+          "ts": "getRandomU64",
+          "kind": "freestanding",
+          "async": false,
+          "params": [],
+          "result": "U64"
+        }
+      ]
+    },
+    {
       "package": "wasi:filesystem",
       "version": "0.3.2",
       "interface": "types",
@@ -247,7 +324,7 @@
                 },
                 {
                   "name": "other",
-                  "type": 10,
+                  "type": 12,
                   "docs": {
                     "contents": "The type of the descriptor or file is different from any of the\nother types specified."
                   }
@@ -362,42 +439,42 @@
               "fields": [
                 {
                   "name": "type",
-                  "type": 11,
+                  "type": 13,
                   "docs": {
                     "contents": "File type."
                   }
                 },
                 {
                   "name": "link-count",
-                  "type": 15,
+                  "type": 17,
                   "docs": {
                     "contents": "Number of hard links to the file."
                   }
                 },
                 {
                   "name": "size",
-                  "type": 9,
+                  "type": 11,
                   "docs": {
                     "contents": "For regular files, the file size in bytes. For symbolic links, the\nlength in bytes of the pathname contained in the symbolic link."
                   }
                 },
                 {
                   "name": "data-access-timestamp",
-                  "type": 16,
+                  "type": 18,
                   "docs": {
                     "contents": "Last data access timestamp.\n\nIf the `option` is none, the platform doesn't maintain an access\ntimestamp for this file."
                   }
                 },
                 {
                   "name": "data-modification-timestamp",
-                  "type": 16,
+                  "type": 18,
                   "docs": {
                     "contents": "Last data modification timestamp.\n\nIf the `option` is none, the platform doesn't maintain a\nmodification timestamp for this file."
                   }
                 },
                 {
                   "name": "status-change-timestamp",
-                  "type": 16,
+                  "type": 18,
                   "docs": {
                     "contents": "Last file status-change timestamp.\n\nIf the `option` is none, the platform doesn't maintain a\nstatus-change timestamp for this file."
                   }
@@ -427,7 +504,7 @@
                 },
                 {
                   "name": "timestamp",
-                  "type": 8,
+                  "type": 10,
                   "docs": {
                     "contents": "Set the timestamp to the given value."
                   }
@@ -443,7 +520,7 @@
               "fields": [
                 {
                   "name": "type",
-                  "type": 11,
+                  "type": 13,
                   "docs": {
                     "contents": "The type of the file referred to by this directory entry."
                   }
@@ -718,7 +795,7 @@
                 },
                 {
                   "name": "other",
-                  "type": 10,
+                  "type": 12,
                   "docs": {
                     "contents": "A catch-all for errors not captured by the existing variants.\nImplementations can use this to extend the error type without\nbreaking existing code."
                   }
@@ -806,7 +883,7 @@
           "wit": "[method]descriptor.read-via-stream",
           "ts": "readViaStream",
           "kind": {
-            "method": 23
+            "method": 25
           },
           "async": false,
           "params": [
@@ -825,7 +902,7 @@
           "wit": "[method]descriptor.write-via-stream",
           "ts": "writeViaStream",
           "kind": {
-            "method": 23
+            "method": 25
           },
           "async": false,
           "params": [
@@ -848,7 +925,7 @@
           "wit": "[method]descriptor.append-via-stream",
           "ts": "appendViaStream",
           "kind": {
-            "method": 23
+            "method": 25
           },
           "async": false,
           "params": [
@@ -867,7 +944,7 @@
           "wit": "[method]descriptor.advise",
           "ts": "advise",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -894,7 +971,7 @@
           "wit": "[method]descriptor.sync-data",
           "ts": "syncData",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -909,7 +986,7 @@
           "wit": "[method]descriptor.get-flags",
           "ts": "getFlags",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -924,7 +1001,7 @@
           "wit": "[method]descriptor.get-type",
           "ts": "getType",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -939,7 +1016,7 @@
           "wit": "[method]descriptor.set-size",
           "ts": "setSize",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -958,7 +1035,7 @@
           "wit": "[method]descriptor.set-times",
           "ts": "setTimes",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -981,7 +1058,7 @@
           "wit": "[method]descriptor.read-directory",
           "ts": "readDirectory",
           "kind": {
-            "method": 23
+            "method": 25
           },
           "async": false,
           "params": [
@@ -996,7 +1073,7 @@
           "wit": "[method]descriptor.sync",
           "ts": "sync",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1011,7 +1088,7 @@
           "wit": "[method]descriptor.create-directory-at",
           "ts": "createDirectoryAt",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1030,7 +1107,7 @@
           "wit": "[method]descriptor.stat",
           "ts": "stat",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1045,7 +1122,7 @@
           "wit": "[method]descriptor.stat-at",
           "ts": "statAt",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1068,7 +1145,7 @@
           "wit": "[method]descriptor.set-times-at",
           "ts": "setTimesAt",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1099,7 +1176,7 @@
           "wit": "[method]descriptor.link-at",
           "ts": "linkAt",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1130,7 +1207,7 @@
           "wit": "[method]descriptor.open-at",
           "ts": "openAt",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1161,7 +1238,7 @@
           "wit": "[method]descriptor.readlink-at",
           "ts": "readlinkAt",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1180,7 +1257,7 @@
           "wit": "[method]descriptor.remove-directory-at",
           "ts": "removeDirectoryAt",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1199,7 +1276,7 @@
           "wit": "[method]descriptor.rename-at",
           "ts": "renameAt",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1226,7 +1303,7 @@
           "wit": "[method]descriptor.symlink-at",
           "ts": "symlinkAt",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1249,7 +1326,7 @@
           "wit": "[method]descriptor.unlink-file-at",
           "ts": "unlinkFileAt",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1268,7 +1345,7 @@
           "wit": "[method]descriptor.is-same-object",
           "ts": "isSameObject",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1287,7 +1364,7 @@
           "wit": "[method]descriptor.metadata-hash",
           "ts": "metadataHash",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1302,7 +1379,7 @@
           "wit": "[method]descriptor.metadata-hash-at",
           "ts": "metadataHashAt",
           "kind": {
-            "async-method": 23
+            "async-method": 25
           },
           "async": true,
           "params": [
@@ -1331,7 +1408,7 @@
       "types": {
         "descriptor": {
           "kind": {
-            "type": 23
+            "type": 25
           },
           "ts": "WasiFilesystemTypes.Descriptor"
         }
@@ -1463,7 +1540,7 @@
                 },
                 {
                   "name": "other",
-                  "type": 43,
+                  "type": 45,
                   "docs": {
                     "contents": "A catch-all for errors not captured by the existing variants.\nImplementations can use this to extend the error type without\nbreaking existing code."
                   }
@@ -1530,11 +1607,11 @@
               "cases": [
                 {
                   "name": "ipv4",
-                  "type": 46
+                  "type": 48
                 },
                 {
                   "name": "ipv6",
-                  "type": 47
+                  "type": 49
                 }
               ]
             }
@@ -1554,7 +1631,7 @@
                 },
                 {
                   "name": "address",
-                  "type": 46,
+                  "type": 48,
                   "docs": {
                     "contents": "sin_addr"
                   }
@@ -1584,7 +1661,7 @@
                 },
                 {
                   "name": "address",
-                  "type": 47,
+                  "type": 49,
                   "docs": {
                     "contents": "sin6_addr"
                   }
@@ -1607,11 +1684,11 @@
               "cases": [
                 {
                   "name": "ipv4",
-                  "type": 49
+                  "type": 51
                 },
                 {
                   "name": "ipv6",
-                  "type": 50
+                  "type": 52
                 }
               ]
             }
@@ -1632,7 +1709,7 @@
           "wit": "[static]tcp-socket.create",
           "ts": "create",
           "kind": {
-            "static": 52
+            "static": 54
           },
           "async": false,
           "params": [
@@ -1647,7 +1724,7 @@
           "wit": "[method]tcp-socket.bind",
           "ts": "bind",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1666,7 +1743,7 @@
           "wit": "[method]tcp-socket.connect",
           "ts": "connect",
           "kind": {
-            "async-method": 52
+            "async-method": 54
           },
           "async": true,
           "params": [
@@ -1685,7 +1762,7 @@
           "wit": "[method]tcp-socket.listen",
           "ts": "listen",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1700,7 +1777,7 @@
           "wit": "[method]tcp-socket.send",
           "ts": "send",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1719,7 +1796,7 @@
           "wit": "[method]tcp-socket.receive",
           "ts": "receive",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1734,7 +1811,7 @@
           "wit": "[method]tcp-socket.get-local-address",
           "ts": "getLocalAddress",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1749,7 +1826,7 @@
           "wit": "[method]tcp-socket.get-remote-address",
           "ts": "getRemoteAddress",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1764,7 +1841,7 @@
           "wit": "[method]tcp-socket.get-is-listening",
           "ts": "getIsListening",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1779,7 +1856,7 @@
           "wit": "[method]tcp-socket.get-address-family",
           "ts": "getAddressFamily",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1794,7 +1871,7 @@
           "wit": "[method]tcp-socket.set-listen-backlog-size",
           "ts": "setListenBacklogSize",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1813,7 +1890,7 @@
           "wit": "[method]tcp-socket.get-keep-alive-enabled",
           "ts": "getKeepAliveEnabled",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1828,7 +1905,7 @@
           "wit": "[method]tcp-socket.set-keep-alive-enabled",
           "ts": "setKeepAliveEnabled",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1847,7 +1924,7 @@
           "wit": "[method]tcp-socket.get-keep-alive-idle-time",
           "ts": "getKeepAliveIdleTime",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1862,7 +1939,7 @@
           "wit": "[method]tcp-socket.set-keep-alive-idle-time",
           "ts": "setKeepAliveIdleTime",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1881,7 +1958,7 @@
           "wit": "[method]tcp-socket.get-keep-alive-interval",
           "ts": "getKeepAliveInterval",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1896,7 +1973,7 @@
           "wit": "[method]tcp-socket.set-keep-alive-interval",
           "ts": "setKeepAliveInterval",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1915,7 +1992,7 @@
           "wit": "[method]tcp-socket.get-keep-alive-count",
           "ts": "getKeepAliveCount",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1930,7 +2007,7 @@
           "wit": "[method]tcp-socket.set-keep-alive-count",
           "ts": "setKeepAliveCount",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1949,7 +2026,7 @@
           "wit": "[method]tcp-socket.get-hop-limit",
           "ts": "getHopLimit",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1964,7 +2041,7 @@
           "wit": "[method]tcp-socket.set-hop-limit",
           "ts": "setHopLimit",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1983,7 +2060,7 @@
           "wit": "[method]tcp-socket.get-receive-buffer-size",
           "ts": "getReceiveBufferSize",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -1998,7 +2075,7 @@
           "wit": "[method]tcp-socket.set-receive-buffer-size",
           "ts": "setReceiveBufferSize",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -2017,7 +2094,7 @@
           "wit": "[method]tcp-socket.get-send-buffer-size",
           "ts": "getSendBufferSize",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -2032,7 +2109,7 @@
           "wit": "[method]tcp-socket.set-send-buffer-size",
           "ts": "setSendBufferSize",
           "kind": {
-            "method": 52
+            "method": 54
           },
           "async": false,
           "params": [
@@ -2051,7 +2128,7 @@
           "wit": "[static]udp-socket.create",
           "ts": "create",
           "kind": {
-            "static": 53
+            "static": 55
           },
           "async": false,
           "params": [
@@ -2066,7 +2143,7 @@
           "wit": "[method]udp-socket.bind",
           "ts": "bind",
           "kind": {
-            "method": 53
+            "method": 55
           },
           "async": false,
           "params": [
@@ -2085,7 +2162,7 @@
           "wit": "[method]udp-socket.connect",
           "ts": "connect",
           "kind": {
-            "method": 53
+            "method": 55
           },
           "async": false,
           "params": [
@@ -2104,7 +2181,7 @@
           "wit": "[method]udp-socket.disconnect",
           "ts": "disconnect",
           "kind": {
-            "method": 53
+            "method": 55
           },
           "async": false,
           "params": [
@@ -2119,7 +2196,7 @@
           "wit": "[method]udp-socket.send",
           "ts": "send",
           "kind": {
-            "async-method": 53
+            "async-method": 55
           },
           "async": true,
           "params": [
@@ -2142,7 +2219,7 @@
           "wit": "[method]udp-socket.receive",
           "ts": "receive",
           "kind": {
-            "async-method": 53
+            "async-method": 55
           },
           "async": true,
           "params": [
@@ -2157,7 +2234,7 @@
           "wit": "[method]udp-socket.get-local-address",
           "ts": "getLocalAddress",
           "kind": {
-            "method": 53
+            "method": 55
           },
           "async": false,
           "params": [
@@ -2172,7 +2249,7 @@
           "wit": "[method]udp-socket.get-remote-address",
           "ts": "getRemoteAddress",
           "kind": {
-            "method": 53
+            "method": 55
           },
           "async": false,
           "params": [
@@ -2187,7 +2264,7 @@
           "wit": "[method]udp-socket.get-address-family",
           "ts": "getAddressFamily",
           "kind": {
-            "method": 53
+            "method": 55
           },
           "async": false,
           "params": [
@@ -2202,7 +2279,7 @@
           "wit": "[method]udp-socket.get-unicast-hop-limit",
           "ts": "getUnicastHopLimit",
           "kind": {
-            "method": 53
+            "method": 55
           },
           "async": false,
           "params": [
@@ -2217,7 +2294,7 @@
           "wit": "[method]udp-socket.set-unicast-hop-limit",
           "ts": "setUnicastHopLimit",
           "kind": {
-            "method": 53
+            "method": 55
           },
           "async": false,
           "params": [
@@ -2236,7 +2313,7 @@
           "wit": "[method]udp-socket.get-receive-buffer-size",
           "ts": "getReceiveBufferSize",
           "kind": {
-            "method": 53
+            "method": 55
           },
           "async": false,
           "params": [
@@ -2251,7 +2328,7 @@
           "wit": "[method]udp-socket.set-receive-buffer-size",
           "ts": "setReceiveBufferSize",
           "kind": {
-            "method": 53
+            "method": 55
           },
           "async": false,
           "params": [
@@ -2270,7 +2347,7 @@
           "wit": "[method]udp-socket.get-send-buffer-size",
           "ts": "getSendBufferSize",
           "kind": {
-            "method": 53
+            "method": 55
           },
           "async": false,
           "params": [
@@ -2285,7 +2362,7 @@
           "wit": "[method]udp-socket.set-send-buffer-size",
           "ts": "setSendBufferSize",
           "kind": {
-            "method": 53
+            "method": 55
           },
           "async": false,
           "params": [
@@ -2310,7 +2387,7 @@
       "types": {
         "ip-address": {
           "kind": {
-            "type": 48
+            "type": 50
           },
           "ts": "WasiSocketsTypes.IpAddress"
         },
@@ -2355,7 +2432,7 @@
                 },
                 {
                   "name": "other",
-                  "type": 43,
+                  "type": 45,
                   "docs": {
                     "contents": "A catch-all for errors not captured by the existing variants.\nImplementations can use this to extend the error type without\nbreaking existing code."
                   }
@@ -2379,83 +2456,6 @@
             }
           ],
           "result": "Result<readonly (IpAddress)[], ErrorCode>"
-        }
-      ]
-    },
-    {
-      "package": "wasi:random",
-      "version": "0.3.2",
-      "interface": "insecure-seed",
-      "namespace": "WasiRandomInsecureSeed",
-      "types": {},
-      "operations": [
-        {
-          "wit": "get-insecure-seed",
-          "ts": "getInsecureSeed",
-          "kind": "freestanding",
-          "async": false,
-          "params": [],
-          "result": "readonly [U64, U64]"
-        }
-      ]
-    },
-    {
-      "package": "wasi:random",
-      "version": "0.3.2",
-      "interface": "insecure",
-      "namespace": "WasiRandomInsecure",
-      "types": {},
-      "operations": [
-        {
-          "wit": "get-insecure-random-bytes",
-          "ts": "getInsecureRandomBytes",
-          "kind": "freestanding",
-          "async": false,
-          "params": [
-            {
-              "name": "max-len",
-              "type": "U64"
-            }
-          ],
-          "result": "Uint8Array"
-        },
-        {
-          "wit": "get-insecure-random-u64",
-          "ts": "getInsecureRandomU64",
-          "kind": "freestanding",
-          "async": false,
-          "params": [],
-          "result": "U64"
-        }
-      ]
-    },
-    {
-      "package": "wasi:random",
-      "version": "0.3.2",
-      "interface": "random",
-      "namespace": "WasiRandomRandom",
-      "types": {},
-      "operations": [
-        {
-          "wit": "get-random-bytes",
-          "ts": "getRandomBytes",
-          "kind": "freestanding",
-          "async": false,
-          "params": [
-            {
-              "name": "max-len",
-              "type": "U64"
-            }
-          ],
-          "result": "Uint8Array"
-        },
-        {
-          "wit": "get-random-u64",
-          "ts": "getRandomU64",
-          "kind": "freestanding",
-          "async": false,
-          "params": [],
-          "result": "U64"
         }
       ]
     },
@@ -3888,19 +3888,19 @@
         },
         "descriptor": {
           "kind": {
-            "type": 23
+            "type": 25
           },
           "ts": "WasiFilesystemTypes.Descriptor"
         },
         "filesize": {
           "kind": {
-            "type": 9
+            "type": 11
           },
           "ts": "WasiFilesystemTypes.Filesize"
         },
         "filesystem-error": {
           "kind": {
-            "type": 20
+            "type": 22
           },
           "ts": "WasiFilesystemTypes.ErrorCode"
         },
@@ -4047,7 +4047,7 @@
       "types": {
         "descriptor": {
           "kind": {
-            "type": 23
+            "type": 25
           },
           "ts": "WasiFilesystemTypes.Descriptor"
         },
@@ -4217,6 +4217,186 @@
             }
           ],
           "result": "Result<Own<ChildProcess>, SpawnError>"
+        }
+      ]
+    },
+    {
+      "package": "walos:runtime",
+      "version": "0.3.2",
+      "interface": "http",
+      "namespace": "WalosRuntimeHttp",
+      "types": {
+        "descriptor": {
+          "kind": {
+            "type": 25
+          },
+          "ts": "WasiFilesystemTypes.Descriptor"
+        },
+        "request": {
+          "kind": {
+            "type": 130
+          },
+          "ts": "WasiHttpTypes.Request"
+        },
+        "response": {
+          "kind": {
+            "type": 133
+          },
+          "ts": "WasiHttpTypes.Response"
+        },
+        "error-code": {
+          "kind": {
+            "type": 122
+          },
+          "ts": "WasiHttpTypes.ErrorCode"
+        },
+        "spawn-error": {
+          "kind": {
+            "type": 200
+          },
+          "ts": "WalosRuntimeProcess.SpawnError"
+        },
+        "exit-result": {
+          "kind": {
+            "type": 201
+          },
+          "ts": "WalosRuntimeProcess.ExitResult"
+        },
+        "wait-error": {
+          "kind": {
+            "type": 202
+          },
+          "ts": "WalosRuntimeProcess.WaitError"
+        },
+        "output-endpoint": {
+          "kind": {
+            "type": 182
+          },
+          "ts": "WalosRuntimeIo.OutputEndpoint"
+        },
+        "listen-address": {
+          "kind": {
+            "record": {
+              "fields": [
+                {
+                  "name": "port",
+                  "type": "u16"
+                },
+                {
+                  "name": "path",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "ts": "{ readonly port: U16; readonly path: string; }"
+        },
+        "service": {
+          "kind": "resource",
+          "ts": "Service"
+        }
+      },
+      "operations": [
+        {
+          "wit": "[method]service.pid",
+          "ts": "pid",
+          "kind": {
+            "method": 225
+          },
+          "async": false,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Service>"
+            }
+          ],
+          "result": "U32"
+        },
+        {
+          "wit": "[method]service.handle",
+          "ts": "handle",
+          "kind": {
+            "async-method": 225
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Service>"
+            },
+            {
+              "name": "request",
+              "type": "Own<Request>"
+            }
+          ],
+          "result": "Result<Own<Response>, ErrorCode>"
+        },
+        {
+          "wit": "[method]service.wait",
+          "ts": "wait",
+          "kind": {
+            "async-method": 225
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Service>"
+            }
+          ],
+          "result": "Result<ExitResult, WaitError>"
+        },
+        {
+          "wit": "[method]service.request-stop",
+          "ts": "requestStop",
+          "kind": {
+            "async-method": 225
+          },
+          "async": true,
+          "params": [
+            {
+              "name": "self",
+              "type": "Borrow<Service>"
+            }
+          ],
+          "result": "void"
+        },
+        {
+          "wit": "start",
+          "ts": "start",
+          "kind": "async-freestanding",
+          "async": true,
+          "params": [
+            {
+              "name": "executable",
+              "type": "Borrow<Descriptor>"
+            },
+            {
+              "name": "argv",
+              "type": "readonly (string)[]"
+            },
+            {
+              "name": "env",
+              "type": "readonly (readonly [string, string])[]"
+            },
+            {
+              "name": "listen",
+              "type": "(ListenAddress | undefined)"
+            },
+            {
+              "name": "next",
+              "type": "(Borrow<Service> | undefined)"
+            },
+            {
+              "name": "stdout",
+              "type": "(Own<OutputEndpoint> | undefined)"
+            },
+            {
+              "name": "stderr",
+              "type": "(Own<OutputEndpoint> | undefined)"
+            }
+          ],
+          "result": "Result<Own<Service>, SpawnError>"
         }
       ]
     }

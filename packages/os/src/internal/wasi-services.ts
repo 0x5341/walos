@@ -11,11 +11,28 @@ import type {
   WalosRuntimeIo as IO,
   WalosRuntimeProcess as Process,
   WasiFilesystemTypes as FS,
+  WalosRuntimeHttp as Http,
+  WasiHttpHandler,
 } from '../wasi-types.js';
 import type * as Model from './service-model.js';
 import { apiShape } from './wasi-shape.js';
 import { createHttpTypes } from './http.js';
 import { createHttpClient } from './http-client.js';
+import type { HttpRequest } from './http-resources.js';
+
+export interface HttpProcessApi {
+  send(request: HttpRequest): Promise<Result<Http.Response, Http.ErrorCode> | undefined>;
+  handle: WasiHttpHandler.Interface['handle'];
+  start(
+    executable: Model.FileDescriptor,
+    argv: readonly string[],
+    env: readonly Model.EnvironmentEntry[],
+    listen: Http.ListenAddress | undefined,
+    next: Http.Service | undefined,
+    stdout?: Model.OutputStream,
+    stderr?: Model.OutputStream,
+  ): Promise<Http.Service>;
+}
 
 const ok = <T>(val: T): Result<T, never> => ({ tag: 'ok', val });
 const trap = (operation: string): never => {
@@ -52,7 +69,25 @@ class Scope {
   private pending = new Set<Promise<unknown>>();
   private closing = false;
   add<T extends AsyncDisposable>(value: T): T {
+    if (this.resources.has(value)) return value;
     this.resources.add(value);
+    const dispose = value[Symbol.asyncDispose].bind(value);
+    Object.defineProperty(value, Symbol.asyncDispose, {
+      configurable: true,
+      value: async () => {
+        await dispose();
+        this.remove(value);
+      },
+    });
+    const moved = value as T & { move?: (...args: unknown[]) => unknown };
+    if (typeof moved.move === 'function') {
+      const move = moved.move.bind(value);
+      moved.move = (...args) => {
+        const result = move(...args);
+        this.remove(value);
+        return result;
+      };
+    }
     if (this.closing) void Promise.resolve(value[Symbol.asyncDispose]()).catch(() => {});
     return value;
   }
@@ -246,6 +281,7 @@ function writeStream<E>(
 export function createProcessApi(
   model: Model.ServiceModel,
   sockets?: Pick<import('../types.js').SocketBackend, 'types' | 'ipNameLookup'>,
+  http?: HttpProcessApi,
 ): {
   context: ProcessContext;
   dispose: () => Promise<void>;
@@ -359,9 +395,7 @@ export function createProcessApi(
       return fsCall(() => this.value.metadataHash() as Promise<FS.MetadataHashValue>);
     }
     metadataHashAt(flags: FS.PathFlags, path: string) {
-      return fsCall(
-        () => this.value.metadataHashAt(flags, path) as Promise<FS.MetadataHashValue>,
-      );
+      return fsCall(() => this.value.metadataHashAt(flags, path) as Promise<FS.MetadataHashValue>);
     }
     [Symbol.asyncDispose]() {
       return this.value[Symbol.asyncDispose]();
@@ -474,7 +508,15 @@ export function createProcessApi(
     group[iface.interface.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = Object.freeze(object);
   }
   standard.http.types = createHttpTypes(scope);
-  standard.http.client = createHttpClient(scope);
+  standard.http.client = createHttpClient(scope, http?.send);
+  standard.http.handler = {
+    handle:
+      http?.handle ??
+      (async (request: Http.Request) => {
+        await request[Symbol.asyncDispose]();
+        return { tag: 'err', val: { tag: 'configuration-error' } };
+      }),
+  };
   const terminal = (index: number) => {
     const value = index === 0 ? model.io.stdin : index === 1 ? model.io.stdout : model.io.stderr;
     const connected = (value as any).isTerminal;
@@ -551,6 +593,35 @@ export function createProcessApi(
       model.fs.getDirectories().map(([d, path]) => [new Descriptor(d), path] as const),
   });
   const walos: ProcessContext['walos'] = {
+    http: Object.freeze<Http.Interface>({
+      start: async (file, argv, env, listen, next, stdout, stderr) => {
+        try {
+          if (!http) throw new ServiceError('unsupported', 'HTTP processes unavailable');
+          return ok(
+            scope.add(
+              await http.start(
+                dValue(file),
+                argv,
+                env.map(([key, value]) => ({ key, value })),
+                listen,
+                next,
+                stdout ? (outputs.get(stdout) ?? ({} as Model.OutputStream)) : undefined,
+                stderr ? (outputs.get(stderr) ?? ({} as Model.OutputStream)) : undefined,
+              ),
+            ),
+          );
+        } catch (error) {
+          if (!(error instanceof ServiceError)) throw error;
+          return {
+            tag: 'err',
+            val:
+              error.code === 'busy'
+                ? { tag: 'busy' }
+                : { tag: 'initialization', val: error.message },
+          };
+        }
+      },
+    }),
     io: Object.freeze({
       readViaDescriptor: (file: FS.Descriptor, offset: bigint) =>
         fsCall(async () => new InputEndpoint(await dValue(file).readViaStream(offset))),

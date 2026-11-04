@@ -1,5 +1,8 @@
 package walos:runtime@0.3.2;
 
+world http-service { include wasi:http/service@0.3.2; }
+world http-middleware { include wasi:http/middleware@0.3.2; }
+
 interface io {
     use wasi:cli/types@0.3.2.{error-code};
     use wasi:filesystem/types@0.3.2.{descriptor, filesize, error-code as filesystem-error};
@@ -39,10 +42,34 @@ interface process {
     ) -> result<child-process, spawn-error>;
 }
 
+interface http {
+    use wasi:filesystem/types@0.3.2.{descriptor};
+    use wasi:http/types@0.3.2.{request, response, error-code};
+    use process.{spawn-error, exit-result, wait-error};
+    use io.{output-endpoint};
+    record listen-address { port: u16, path: string }
+    resource service {
+        pid: func() -> u32;
+        handle: async func(request: request) -> result<response, error-code>;
+        wait: async func() -> result<exit-result, wait-error>;
+        request-stop: async func();
+    }
+    start: async func(
+        executable: borrow<descriptor>,
+        argv: list<string>,
+        env: list<tuple<string, string>>,
+        listen: option<listen-address>,
+        next: option<borrow<service>>,
+        stdout: option<output-endpoint>,
+        stderr: option<output-endpoint>
+    ) -> result<service, spawn-error>;
+}
+
 world command {
     include wasi:cli/command@0.3.2;
     import io;
     import process;
+    import http;
     import wasi:http/types@0.3.2;
     import wasi:http/client@0.3.2;
     import wasi:http/handler@0.3.2;

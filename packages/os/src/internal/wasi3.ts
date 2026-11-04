@@ -58,6 +58,12 @@ export class Wasi3 implements Runtime {
       throw error;
     }
   }
+  async handle(request: import('../wasi-types.js').WasiHttpTypes.Request) {
+    if (!this.component || this.stopping) throw new RuntimeStopped();
+    const result = await this.component.handle(request);
+    if (this.fault) throw this.fault;
+    return result;
+  }
   [Symbol.asyncDispose]() {
     return (this.disposal ??= this.close());
   }

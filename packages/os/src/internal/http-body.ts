@@ -27,13 +27,13 @@ export class HttpBody implements AsyncDisposable {
   readonly completion: Future<Completion>;
   readonly trailers: Future<Trailers>;
   readonly hasContents: boolean;
-  onAbort(callback: () => void) {
+  onAbort(callback: (error: HTTP.ErrorCode) => void) {
     this.abort = callback;
   }
   constructor(
     private input: Stream<number> | undefined,
     private sourceTrailers: Future<Trailers>,
-    private abort = () => {},
+    private abort: (error: HTTP.ErrorCode) => void = () => {},
   ) {
     this.hasContents = input !== undefined;
     this.completion = new Future(
@@ -84,7 +84,7 @@ export class HttpBody implements AsyncDisposable {
     this.stopped();
     this.trailersDone({ tag: 'err', val: error });
     this.trailersSettled = true;
-    this.abort();
+    this.abort(error);
     return (this.cleanup = Promise.allSettled([
       this.input?.cancel(),
       this.sourceTrailers.cancel(),

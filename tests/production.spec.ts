@@ -1,4 +1,36 @@
 import { test, expect } from '@playwright/test';
+test('bundled native HTTP service accepts another P3 process client', async ({ page }) => {
+  await page.goto('/tests/fixtures/production.html');
+  await page.waitForFunction(() => Boolean((window as any).testHost));
+  const result = await page.evaluate(async () => {
+    const h = (window as any).testHost;
+    const os = await h.Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('http-production', { create: true }),
+    });
+    try {
+      const host = new h.HostProcessContext(os.getHostProcess());
+      const service = await host.http.start(await h.install(host, 'p3-http-service'), {
+        listen: { port: 3000 },
+      });
+      const result = await h.run(host, await h.install(host, 'p3-probe'), [
+        'p3-probe',
+        'http-local',
+        'localhost:3000',
+      ]);
+      await service.requestStop();
+      return { result, exit: await service.wait() };
+    } finally {
+      await os.dispose();
+    }
+  });
+  expect(result.result).toMatchObject({
+    exit: { kind: 'exited', code: 0 },
+    stdout: 'p3-http-ok\n',
+  });
+  expect(result.exit.kind).toBe('terminated');
+});
 test.skip(
   !process.env.WALOS_TEST_BUILD,
   'Production bundle checks run through npm run test:production',

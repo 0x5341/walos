@@ -17,6 +17,10 @@ let finished = false;
 let stopping = false;
 let fatal: unknown;
 let metrics: ProcessMetrics | undefined;
+let stop!: () => void;
+const stopped = new Promise<void>((resolve) => {
+  stop = resolve;
+});
 
 // Every completion path shares one notification and cleanup scope.
 function notify(exit: Exit) {
@@ -54,10 +58,31 @@ scope.onmessage = async (event) => {
     services?.gone(message.id);
     return;
   }
+  if (message.type === 'http-disconnected') {
+    services?.http.disconnected(message.connection);
+    return;
+  }
+  if (message.type === 'http-incoming') {
+    if (!ready || !(runtime instanceof Wasi3) || !services) {
+      message.port.close();
+      return;
+    }
+    const adapter = runtime;
+    services.http.accept(message.connection, message.port, async (request) => {
+      try {
+        return await adapter.handle(request);
+      } catch (error) {
+        if (!stopping) fail(error);
+        throw error;
+      }
+    });
+    return;
+  }
   if (message.type === 'stop') {
     stopping = true;
     services?.cancelSockets();
     runtime?.requestStop();
+    stop();
     return;
   }
   if (message.type !== 'start' || started) return;
@@ -77,6 +102,16 @@ scope.onmessage = async (event) => {
         ? await prepareComponent(bytes, metrics?.component)
         : undefined;
     const format = prepared?.format ?? 'p1';
+    if (message.spec.http ? prepared?.world !== 'http' : prepared?.world === 'http')
+      throw new Error(
+        'HTTP components require the dedicated HTTP start API; CLI components require spawn',
+      );
+    if (
+      message.spec.http &&
+      prepared?.component.imports().includes('wasi:http/handler@0.3.2') &&
+      message.spec.http.next === undefined
+    )
+      throw new Error('HTTP middleware requires a next service');
     const adapterStart = performance.now();
     services = new ProcessServices(
       {
@@ -108,7 +143,10 @@ scope.onmessage = async (event) => {
       scope.postMessage({ type: 'ready', ...(metrics && { metrics }) });
       ready = true;
       runStart = performance.now();
-      exit = { kind: 'exited', code: await runtime.run() };
+      if (message.spec.http) {
+        await stopped;
+        exit = { kind: 'terminated', message: 'HTTP service stopped' };
+      } else exit = { kind: 'exited', code: await runtime.run() };
       runMs = performance.now() - runStart;
     }
   } catch (error) {

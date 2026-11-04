@@ -4,7 +4,7 @@ interface RecordEntry {
   pid: number;
   parent: number | null;
   worker: Worker | null;
-  spec: Pick<Spec, 'argv' | 'env' | 'stdio'>;
+  spec: Pick<Spec, 'argv' | 'env' | 'stdio' | 'http'>;
   state: 'STARTING' | 'RUNNING' | 'EXITED';
   exit?: Exit;
   ready: Promise<number>;
@@ -27,6 +27,8 @@ export interface CoreEvents {
 export class ProcessManager {
   private nextPid = 1;
   private nextStream = 1;
+  private nextConnection = 1;
+  private connections = new Map<number, { caller: number; target: number }>();
   sockets?: import('../types.js').SocketBackendOptions;
   private records = new Map<number, RecordEntry>();
   private owners = new Map<
@@ -78,6 +80,41 @@ export class ProcessManager {
       throw new RpcFailure('invalid-resource', 'Host is unavailable');
     void this.request(r, request);
   }
+  private validateHttp(spec: Spec, parent: number | null, pid: number) {
+    if (spec.http) {
+      if (spec.http.next !== undefined) {
+        const owner = parent === null ? undefined : this.records.get(parent);
+        const next = this.records.get(spec.http.next);
+        if (!owner?.handles.has(spec.http.next) || !next?.spec.http || next.state !== 'RUNNING')
+          throw new RpcFailure('invalid-resource', 'Invalid next HTTP service');
+      }
+      if (spec.http.listen) {
+        const { port, path } = spec.http.listen;
+        if (
+          !Number.isInteger(port) ||
+          port < 1 ||
+          port > 65535 ||
+          !path.startsWith('/') ||
+          /[?#\\\\]/.test(path)
+        )
+          throw new RpcFailure('startup', 'Invalid HTTP listen address');
+        const normalized = new URL(path, 'http://localhost');
+        if (normalized.origin !== 'http://localhost' || normalized.pathname !== path)
+          throw new RpcFailure('startup', 'HTTP listen path must be canonical');
+        spec.http.listen.path = path.replace(/\/+$/, '') || '/';
+        if (
+          [...this.records.values()].some(
+            (r) =>
+              r.pid !== pid &&
+              r.state !== 'EXITED' &&
+              r.spec.http?.listen?.port === port &&
+              r.spec.http.listen.path === spec.http!.listen!.path,
+          )
+        )
+          throw new RpcFailure('busy', 'HTTP listen address already registered');
+      }
+    }
+  }
   spawn(spec: Spec, parent: number | null, spawnRequest?: number): Promise<number> {
     const pid = this.nextPid++;
     let resolve!: (n: number) => void;
@@ -109,6 +146,7 @@ export class ProcessManager {
     this.records.set(pid, r);
     if (parent !== null) this.records.get(parent)?.handles.add(pid);
     try {
+      this.validateHttp(spec, parent, pid);
       const worker = (r.worker = this.makeWorker());
       const p = parent === null ? undefined : this.records.get(parent);
       spec.stdio = spec.stdio.map((s, i) => {
@@ -150,6 +188,7 @@ export class ProcessManager {
       r.transferred = true;
       this.publish();
     } catch (e) {
+      if (e instanceof RpcFailure) r.reject(e);
       for (const ref of spec.stdio) {
         if (!ref) continue;
         const owner = this.owners.get(ref.id);
@@ -181,6 +220,60 @@ export class ProcessManager {
     let ports: Transferable[] = [];
     try {
       switch (m.op) {
+        case 'http-connect': {
+          let target = m.pid === undefined ? undefined : this.records.get(m.pid);
+          if (m.pid !== undefined && !r.handles.has(m.pid) && r.spec.http?.next !== m.pid)
+            throw new RpcFailure('invalid-resource', 'Invalid HTTP service handle');
+          if (m.pid === undefined && m.url) {
+            const url = new URL(m.url);
+            if (url.protocol === 'http:' && url.hostname === 'localhost') {
+              const port = Number(url.port || 80);
+              target = [...this.records.values()]
+                .filter((candidate) => {
+                  const address = candidate.spec.http?.listen;
+                  return (
+                    candidate.state === 'RUNNING' &&
+                    address?.port === port &&
+                    (address.path === '/' ||
+                      url.pathname === address.path ||
+                      url.pathname.startsWith(address.path + '/'))
+                  );
+                })
+                .sort(
+                  (a, b) => b.spec.http!.listen!.path.length - a.spec.http!.listen!.path.length,
+                )[0];
+            }
+            if (!target) break; // Only no-match permits the caller's Fetch fallback.
+          }
+          if (!target?.spec.http || target.state !== 'RUNNING')
+            throw new RpcFailure('invalid-resource', 'HTTP service is unavailable');
+          if ([...this.connections.values()].some((c) => c.target === target!.pid))
+            throw new RpcFailure('busy', 'HTTP service is busy');
+          const channel = new MessageChannel();
+          const connection = this.nextConnection++;
+          this.connections.set(connection, { caller: r.pid, target: target.pid });
+          if (
+            !this.send(target, { type: 'http-incoming', connection, port: channel.port2 }, [
+              channel.port2,
+            ])
+          ) {
+            channel.port1.close();
+            this.connections.delete(connection);
+            throw new RpcFailure('internal', 'HTTP service disconnected');
+          }
+          value = { connection, port: channel.port1 };
+          ports = [channel.port1];
+          break;
+        }
+        case 'http-close': {
+          const connection = this.connections.get(m.connection);
+          if (!connection) break;
+          if (connection.caller !== r.pid && connection.target !== r.pid)
+            throw new RpcFailure('invalid-resource', 'Foreign HTTP connection');
+          this.connections.delete(m.connection);
+          if (m.cancel) this.requestStop(connection.target);
+          break;
+        }
         case 'spawn':
           value = await this.spawn(m.spec, r.pid, m.id);
           break;
@@ -306,6 +399,16 @@ export class ProcessManager {
     clearTimeout(r.timer);
     r.worker?.terminate();
     r.worker = null;
+    for (const [id, connection] of [...this.connections]) {
+      if (connection.caller !== pid && connection.target !== pid) continue;
+      this.connections.delete(id);
+      const peer = this.records.get(
+        connection.caller === pid ? connection.target : connection.caller,
+      );
+      if (peer?.state === 'RUNNING') this.send(peer, { type: 'http-disconnected', connection: id });
+      if (connection.caller === pid && connection.target !== pid)
+        this.requestStop(connection.target);
+    }
     if (!r.transferred)
       for (const s of r.spec.stdio)
         if (s && (s.kind === 'pipe' || s.kind === 'tty')) {
