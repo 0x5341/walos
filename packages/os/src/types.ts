@@ -7,6 +7,8 @@ export type ErrorCode =
   | 'access'
   | 'busy'
   | 'exist'
+  | 'loop'
+  | 'cross-device'
   | 'invalid'
   | 'io'
   | 'no-entry'
@@ -48,6 +50,8 @@ export type WalosEvent =
   | { type: 'exit'; pid: number; exit: Exit; durationMs: number }
   | { type: 'error'; error: ServiceError };
 export interface WalosOptions {
+  /** Dedicated empty directory or an existing walos filesystem. */
+  readonly storage: FileSystemDirectoryHandle;
   readonly env?: Readonly<Record<string, string>>;
   readonly argv?: readonly string[];
 }

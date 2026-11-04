@@ -162,12 +162,19 @@ export class Wasi implements Runtime {
   }
   private stat(out: number, stat?: DescriptorStat, terminal = false) {
     this.bytes(out, 64).fill(0);
-    this.view().setUint8(out + 16, stat?.type === 'directory' ? 3 : terminal ? 2 : 4);
+    this.view().setUint8(
+      out + 16,
+      stat?.type === 'directory' ? 3 : stat?.type === 'symbolic-link' ? 7 : terminal ? 2 : 4,
+    );
     this.u64(out + 24, stat?.linkCount ?? 1n);
     this.u64(out + 32, stat?.size ?? 0n);
-    const timestamp = stat?.dataModificationTimestamp;
-    if (timestamp)
-      this.u64(out + 48, timestamp.seconds * 1000000000n + BigInt(timestamp.nanoseconds));
+    for (const [offset, timestamp] of [
+      [40, stat?.dataAccessTimestamp],
+      [48, stat?.dataModificationTimestamp],
+      [56, stat?.statusChangeTimestamp],
+    ] as const)
+      if (timestamp)
+        this.u64(out + offset, timestamp.seconds * 1000000000n + BigInt(timestamp.nanoseconds));
   }
   imports() {
     const context = this.context;
@@ -306,6 +313,7 @@ export class Wasi implements Runtime {
       }),
       fd_filestat_set_times: this.host(
         async (fd: number, atime: bigint, mtime: bigint, flags: number) => {
+          if ((flags & 3) === 3 || (flags & 12) === 12 || flags & ~15) return 28;
           const timestamp = (value: bigint, set: boolean, now: boolean) =>
             now
               ? { tag: 'now' as const }
@@ -447,9 +455,85 @@ export class Wasi implements Runtime {
       },
       sched_yield: () => 0,
     };
+    const timestamp = (value: bigint, set: boolean, current: boolean) =>
+      current
+        ? { tag: 'now' as const }
+        : set
+          ? {
+              tag: 'timestamp' as const,
+              val: { seconds: value / 1000000000n, nanoseconds: Number(value % 1000000000n) },
+            }
+          : { tag: 'no-change' as const };
+    wasi.path_filestat_set_times = this.host(
+      async (
+        fd: number,
+        lookup: number,
+        ptr: number,
+        len: number,
+        a: bigint,
+        m: bigint,
+        flags: number,
+      ) => {
+        if ((flags & 3) === 3 || (flags & 12) === 12 || flags & ~15) return 28;
+        await this.descriptor(fd).setTimesAt(
+          { symlinkFollow: !!(lookup & 1) },
+          this.str(ptr, len),
+          timestamp(a, !!(flags & 1), !!(flags & 2)),
+          timestamp(m, !!(flags & 4), !!(flags & 8)),
+        );
+        return 0;
+      },
+    );
+    wasi.path_link = this.host(
+      async (
+        fd: number,
+        lookup: number,
+        ptr: number,
+        len: number,
+        to: number,
+        np: number,
+        nl: number,
+      ) => {
+        await this.descriptor(fd).linkAt(
+          { symlinkFollow: !!(lookup & 1) },
+          this.str(ptr, len),
+          this.descriptor(to),
+          this.str(np, nl),
+        );
+        return 0;
+      },
+    );
+    wasi.path_symlink = this.host(
+      async (ptr: number, len: number, fd: number, np: number, nl: number) => {
+        await this.descriptor(fd).symlinkAt(this.str(ptr, len), this.str(np, nl));
+        return 0;
+      },
+    );
+    wasi.path_readlink = this.host(
+      async (fd: number, ptr: number, len: number, out: number, size: number, used: number) => {
+        const bytes = this.encoder
+          .encode(await this.descriptor(fd).readlinkAt(this.str(ptr, len)))
+          .subarray(0, size);
+        this.bytes(out, bytes.length).set(bytes);
+        this.u32(used, bytes.length);
+        return 0;
+      },
+    );
+    wasi.fd_advise = this.host(
+      async (fd: number, offset: bigint, length: bigint, advice: number) => {
+        if (advice > 5 || advice < 0) return 28;
+        await this.descriptor(fd).advise(
+          offset,
+          length,
+          (['normal', 'sequential', 'random', 'will-need', 'dont-need', 'no-reuse'] as const)[
+            advice
+          ],
+        );
+        return 0;
+      },
+    );
     wasi.fd_datasync = wasi.fd_sync;
     for (const name of [
-      'fd_advise',
       'fd_allocate',
       'fd_fdstat_set_flags',
       'fd_fdstat_set_rights',
@@ -457,9 +541,6 @@ export class Wasi implements Runtime {
       'fd_pwrite',
       'fd_readdir',
       'fd_renumber',
-      'path_link',
-      'path_readlink',
-      'path_symlink',
       'poll_oneoff',
       'proc_raise',
       'sock_accept',

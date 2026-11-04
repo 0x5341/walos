@@ -18,7 +18,13 @@ test('empty OS preserves OPFS, has one Host without JSPI or command fetches, imm
     Object.defineProperty(WebAssembly, 'Suspending', { value: undefined, configurable: true });
     const env = { A: 'before' },
       argv = ['host'];
-    const pending = Walos.create({ env, argv });
+    const pending = Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+      env,
+      argv,
+    });
     env.A = 'after';
     argv[0] = 'after';
     const os = await pending;
@@ -31,7 +37,12 @@ test('empty OS preserves OPFS, has one Host without JSPI or command fetches, imm
       same: h.context === os.getHostProcess(),
       processes: os.processes,
     };
-    const other = await Walos.create({ env: { PWD: 'relative' } });
+    const other = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+      env: { PWD: 'relative' },
+    });
     const pwd = new HostProcessContext(other.getHostProcess()).env.get('PWD');
     await other.dispose();
     const stdin = h.io.stdin;
@@ -67,7 +78,9 @@ test('empty OS preserves OPFS, has one Host without JSPI or command fetches, imm
     const preserved = [];
     for (const name of ['bin', 'home', 'tmp'])
       preserved.push(
-        await (await (await root.getDirectoryHandle(name)).getFileHandle('sentinel'))
+        await (
+          await (await root.getDirectoryHandle(name)).getFileHandle('sentinel')
+        )
           .getFile()
           .then((f) => f.text()),
       );
@@ -111,10 +124,13 @@ test('empty OS preserves OPFS, has one Host without JSPI or command fetches, imm
 for (const name of ['echo', 'p2-echo', 'true', 'p2-true', 'trap', 'p2-trap'])
   test(`Host spawns ${name}, preserves fast EXIT and separates stdio`, async ({ page }) => {
     const result = await page.evaluate(async (name) => {
-      const { Walos, HostProcessContext, install, run } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
-      const os = await Walos.create();
+      const { Walos, HostProcessContext, install, run } =
+        await import('/tests/fixtures/host-harness.ts');
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         const host = new HostProcessContext(os.getHostProcess());
         const exe = await install(host, name);
@@ -136,7 +152,11 @@ test('wait consumes its right on invocation; stop works during wait; handle drop
 }) => {
   const result = await page.evaluate(async () => {
     const { Walos, HostProcessContext, install } = await import('/tests/fixtures/host-harness.ts');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     const h = new HostProcessContext(os.getHostProcess());
     const exe = await install(h, 'hang');
     const child = await h.process.spawn(exe, ['hang'], [{ key: 'PWD', value: '/' }]);
@@ -168,10 +188,13 @@ for (const source of ['cat', 'p2-cat', 'p3-probe'])
     }) => {
       const result = await page.evaluate(
         async ({ source, dest }) => {
-          const { Walos, HostProcessContext, install, readAll, writeAll } = await import(
-            '/tests/fixtures/host-harness.ts'
-          );
-          const os = await Walos.create();
+          const { Walos, HostProcessContext, install, readAll, writeAll } =
+            await import('/tests/fixtures/host-harness.ts');
+          const os = await Walos.create({
+            storage: await (
+              await navigator.storage.getDirectory()
+            ).getDirectoryHandle('walos-v1', { create: true }),
+          });
           try {
             const h = new HostProcessContext(os.getHostProcess());
             const a = await install(h, source),
@@ -226,10 +249,14 @@ test('Descriptor-relative Host I/O, directory operations, offsets, independent s
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { Walos, HostProcessContext, readAll, writeAll } = await import(
-      '/tests/fixtures/host-harness.ts'
-    );
-    const os = await Walos.create({ env: { PWD: '/does-not-exist' } });
+    const { Walos, HostProcessContext, readAll, writeAll } =
+      await import('/tests/fixtures/host-harness.ts');
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+      env: { PWD: '/does-not-exist' },
+    });
     try {
       const h = new HostProcessContext(os.getHostProcess());
       const [[root]] = h.fs.getDirectories();
@@ -292,8 +319,16 @@ test('stdio move is immediate on failed spawn and foreign resources are rejected
 }) => {
   const result = await page.evaluate(async () => {
     const { Walos, HostProcessContext } = await import('/tests/fixtures/host-harness.ts');
-    const os = await Walos.create();
-    const other = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
+    const other = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const h = new HostProcessContext(os.getHostProcess());
       const [[dir]] = h.fs.getDirectories();
@@ -330,7 +365,11 @@ test('Clock, timer cancellation, random limits and insecure random independence'
 }) => {
   const result = await page.evaluate(async () => {
     const { Walos, HostProcessContext } = await import('/tests/fixtures/host-harness.ts');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const h = new HostProcessContext(os.getHostProcess());
       const wall = h.clock.wall.now(),
@@ -398,10 +437,14 @@ for (const name of ['services-probe', 'p2-services-probe'])
     }) => {
       const result = await page.evaluate(
         async ({ name, pwd }) => {
-          const { Walos, HostProcessContext, install, readAll } = await import(
-            '/tests/fixtures/host-harness.ts'
-          );
-          const os = await Walos.create({ env: { HOST_ONLY: 'hidden' } });
+          const { Walos, HostProcessContext, install, readAll } =
+            await import('/tests/fixtures/host-harness.ts');
+          const os = await Walos.create({
+            storage: await (
+              await navigator.storage.getDirectory()
+            ).getDirectoryHandle('walos-v1', { create: true }),
+            env: { HOST_ONLY: 'hidden' },
+          });
           try {
             const h = new HostProcessContext(os.getHostProcess()),
               exe = await install(h, name);
@@ -434,10 +477,13 @@ for (const name of ['services-probe', 'p2-services-probe'])
 for (const name of ['services-probe', 'p2-services-probe'])
   test(`${name} accepts completely empty argv`, async ({ page }) => {
     const result = await page.evaluate(async (name) => {
-      const { Walos, HostProcessContext, install, run } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
-      const os = await Walos.create();
+      const { Walos, HostProcessContext, install, run } =
+        await import('/tests/fixtures/host-harness.ts');
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         return await run(
           new HostProcessContext(os.getHostProcess()),
@@ -457,7 +503,11 @@ test('Host output stream flush, append, lock conflicts and descriptor disposal c
 }) => {
   const result = await page.evaluate(async () => {
     const { Walos, HostProcessContext, writeAll } = await import('/tests/fixtures/host-harness.ts');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const h = new HostProcessContext(os.getHostProcess());
       const [[root]] = h.fs.getDirectories();

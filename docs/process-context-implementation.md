@@ -1,7 +1,7 @@
 # ProcessContext implementation (#27–#31, #33, #35–#38)
 
 This implements the public contract in [process-context-api.md](process-context-api.md).
-`@walos/os` is version 0.3.0. Its constructor is private; `Walos.create()` completes
+`@walos/os` is version 0.3.0. Its constructor is private; `Walos.create({ storage })` completes
 Core registration of exactly one Worker-free Host before returning. No application
 or TTY is started, no commands are fetched, and no user directory is initialized.
 Only the supervisor Core Worker is created. Creation rollback and OS disposal reclaim

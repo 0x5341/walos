@@ -1,6 +1,6 @@
 # ProcessContext API (WASI 0.3.2)
 
-`Walos.create()` registers one logical Host in Main Thread. Repeated
+`Walos.create({ storage })` registers one logical Host in Main Thread. Repeated
 `getHostProcess()` calls return its identical raw `ProcessContextImpl` instance.
 The public API follows the official WASI v0.3.2 WIT pinned at
 `bdadbbb8cadd287cc5014c4b5a0bf76efc60291c`; `wit/p3/api.json` contains the full
@@ -8,7 +8,9 @@ interface/function/type mapping. `npm run check:wasi` checks source hashes and
 regenerates this projection for comparison.
 
 ```ts
-await using os = await Walos.create();
+const storage = await (await navigator.storage.getDirectory())
+  .getDirectoryHandle('my-os-v1', { create: true });
+await using os = await Walos.create({ storage });
 const context = os.getHostProcess();
 const [[root]] = context.wasi.filesystem.preopens.getDirectories();
 const result = await root.openAt({}, 'file', {}, { read: true });
@@ -70,7 +72,9 @@ cleanup remain active; no new own/borrow-violation checks are introduced.
 ## Host convenience wrapper
 
 ```ts
-await using os = await Walos.create();
+const storage = await (await navigator.storage.getDirectory())
+  .getDirectoryHandle('my-os-v1', { create: true });
+await using os = await Walos.create({ storage });
 await using host = new HostProcessContext(os.getHostProcess());
 const [[root]] = host.fs.getDirectories();
 await using file = await root.openAt({}, 'file', { create: true }, { write: true });

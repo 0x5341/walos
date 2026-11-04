@@ -66,9 +66,8 @@ async function launch(format: 'p1' | 'p2' | 'p3', mode: 'startup' | 'cpu' | 'hol
     ports.push(channel.port2);
   }
   const spec: Spec = {
+    root,
     file: await dir.getFileHandle(format),
-    cwd: root,
-    cwdPath: '/',
     argv: [format, mode],
     env: { PWD: '/' },
     stdio,

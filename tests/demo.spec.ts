@@ -63,7 +63,11 @@ test('jsco leaves preexisting component cache data untouched and removes the cac
     const writer = await file.createWritable();
     await writer.write('preserved');
     await writer.close();
-    const os = await h.Walos.create();
+    const os = await h.Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     const host = new h.HostProcessContext(os.getHostProcess());
     const exe = await h.install(host, 'p2-true');
     const exits = [];
@@ -93,7 +97,11 @@ for (const name of ['cwd-probe', 'p2-cwd-probe']) {
     await page.goto('/tests/fixtures/library.html');
     const results = await page.evaluate(async (name) => {
       const h = await import('/tests/fixtures/host-harness.ts');
-      const os = await h.Walos.create();
+      const os = await h.Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         const host = new h.HostProcessContext(os.getHostProcess());
         const exe = await h.install(host, name);

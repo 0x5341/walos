@@ -17,6 +17,15 @@ export default defineConfig({
           futureDrop,
           'dropReadable(e,t){o.get(t)?.cancel?.();o.delete(t);r.delete(-2&t)}',
         );
+        // Async canonical lower imports always receive a result pointer, including
+        // scalar results (e.g. descriptor.is-same-object -> bool). preview.2
+        // incorrectly selects a flat return for a single scalar and never stores it.
+        const asyncResult = 'g=2===r.params?2===r.results?Ko:qo:2===r.results?Xo:Zo';
+        if (!code.includes(asyncResult)) throw new Error('Review jsco async scalar result patch');
+        code = code.replace(
+          asyncResult,
+          'g=n?2===r.params?Ko:Xo:2===r.params?2===r.results?Ko:qo:2===r.results?Xo:Zo',
+        );
         return code.replace(
           /import\(["']\.\/(?:cli|wasip3-node)\.js["']\)/g,
           'Promise.reject(new Error("Node-only jsco API unavailable in a browser"))',

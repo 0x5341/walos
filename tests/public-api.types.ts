@@ -9,7 +9,17 @@ import {
   type HostDescriptor as FileDescriptor,
 } from '@walos/os';
 export async function publicExample(executable: FileDescriptor) {
-  await using os = await Walos.create({ env: { PWD: '/' }, argv: [] });
+  // @ts-expect-error storage is required at initialization
+  Walos.create();
+  // @ts-expect-error env alone does not select dedicated storage
+  Walos.create({ env: {} });
+  await using os = await Walos.create({
+    storage: await (
+      await navigator.storage.getDirectory()
+    ).getDirectoryHandle('walos-v1', { create: true }),
+    env: { PWD: '/' },
+    argv: [],
+  });
   const raw: ProcessContext = os.getHostProcess();
   const host = new HostProcessContext(raw);
   // @ts-expect-error old P2-based Context grouping has been removed

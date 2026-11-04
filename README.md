@@ -13,7 +13,9 @@ installs its own demo binaries, spawns the C Shell and connects explicit byte pi
 ```ts
 import { Walos, HostProcessContext } from '@walos/os';
 
-await using os = await Walos.create({ env: { PWD: '/', PATH: '/bin' } });
+const storage = await (await navigator.storage.getDirectory())
+  .getDirectoryHandle('my-os-v1', { create: true });
+await using os = await Walos.create({ storage, env: { PWD: '/', PATH: '/bin' } });
 await using host = new HostProcessContext(os.getHostProcess());
 const [[root]] = host.fs.getDirectories();
 await using directory = root;
@@ -68,7 +70,7 @@ npm run dev
 ```
 
 Open Vite's localhost URL in current Chromium with JSPI. HTTPS is required outside
-localhost for OPFS. `Walos.create()` itself does not require JSPI. Use one OS tab per
+localhost for OPFS. `Walos.create({ storage })` itself does not require JSPI. Use one OS tab per
 origin; concurrent instances have no filesystem isolation guarantee.
 
 The demo overwrites only its named `/bin` commands. `/home`, `/tmp` and other user
@@ -156,3 +158,8 @@ Timezone APIs read the browser timezone on each call (TZ is ignored). Browser In
 API documentation is built in the private `@walos/docs-toolchain` workspace with
 TypeDoc 0.28.20 and TypeScript 6.0.3. Project builds and type checks use TypeScript
 7.0.2 from the root workspace. `npm ci` installs both toolchains.
+
+Filesystem storage now requires a caller-provided dedicated OPFS directory.
+Empty storage initializes format v1; existing walos storage reopens. Unknown data
+is rejected. Internal physical paths are not the WASI namespace; install files
+through the Host API. See [storage contract](docs/filesystem-storage.md) for migration and recovery limits.

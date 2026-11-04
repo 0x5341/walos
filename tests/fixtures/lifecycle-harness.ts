@@ -11,16 +11,22 @@ export interface Scenario {
 // These are native Workers. Only delivery of actual native READY/terminal events
 // is held/replayed; production ProcessManager, RPC and WASI adapters stay intact.
 export async function runLifecycle(scenario: Scenario) {
-  const root = await navigator.storage.getDirectory();
-  const bin = await root.getDirectoryHandle('bin', { create: true });
-  for (const name of [scenario.parent, scenario.child]) {
-    const response = await fetch(`/bin/${name}.wasm`);
-    if (!response.ok) throw new Error(`missing fixture ${name}: ${response.status}`);
-    const file = await bin.getFileHandle(name, { create: true });
-    const writer = await file.createWritable();
-    await writer.write(await response.arrayBuffer());
-    await writer.close();
-  }
+  const { Store } = await import('../../packages/os/dist/internal/fs-store.js');
+  const { Walos, HostProcessContext } = await import('../../packages/os/dist/index.js');
+  const { install } = await import('./host-harness.ts');
+  const root = await (
+    await navigator.storage.getDirectory()
+  ).getDirectoryHandle('lifecycle', { create: true });
+  const setup = await Walos.create({ storage: root });
+  const host = new HostProcessContext(setup.getHostProcess());
+  const [[directory]] = host.fs.getDirectories();
+  await directory.createDirectoryAt('bin');
+  for (const name of [scenario.parent, scenario.child]) await install(host, name, `bin/${name}`);
+  const store = new Store(root);
+  const parentFile = await store.run(async (state) =>
+    store.file(store.resolve(state, 'root', `bin/${scenario.parent}`).id!),
+  );
+  await setup.dispose();
   const events: CoreEvent[] = [];
   const inputs = new Map<number, MessagePort>();
   const outputs = new Map<number, string>();
@@ -132,9 +138,8 @@ export async function runLifecycle(scenario: Scenario) {
   try {
     const parentPid = await manager.spawn(
       {
-        file: await bin.getFileHandle(scenario.parent),
-        cwd: root,
-        cwdPath: '/',
+        root,
+        file: parentFile,
         argv: [scenario.parent, scenario.child, scenario.reason],
         env: {},
         stdio: [null, null, null],

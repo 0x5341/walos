@@ -254,8 +254,8 @@ export function createProcessApi(model: Model.ServiceModel): {
   const stat = (value: Model.DescriptorStat): FS.DescriptorStat => ({
     ...value,
     type: { tag: value.type },
-    dataAccessTimestamp: undefined,
-    statusChangeTimestamp: undefined,
+    dataAccessTimestamp: value.dataAccessTimestamp,
+    statusChangeTimestamp: value.statusChangeTimestamp,
     dataModificationTimestamp: value.dataModificationTimestamp,
   });
   class Descriptor implements FS.Descriptor {
@@ -272,10 +272,10 @@ export function createProcessApi(model: Model.ServiceModel): {
       return writeStream(scope, data, this.value.appendViaStream(), fsError, true);
     }
     advise(_offset: bigint, _length: bigint, _advice: FS.Advice) {
-      return fsCall(() => (this.value as any).advise());
+      return fsCall(() => this.value.advise());
     }
     syncData() {
-      return fsCall(() => (this.value as any).syncData());
+      return fsCall(() => this.value.syncData());
     }
     getFlags() {
       return fsCall(() => this.value.getFlags());
@@ -287,7 +287,7 @@ export function createProcessApi(model: Model.ServiceModel): {
       return fsCall(() => this.value.setSize(size));
     }
     setTimes(_a: FS.NewTimestamp, _m: FS.NewTimestamp): Promise<Result<void, FS.ErrorCode>> {
-      return trap('wasi:filesystem/types@0.3.2/[method]descriptor.set-times');
+      return fsCall(() => this.value.setTimes(_a, _m));
     }
     readDirectory() {
       return sourceStream<FS.DirectoryEntry, Model.DirectoryEntryStream, FS.ErrorCode>(
@@ -319,7 +319,7 @@ export function createProcessApi(model: Model.ServiceModel): {
       _a: FS.NewTimestamp,
       _m: FS.NewTimestamp,
     ): Promise<Result<void, FS.ErrorCode>> {
-      return trap('wasi:filesystem/types@0.3.2/[method]descriptor.set-times-at');
+      return fsCall(() => this.value.setTimesAt(_flags, _path, _a, _m));
     }
     linkAt(
       _flags: FS.PathFlags,
@@ -327,13 +327,13 @@ export function createProcessApi(model: Model.ServiceModel): {
       _to: FS.Descriptor,
       _path: string,
     ): Promise<Result<void, FS.ErrorCode>> {
-      return trap('wasi:filesystem/types@0.3.2/[method]descriptor.link-at');
+      return fsCall(() => this.value.linkAt(_flags, _old, dValue(_to), _path));
     }
     openAt(pf: FS.PathFlags, path: string, of: FS.OpenFlags, flags: FS.DescriptorFlags) {
       return fsCall(async () => new Descriptor(await this.value.openAt(pf, path, of, flags)));
     }
     readlinkAt(_path: string): Promise<Result<string, FS.ErrorCode>> {
-      return trap('wasi:filesystem/types@0.3.2/[method]descriptor.readlink-at');
+      return fsCall(() => this.value.readlinkAt(_path));
     }
     removeDirectoryAt(path: string) {
       return fsCall(() => this.value.removeDirectoryAt(path));
@@ -342,7 +342,7 @@ export function createProcessApi(model: Model.ServiceModel): {
       return fsCall(() => this.value.renameAt(old, dValue(to), path));
     }
     symlinkAt(_old: string, _path: string): Promise<Result<void, FS.ErrorCode>> {
-      return trap('wasi:filesystem/types@0.3.2/[method]descriptor.symlink-at');
+      return fsCall(() => this.value.symlinkAt(_old, _path));
     }
     unlinkFileAt(path: string) {
       return fsCall(() => this.value.unlinkFileAt(path));
@@ -351,11 +351,11 @@ export function createProcessApi(model: Model.ServiceModel): {
       return this.value.isSameObject(dValue(other));
     }
     metadataHash() {
-      return fsCall(() => (this.value as any).metadataHash() as Promise<FS.MetadataHashValue>);
+      return fsCall(() => this.value.metadataHash() as Promise<FS.MetadataHashValue>);
     }
     metadataHashAt(flags: FS.PathFlags, path: string) {
       return fsCall(
-        () => (this.value as any).metadataHashAt(flags, path) as Promise<FS.MetadataHashValue>,
+        () => this.value.metadataHashAt(flags, path) as Promise<FS.MetadataHashValue>,
       );
     }
     [Symbol.asyncDispose]() {

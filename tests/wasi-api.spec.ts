@@ -8,7 +8,11 @@ test.beforeEach(async ({ page }) => {
 test('raw Context exposes every pinned WIT import and keeps exports separate', async ({ page }) => {
   const result = await page.evaluate(async (schema) => {
     const { Walos } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const context = os.getHostProcess(),
         missing: string[] = [];
@@ -60,7 +64,11 @@ test('raw Context exposes every pinned WIT import and keeps exports separate', a
 test('raw filesystem returns WIT Results and native streams/futures', async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { Walos, createStream } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const context = os.getHostProcess();
       const [[root]] = context.wasi.filesystem.preopens.getDirectories();
@@ -117,7 +125,11 @@ test('raw standard stdio Future completes and wrapper disposal keeps Context ali
 }) => {
   const result = await page.evaluate(async () => {
     const { Walos, HostProcessContext, createStream } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const context = os.getHostProcess(),
         host = new HostProcessContext(context);
@@ -158,43 +170,14 @@ test('raw standard stdio Future completes and wrapper disposal keeps Context ali
   });
 });
 
-for (const name of ['unimplemented-probe', 'p2-unimplemented-probe'])
-  test(`${name} preserves the common unimplemented Trap`, async ({ page }) => {
-    const result = await page.evaluate(async (name) => {
-      const { Walos, HostProcessContext, install, run } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
-      const os = await Walos.create();
-      try {
-        const context = os.getHostProcess(),
-          host = new HostProcessContext(context);
-        const [[root]] = context.wasi.filesystem.preopens.getDirectories();
-        const file = await root.openAt({}, 'host-trap', { create: true }, { write: true });
-        let operation = '',
-          type = '';
-        if (file.tag === 'ok')
-          try {
-            await file.val.setTimes({ tag: 'now' }, { tag: 'now' });
-          } catch (error: any) {
-            operation = error.operation;
-            type = error.name;
-          }
-        const result = await run(host, await install(host, name), [name]);
-        return { operation, type, exit: result.exit };
-      } finally {
-        await os.dispose();
-      }
-    }, name);
-    expect(result.type).toBe('UnimplementedWasiError');
-    expect(result.operation).toBe('wasi:filesystem/types@0.3.2/[method]descriptor.set-times');
-    expect(result.exit.kind).toBe('trap');
-    if (result.exit.kind === 'trap') expect(result.exit.message).toContain(result.operation);
-  });
-
 test('HTTP and socket APIs throw from the shared Context', async ({ page }) => {
   const errors = await page.evaluate(async () => {
     const { Walos } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const c = os.getHostProcess();
       const result = [];
@@ -256,7 +239,11 @@ test('dropping a raw read stream cancels pending IO and settles its completion F
 }) => {
   const result = await page.evaluate(async () => {
     const { Walos } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const [input, output] = await os.getHostProcess().walos.io.createPipe();
       const [stream, future] = input.readViaStream();
@@ -277,7 +264,11 @@ test('dropping a raw read stream cancels pending IO and settles its completion F
 test('filesystem permission failures retain the WIT read-only variant', async ({ page }) => {
   const tag = await page.evaluate(async () => {
     const { Walos } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const [[root]] = os.getHostProcess().wasi.filesystem.preopens.getDirectories();
       const opened = await root.openAt({}, '.', { directory: true }, { read: true });
@@ -292,3 +283,29 @@ test('filesystem permission failures retain the WIT read-only variant', async ({
   });
   expect(tag).toBe('read-only');
 });
+
+for (const name of ['unimplemented-probe', 'p2-unimplemented-probe'])
+  test(`${name} now executes timestamp mutation through the common filesystem`, async ({
+    page,
+  }) => {
+    const result = await page.evaluate(async (name) => {
+      const { Walos, HostProcessContext, install, run } =
+        await import('/tests/fixtures/host-harness.ts');
+      const os = await Walos.create({ storage: await navigator.storage.getDirectory() });
+      try {
+        const host = new HostProcessContext(os.getHostProcess());
+        const result = await run(host, await install(host, name), [name]);
+        const [[root]] = host.fs.getDirectories();
+        return {
+          exit: result.exit,
+          time: (await root.statAt({}, 'unimplemented-times')).dataModificationTimestamp,
+        };
+      } finally {
+        await os.dispose();
+      }
+    }, name);
+    expect(result).toEqual({
+      exit: { kind: 'exited', code: 0 },
+      time: { seconds: 1n, nanoseconds: 0 },
+    });
+  });

@@ -14,7 +14,7 @@ const processes = document.querySelector('#processes')!;
 const stop = document.querySelector<HTMLButtonElement>('#interrupt')!;
 const encoder = new TextEncoder();
 async function writeAll(output: OutputStream, bytes: Uint8Array) {
-  for (let offset = 0; offset < bytes.length; ) {
+  for (let offset = 0; offset < bytes.length;) {
     const ready = output.subscribe();
     try {
       await ready.block();
@@ -42,7 +42,12 @@ async function display(stream: InputStream) {
   }
 }
 async function start() {
-  const os = await Walos.create({ env: { PWD: '/', PATH: '/bin' } });
+  const os = await Walos.create({
+    storage: await (
+      await navigator.storage.getDirectory()
+    ).getDirectoryHandle('walos-v1', { create: true }),
+    env: { PWD: '/', PATH: '/bin' },
+  });
   window.addEventListener('pagehide', () => void os.dispose());
   try {
     const host = new HostProcessContext(os.getHostProcess());

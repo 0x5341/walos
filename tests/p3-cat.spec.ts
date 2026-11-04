@@ -9,10 +9,13 @@ for (const name of ['p2-cat', 'p3-cat'])
     page,
   }) => {
     const results = await page.evaluate(async (name) => {
-      const { Walos, HostProcessContext, install, run } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
-      const os = await Walos.create();
+      const { Walos, HostProcessContext, install, run } =
+        await import('/tests/fixtures/host-harness.ts');
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         const host = new HostProcessContext(os.getHostProcess());
         const [[root]] = host.fs.getDirectories();
@@ -86,10 +89,13 @@ test('p3-cat preserves every byte of a large file through a backpressured output
   page,
 }) => {
   const result = await page.evaluate(async () => {
-    const { Walos, HostProcessContext, install, readAll, writeAll } = await import(
-      '/tests/fixtures/host-harness.ts'
-    );
-    const os = await Walos.create();
+    const { Walos, HostProcessContext, install, readAll, writeAll } =
+      await import('/tests/fixtures/host-harness.ts');
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     try {
       const host = new HostProcessContext(os.getHostProcess());
       const [[root]] = host.fs.getDirectories();
@@ -124,10 +130,13 @@ test('p3-cat preserves every byte of a large file through a backpressured output
 for (const args of [[], ['-'], ['/before', '-', '/after']])
   test(`p3-cat preserves stdin with operands ${JSON.stringify(args)}`, async ({ page }) => {
     const result = await page.evaluate(async (args) => {
-      const { Walos, HostProcessContext, install, readAll, writeAll } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
-      const os = await Walos.create();
+      const { Walos, HostProcessContext, install, readAll, writeAll } =
+        await import('/tests/fixtures/host-harness.ts');
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       try {
         const host = new HostProcessContext(os.getHostProcess());
         const [[root]] = host.fs.getDirectories();

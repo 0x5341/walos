@@ -36,13 +36,21 @@ for (const failure of ['construct', 'send', 'error', 'messageerror'] as const)
           terminated++;
         }
       };
-      const error = await Walos.create().then(
+      const error = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      }).then(
         () => null,
         (e: any) => ({ code: e.code, name: e.name }),
       );
       (window as any).Worker = NativeWorker;
       navigator.storage.getDirectory = original;
-      const os = await Walos.create();
+      const os = await Walos.create({
+        storage: await (
+          await navigator.storage.getDirectory()
+        ).getDirectoryHandle('walos-v1', { create: true }),
+      });
       const processes = os.processes.length;
       await os.dispose();
       return { error, created, terminated, storageCalls, processes };
@@ -71,7 +79,11 @@ test('Core loss rejects outstanding RPCs, invalidates Host resources, and releas
         super.terminate();
       }
     };
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     const h = new HostProcessContext(os.getHostProcess());
     const errors: string[] = [];
     os.subscribe((e) => {
@@ -108,7 +120,11 @@ test('Core loss rejects outstanding RPCs, invalidates Host resources, and releas
 test('disposal wakes a pending pipe read, pipe write and poll without a peer', async ({ page }) => {
   const result = await page.evaluate(async () => {
     const { Walos, HostProcessContext } = await import('/tests/fixtures/host-harness.ts');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     const h = new HostProcessContext(os.getHostProcess());
     const [reader, writer] = await h.io.createPipe();
     const [empty, unused] = await h.io.createPipe();
@@ -131,7 +147,11 @@ test('dispose is reentrant from a state listener and acknowledges the same compl
 }) => {
   const result = await page.evaluate(async () => {
     const { Walos, HostProcessContext } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create();
+    const os = await Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+    });
     let nested: Promise<void> | undefined;
     os.subscribe((event) => {
       if (event.type === 'state' && event.state === 'disposed') nested = os.dispose();
