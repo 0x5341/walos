@@ -94,7 +94,14 @@ migration and coverage documents for Result/Future/Stream and unsupported APIs.
 P2/P3 classification inspects actual component imports/exports and versions. Mixed,
 unknown and unsupported worlds fail before READY. P3 requires exactly the 0.3.2
 CLI entrypoint and known 0.3.2 imports. `run` returns a normal code, while a stop
-is `terminated` and an unimplemented operation is a Trap. HTTP handler traps; sockets use a configured backend. HTTP client sending uses browser Fetch. Links and timestamp mutation use the common persistent filesystem; see the repository coverage table.
+is `terminated` and an unimplemented operation is a Trap. Sockets use a configured
+backend. `host.http.start(executable, { listen: { port: 3000, path: '/api' } })`
+starts a native P3 HTTP service in its own Worker. Host and other P3 processes
+reach it through `wasi.http.client.send` to `http://localhost:3000/api/...`.
+Unmatched URLs use browser Fetch. Middleware accepts a fixed `next` service;
+omitting `listen` creates a private handler. See
+[HTTP routing, streaming and lifecycle](../../docs/wasi-p3-http.md).
+Links and timestamp mutation use the common persistent filesystem; see the repository coverage table.
 The build carries a checked patch to the pinned engine's future-drop producer
 notification; native stream/future cancellation is verified with compiled components.
 

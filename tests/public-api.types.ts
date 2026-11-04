@@ -119,3 +119,29 @@ export async function publicHttpExample(context: ProcessContext) {
   }
   await sent;
 }
+
+export async function httpServiceExample(host: HostProcessContext, executable: FileDescriptor) {
+  await using service: import('@walos/os').HostHttpService = await host.http.start(executable);
+  await using entry = await host.http.start(executable, {
+    next: service,
+    listen: { port: 3000, path: '/api' },
+    argv: [],
+    env: [{ key: 'PWD', value: '/' }],
+  });
+  const { Future } = await import('@walos/os');
+  const types = host.context.wasi.http.types;
+  const [request] = types.request.new(
+    types.fields.new(),
+    undefined,
+    new Future({ tag: 'ok', val: undefined }),
+    undefined,
+  );
+  await entry.handle(request, { signal: new AbortController().signal });
+  await entry.requestStop();
+  const exit = await entry.wait();
+  console.log(exit, entry.pid());
+  // @ts-expect-error HTTP execution borrows an executable descriptor, not a path
+  host.http.start('/bin/service.wasm');
+  // @ts-expect-error middleware next must be a service handle
+  host.http.start(executable, { next: 123 });
+}

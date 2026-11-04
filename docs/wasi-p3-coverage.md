@@ -4,7 +4,7 @@ Source: official tag v0.3.2, commit `bdadbbb8cadd287cc5014c4b5a0bf76efc60291c`. 
 `wit/p3/deps`; `api.json` inventories every type, function, async signature and
 resource. Generated bindings are a comparison/ABI reference, not the public Context.
 
-All 28 interfaces and 143 operations have public TS types. CLI run
+All 29 interfaces and 148 operations have public TS types. CLI run
 is an export/Runtime entrypoint, not an OS import on Context. The optional timezone
 feature uses browser Intl data; unavailable IDs or offsets return none. Offsets are limited to the JavaScript Date range. Type-only interfaces and all named
 types are included in the API inventory even when they have no operation row.
@@ -14,7 +14,8 @@ path. No unsupported success or invented Result variant is returned. Sockets use
 lookup return access-denied. IP literals are parsed locally. Backend-dependent
 means transport, options and authorization depend on the configured backend.
 See [Sockets backend](sockets-backend.md) for the contract and test coverage.
-HTTP resources and client sending are implemented; handler.handle still traps.
+HTTP resources, native service/middleware entrypoints and process-local client routing are implemented.
+HTTP processes publish localhost port/path prefixes; unmatched requests use browser Fetch.
 See [HTTP transport limitations](wasi-p3-http.md).
 
 Filesystem uses a versioned logical namespace in caller-provided dedicated OPFS storage.
@@ -40,6 +41,11 @@ borrowed descriptor. Native P1/P2 representations stay in ABI adapters.
 | wasi:clocks/timezone@0.3.2 | iana-id | implemented |
 | wasi:clocks/timezone@0.3.2 | utc-offset | implemented |
 | wasi:clocks/timezone@0.3.2 | to-debug-string | implemented |
+| wasi:random/insecure-seed@0.3.2 | get-insecure-seed | implemented |
+| wasi:random/insecure@0.3.2 | get-insecure-random-bytes | implemented |
+| wasi:random/insecure@0.3.2 | get-insecure-random-u64 | implemented |
+| wasi:random/random@0.3.2 | get-random-bytes | implemented |
+| wasi:random/random@0.3.2 | get-random-u64 | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.read-via-stream | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.write-via-stream | implemented |
 | wasi:filesystem/types@0.3.2 | [method]descriptor.append-via-stream | implemented |
@@ -107,11 +113,6 @@ borrowed descriptor. Native P1/P2 representations stay in ABI adapters.
 | wasi:sockets/types@0.3.2 | [method]udp-socket.get-send-buffer-size | backend-dependent |
 | wasi:sockets/types@0.3.2 | [method]udp-socket.set-send-buffer-size | backend-dependent |
 | wasi:sockets/ip-name-lookup@0.3.2 | resolve-addresses | backend-dependent |
-| wasi:random/insecure-seed@0.3.2 | get-insecure-seed | implemented |
-| wasi:random/insecure@0.3.2 | get-insecure-random-bytes | implemented |
-| wasi:random/insecure@0.3.2 | get-insecure-random-u64 | implemented |
-| wasi:random/random@0.3.2 | get-random-bytes | implemented |
-| wasi:random/random@0.3.2 | get-random-u64 | implemented |
 | wasi:cli/environment@0.3.2 | get-environment | implemented |
 | wasi:cli/environment@0.3.2 | get-arguments | implemented |
 | wasi:cli/environment@0.3.2 | get-initial-cwd | implemented |
@@ -159,7 +160,7 @@ borrowed descriptor. Native P1/P2 representations stay in ABI adapters.
 | wasi:http/types@0.3.2 | [method]response.set-status-code | implemented |
 | wasi:http/types@0.3.2 | [method]response.get-headers | implemented |
 | wasi:http/types@0.3.2 | [static]response.consume-body | implemented |
-| wasi:http/handler@0.3.2 | handle | Trap |
+| wasi:http/handler@0.3.2 | handle | Runtime entrypoint / linked handler |
 | wasi:http/client@0.3.2 | send | partial |
 | walos:runtime/io@0.3.2 | [method]input-endpoint.read-via-stream | implemented |
 | walos:runtime/io@0.3.2 | [method]output-endpoint.when-writable | implemented |
@@ -174,3 +175,8 @@ borrowed descriptor. Native P1/P2 representations stay in ABI adapters.
 | walos:runtime/process@0.3.2 | [method]child-process.wait | implemented |
 | walos:runtime/process@0.3.2 | [method]child-process.request-stop | implemented |
 | walos:runtime/process@0.3.2 | spawn | implemented |
+| walos:runtime/http@0.3.2 | [method]service.pid | implemented |
+| walos:runtime/http@0.3.2 | [method]service.handle | implemented |
+| walos:runtime/http@0.3.2 | [method]service.wait | implemented |
+| walos:runtime/http@0.3.2 | [method]service.request-stop | implemented |
+| walos:runtime/http@0.3.2 | start | implemented |

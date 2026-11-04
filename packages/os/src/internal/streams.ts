@@ -53,6 +53,7 @@ export const ioError = (e: unknown): IoError =>
                   timeout: 73,
                   cancelled: 11,
                   internal: 29,
+                  busy: 10,
                 }[e.kind]
               : 29,
         String(e),

@@ -388,6 +388,7 @@ static bool lifecycle(command_list_string_t args) {
   if(equals(args.ptr[2],"trap")) __builtin_trap();
   return !equals(args.ptr[2],"nonzero");
 }
+static walos_runtime_http_borrow_service_t *http_direct_service;
 static bool http_client(command_list_string_t args, bool invalid) {
   wasi_http_types_future_result_option_own_trailers_error_code_writer_t trailer_writer;
   wasi_http_types_future_result_option_own_trailers_error_code_t trailer =
@@ -415,7 +416,14 @@ static bool http_client(command_list_string_t args, bool invalid) {
     CHECK(wasi_http_types_method_request_set_path_with_query(wasi_http_types_borrow_request(request.f0), &path));
   }
   wasi_http_client_result_own_response_error_code_t reply;
-  command_subtask_status_t sending = wasi_http_client_send(request.f0, &reply);
+  command_subtask_status_t sending;
+  if (http_direct_service) {
+    walos_runtime_http_result_own_response_error_code_t direct;
+    subtask(walos_runtime_http_method_service_handle(*http_direct_service, request.f0, &direct));
+    reply.is_err = direct.is_err;
+    if (direct.is_err) reply.val.err = direct.val.err; else reply.val.ok = direct.val.ok;
+    sending = COMMAND_SUBTASK_RETURNED;
+  } else sending = wasi_http_client_send(request.f0, &reply);
   if (upload) {
     uint8_t data[4096]; memset(data, 65, sizeof(data));
     for (size_t i = 0; i < 32; i++) {
@@ -449,7 +457,7 @@ static bool http_client(command_list_string_t args, bool invalid) {
     CHECK(COMMAND_WAITABLE_STATE(status) == COMMAND_WAITABLE_COMPLETED);
     total += COMMAND_WAITABLE_COUNT(status);
   }
-  CHECK(total == 7);
+  CHECK(total == (args.len > 1 && equals(args.ptr[1], "http-local") ? 0u : 7u));
   wasi_http_types_stream_u8_drop_readable(body.f0);
   wasi_http_types_result_option_own_trailers_error_code_t trailers;
   completed(body.f1, wasi_http_types_future_result_option_own_trailers_error_code_read(body.f1, &trailers));
@@ -459,6 +467,30 @@ static bool http_client(command_list_string_t args, bool invalid) {
   completed(handled_writer, wasi_http_types_future_result_void_error_code_write(handled_writer, &success));
   wasi_http_types_future_result_void_error_code_drop_writable(handled_writer);
   return print("p3-http-ok\n");
+}
+static bool http_start(void) {
+  wasi_filesystem_types_own_descriptor_t file;
+  CHECK(open_file(root_dir(), "p3-http-service", 0, WASI_FILESYSTEM_TYPES_DESCRIPTOR_FLAGS_READ, &file));
+  walos_runtime_http_start_args_t args = {0};
+  args.executable = wasi_filesystem_types_borrow_descriptor(file);
+  walos_runtime_http_result_own_service_spawn_error_t result;
+  subtask(walos_runtime_http_start(&args, &result));
+  wasi_filesystem_types_descriptor_drop_own(file);
+  CHECK(!result.is_err);
+  walos_runtime_http_borrow_service_t service = walos_runtime_http_borrow_service(result.val.ok);
+  CHECK(walos_runtime_http_method_service_pid(service) > 0);
+  http_direct_service = &service;
+  command_string_t values[] = {text("p3-probe"), text("http-local"), text("localhost:3000")};
+  CHECK(http_client((command_list_string_t){values, 3}, false));
+  http_direct_service = NULL;
+  subtask(walos_runtime_http_method_service_request_stop(service));
+  walos_runtime_http_result_exit_result_wait_error_t exit;
+  subtask(walos_runtime_http_method_service_wait(service, &exit));
+  CHECK(!exit.is_err && exit.val.ok.tag == WALOS_RUNTIME_PROCESS_EXIT_RESULT_TERMINATED);
+  subtask(walos_runtime_http_method_service_wait(service, &exit));
+  CHECK(exit.is_err);
+  walos_runtime_http_service_drop_own(result.val.ok);
+  return print("p3-http-start-ok\n");
 }
 static bool execute(void) {
   command_list_string_t args; wasi_cli_environment_get_arguments(&args);
@@ -522,7 +554,8 @@ static bool execute(void) {
     wasi_filesystem_types_result_void_error_code_t result;
     subtask(wasi_filesystem_types_method_descriptor_set_times(&args,&result)); return true;
   }
-  if (equals(mode,"http") || equals(mode,"http-post") || equals(mode,"http-pending")) return http_client(args, false);
+  if (equals(mode,"http-start")) return http_start();
+  if (equals(mode,"http") || equals(mode,"http-local") || equals(mode,"http-post") || equals(mode,"http-pending")) return http_client(args, false);
   if (equals(mode,"http-invalid")) return http_client(args, true);
   if (equals(mode,"timezone")) {
     command_string_t id;

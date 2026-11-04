@@ -17,6 +17,33 @@ export default defineConfig({
           futureDrop,
           'dropReadable(e,t){o.get(t)?.cancel?.();o.delete(t);r.delete(-2&t)}',
         );
+        // preview.2 copies guest-written future bytes but never decodes their
+        // payload for JS readers. Decode at write time (before guest buffers are
+        // freed), preserving own resources and result resolve/reject semantics.
+        const futureWrite =
+          'Ic=(e,t)=>{const n=t.element,r=e.resolved.yieldThrottle,o=void 0!==e.resolved.wrapLower;return{callerElement:t.callerElement,element:n,binder:Fn(async(e,t)=>({result:pc((t,r)=>e.futures.write(n.type,t,r),e,r,o)}),n.selfSortIndex)}}';
+        if (!code.includes(futureWrite)) throw new Error('Review jsco typed future write patch');
+        code = code.replace(
+          futureWrite,
+          `Ic=(context,plan)=>{
+          const n=plan.element, resolved=context.resolved;
+          const type=resolved.resolvedTypes.get(n.type);
+          if (!type || type.tag!==65) throw new Error('Expected canonical future type');
+          const payload=type.value===undefined?undefined:nr(resolved,er(resolved,type.value));
+          const loader=payload&&ni(payload,resolved.stringEncoding,resolved.canonicalResourceIds,resolved.ownInstanceResources,resolved.usesNumberForInt64);
+          const store=payload&&Gi(payload,resolved.stringEncoding,resolved.canonicalResourceIds,resolved.ownInstanceResources);
+          const storer=payload?.tag===71?Qi(store):store;
+          return {callerElement:plan.callerElement,element:n,binder:Fn(async(memory)=>({result:pc((handle,ptr)=>{
+            const entry=memory.futures.getEntry(handle);
+            if (!entry) return 1;
+            const value=loader?loader(memory,ptr):undefined;
+            entry.resolvedValue=payload?.tag===71?value.val:value;
+            entry.rejected=payload?.tag===71&&value.tag==='err';
+            entry.storer=storer;
+            return memory.futures.write(n.type,handle,0);
+          },memory,resolved.yieldThrottle,resolved.wrapLower!==undefined)}),n.selfSortIndex)}
+        }`,
+        );
         // preview.2 groups imported resource aliases by export name, missing
         // same-instance eq aliases (HTTP headers/trailers are aliases of fields).
         // Canonicalize only explicit type equality; never relax handle checks.

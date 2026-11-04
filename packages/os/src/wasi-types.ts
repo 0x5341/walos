@@ -53,6 +53,26 @@ export namespace WasiClocksTimezone {
   }
 }
 
+export namespace WasiRandomInsecureSeed {
+  export interface Interface {
+    getInsecureSeed(): readonly [U64, U64];
+  }
+}
+
+export namespace WasiRandomInsecure {
+  export interface Interface {
+    getInsecureRandomBytes(maxLen: U64): Uint8Array;
+    getInsecureRandomU64(): U64;
+  }
+}
+
+export namespace WasiRandomRandom {
+  export interface Interface {
+    getRandomBytes(maxLen: U64): Uint8Array;
+    getRandomU64(): U64;
+  }
+}
+
 export namespace WasiFilesystemTypes {
   export type Instant = WasiClocksSystemClock.Instant;
   export type Filesize = U64;
@@ -296,26 +316,6 @@ export namespace WasiSocketsIpNameLookup {
     | { readonly tag: 'other'; readonly val: string | undefined };
   export interface Interface {
     resolveAddresses(name: string): Promise<Result<readonly IpAddress[], ErrorCode>>;
-  }
-}
-
-export namespace WasiRandomInsecureSeed {
-  export interface Interface {
-    getInsecureSeed(): readonly [U64, U64];
-  }
-}
-
-export namespace WasiRandomInsecure {
-  export interface Interface {
-    getInsecureRandomBytes(maxLen: U64): Uint8Array;
-    getInsecureRandomU64(): U64;
-  }
-}
-
-export namespace WasiRandomRandom {
-  export interface Interface {
-    getRandomBytes(maxLen: U64): Uint8Array;
-    getRandomU64(): U64;
   }
 }
 
@@ -632,12 +632,46 @@ export namespace WalosRuntimeProcess {
   }
 }
 
+export namespace WalosRuntimeHttp {
+  export type Descriptor = WasiFilesystemTypes.Descriptor;
+  export type Request = WasiHttpTypes.Request;
+  export type Response = WasiHttpTypes.Response;
+  export type ErrorCode = WasiHttpTypes.ErrorCode;
+  export type SpawnError = WalosRuntimeProcess.SpawnError;
+  export type ExitResult = WalosRuntimeProcess.ExitResult;
+  export type WaitError = WalosRuntimeProcess.WaitError;
+  export type OutputEndpoint = WalosRuntimeIo.OutputEndpoint;
+  export type ListenAddress = { readonly port: U16; readonly path: string };
+  export interface Service extends AsyncDisposable {
+    pid(): U32;
+    handle(request: Own<Request>): Promise<Result<Own<Response>, ErrorCode>>;
+    wait(): Promise<Result<ExitResult, WaitError>>;
+    requestStop(): Promise<void>;
+  }
+  export interface Interface {
+    start(
+      executable: Borrow<Descriptor>,
+      argv: readonly string[],
+      env: readonly (readonly [string, string])[],
+      listen: ListenAddress | undefined,
+      next: Borrow<Service> | undefined,
+      stdout: Own<OutputEndpoint> | undefined,
+      stderr: Own<OutputEndpoint> | undefined,
+    ): Promise<Result<Own<Service>, SpawnError>>;
+  }
+}
+
 export interface WasiImports {
   readonly clocks: {
     readonly types: WasiClocksTypes.Interface;
     readonly monotonicClock: WasiClocksMonotonicClock.Interface;
     readonly systemClock: WasiClocksSystemClock.Interface;
     readonly timezone: WasiClocksTimezone.Interface;
+  };
+  readonly random: {
+    readonly insecureSeed: WasiRandomInsecureSeed.Interface;
+    readonly insecure: WasiRandomInsecure.Interface;
+    readonly random: WasiRandomRandom.Interface;
   };
   readonly filesystem: {
     readonly types: WasiFilesystemTypes.Interface;
@@ -646,11 +680,6 @@ export interface WasiImports {
   readonly sockets: {
     readonly types: WasiSocketsTypes.Interface;
     readonly ipNameLookup: WasiSocketsIpNameLookup.Interface;
-  };
-  readonly random: {
-    readonly insecureSeed: WasiRandomInsecureSeed.Interface;
-    readonly insecure: WasiRandomInsecure.Interface;
-    readonly random: WasiRandomRandom.Interface;
   };
   readonly cli: {
     readonly environment: WasiCliEnvironment.Interface;
@@ -676,5 +705,6 @@ export interface WalosImports {
   readonly runtime: {
     readonly io: WalosRuntimeIo.Interface;
     readonly process: WalosRuntimeProcess.Interface;
+    readonly http: WalosRuntimeHttp.Interface;
   };
 }

@@ -104,6 +104,14 @@ a second filesystem or transport implementation.
 
 ## Errors and unsupported APIs
 
+HTTP services use the `walos:runtime/http@0.3.2` extension and the explicit
+`host.http.start(executable, options)` convenience API. Service resources expose
+`handle`, `pid`, `wait`, `requestStop` and asynchronous disposal. The Host `handle`
+method accepts an optional AbortSignal; HTTP Results retain their standard tagged
+representation. Public `HostHttpService` and `HttpStartOptions` describe these
+views. See [HTTP processes and routing](wasi-p3-http.md) for port/path publication,
+middleware links, internal `client.send`, Fetch fallback and cancellation.
+
 Standard Results stay Results. Host convenience views unwrap Results to ServiceError;
 ABI adapters translate to their target errno/variant. An unimplemented operation
 throws UnimplementedWasiError from the shared Context, with its complete WIT path.

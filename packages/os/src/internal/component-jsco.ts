@@ -13,14 +13,17 @@ export async function prepareJsco(bytes: Uint8Array, metrics?: ComponentMetrics)
   const component = await createComponent(bytes, { noJspi: false, validateTypes: true });
   if (metrics) metrics.prepareMs = performance.now() - start;
   const exports = component.exports();
-  if (exports.length !== 1) throw new Error(`Unsupported CLI world exports: ${exports.join(', ')}`);
+  if (exports.length !== 1)
+    throw new Error(`Unsupported component world exports: ${exports.join(', ')}`);
   const entry = exports[0];
   const format = /^wasi:cli\/run@0\.2\.\d+$/.test(entry)
     ? 'p2'
     : entry === 'wasi:cli/run@0.3.2'
       ? 'p3'
-      : undefined;
-  if (!format) throw new Error(`Unsupported CLI entrypoint/version: ${entry}`);
+      : entry === 'wasi:http/handler@0.3.2'
+        ? 'p3'
+        : undefined;
+  if (!format) throw new Error(`Unsupported component entrypoint/version: ${entry}`);
   const known = new Set(
     apiShape
       .filter((s) => !(s.package === 'wasi:cli' && s.interface === 'run'))
@@ -37,7 +40,12 @@ export async function prepareJsco(bytes: Uint8Array, metrics?: ComponentMetrics)
     )
       throw new Error(`Unsupported or mixed ${format} component import: ${name}`);
   }
-  return { component, format, entry } as const;
+  return {
+    component,
+    format,
+    entry,
+    world: entry.startsWith('wasi:http/') ? 'http' : 'cli',
+  } as const;
 }
 export async function loadJsco(
   bytes: Uint8Array,
@@ -83,7 +91,7 @@ export async function loadP3(
   fault: (error: unknown) => void,
   metrics?: ComponentMetrics,
 ) {
-  if (prepared.format !== 'p3') throw new Error('Expected a WASI 0.3.2 CLI component');
+  if (prepared.format !== 'p3') throw new Error('Expected a WASI 0.3.2 component');
   const start = performance.now();
   const bindings = nativeImports(context, prepared.component.imports(), drops, guard, fault);
   let instance;
@@ -94,17 +102,29 @@ export async function loadP3(
     throw error;
   }
   if (metrics) metrics.instantiateMs = performance.now() - start;
-  const run = instance.exports[prepared.entry]?.run;
-  if (typeof run !== 'function') {
+  const exported = instance.exports[prepared.entry];
+  const run = exported?.run;
+  const handle = exported?.handle;
+  if (typeof (prepared.world === 'http' ? handle : run) !== 'function') {
     try {
       instance.dispose();
     } finally {
       bindings.dispose();
     }
-    throw new Error('Missing native async CLI run');
+    throw new Error(`Missing native async ${prepared.world} entrypoint`);
   }
   return {
     run,
+    handle: async (request: import('../wasi-types.js').WasiHttpTypes.Request) => {
+      const result = bindings.lower(
+        await handle(bindings.lift(request)),
+      ) as import('../wasi-types.js').Result<
+        import('../wasi-types.js').WasiHttpTypes.Response,
+        import('../wasi-types.js').WasiHttpTypes.ErrorCode
+      >;
+      if (result.tag === 'ok') bindings.release(result.val);
+      return result;
+    },
     requestStop: () => instance.abort(),
     dispose: () => {
       try {

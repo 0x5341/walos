@@ -12,6 +12,7 @@ export type HostDescriptor = AbiDescriptor;
 export type HostInput = AbiInput;
 export type HostOutput = AbiOutput;
 export type HostChildProcess = AbiChild;
+export type { AbiHttpService as HostHttpService, HttpStartOptions } from './internal/abi-view.js';
 
 /** Explicit convenience wrapper. It borrows Context and owns only its created views. */
 export class HostProcessContext implements AsyncDisposable {
@@ -26,6 +27,7 @@ export class HostProcessContext implements AsyncDisposable {
   readonly fs: ReturnType<typeof createAbiView>['fs'];
   readonly io: ReturnType<typeof createAbiView>['io'];
   readonly process: ReturnType<typeof createAbiView>['process'];
+  readonly http: ReturnType<typeof createAbiView>['http'];
   readonly clock: ReturnType<typeof createAbiView>['clock'];
   readonly random: ReturnType<typeof createAbiView>['random'];
   constructor(readonly context: ProcessContext) {
@@ -37,6 +39,7 @@ export class HostProcessContext implements AsyncDisposable {
     this.fs = this.methods(view.fs);
     this.io = this.methods(view.io);
     this.process = this.methods(view.process);
+    this.http = this.methods(view.http);
     this.clock = view.clock;
     this.random = view.random;
   }

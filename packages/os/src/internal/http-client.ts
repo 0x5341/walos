@@ -1,4 +1,4 @@
-import { Future, cancellable, type Stream } from '../async.js';
+import { Future, cancellable, cancelAsync, type Stream } from '../async.js';
 import { ServiceError } from '../types.js';
 import type { Result, WasiHttpClient, WasiHttpTypes as HTTP } from '../wasi-types.js';
 import { HttpBody } from './http-body.js';
@@ -137,9 +137,40 @@ function incoming(
   };
 }
 
-export function createHttpClient(scope: {
-  add<T extends AsyncDisposable>(value: T): T;
-}): WasiHttpClient.Interface {
+export function createHttpClient(
+  scope: {
+    add<T extends AsyncDisposable>(value: T): T;
+  },
+  local?: (request: HttpRequest) => Promise<Reply | undefined>,
+): WasiHttpClient.Interface {
+  if (local) {
+    const network = createHttpClient(scope);
+    return {
+      send(request) {
+        if (!(request instanceof HttpRequest))
+          throw new ServiceError('invalid-resource', 'Foreign HTTP request');
+        const moved = scope.add(request.transfer());
+        let cancelled = false;
+        let pending = local(moved);
+        const result = (async (): Promise<Reply> => {
+          const reply = await pending;
+          if (reply !== undefined) return reply;
+          if (cancelled)
+            return {
+              tag: 'err',
+              val: { tag: 'internal-error', val: 'HTTP send cancelled' },
+            } as Reply;
+          pending = network.send(moved);
+          return (await pending)!;
+        })();
+        return cancellable(result, async () => {
+          cancelled = true;
+          await cancelAsync(pending);
+          await moved.body.fail({ tag: 'internal-error', val: 'HTTP send cancelled' });
+        });
+      },
+    };
+  }
   return {
     send(request) {
       if (!(request instanceof HttpRequest))
