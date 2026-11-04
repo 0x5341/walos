@@ -293,3 +293,46 @@ and the bundled production suite passed (6). Local browser runs used isolated
 ports and existing extracted Chromium shared libraries. HTTP/2 tests generate
 short-lived local certificates with OpenSSL and enable certificate-error
 acceptance only in their test browser contexts.
+
+## Issues #50, #51 and #52: persistent filesystem objects
+
+Filesystem initialization now requires a caller-provided dedicated OPFS directory
+handle. Host and all Process Workers share its logical root. Format v1 separates
+stable object IDs/payloads from directory entries; hard links share contents,
+timestamps, link count and identity. Symlink resolution follows each component,
+including `..`, while enforcing the operation's base Descriptor boundary.
+
+Timestamp mutation supports explicit nanoseconds, current time and no-change for
+files, directories and symlinks. Automatic access-time updates are disabled.
+Awaited writes update logical metadata, while stream flush/completion commits the
+physical stamp without overwriting subsequent explicit times. Metadata hashes
+include ID, size, mtime and change generation. Advice is intentionally a no-op;
+integrity-sync open flags remain unsupported.
+
+Namespace/metadata transactions use Web Locks and atomic OPFS snapshot replacement.
+Restart validates the namespace and referenced payloads, reconciles interrupted
+writes using physical stamps, and reclaims uncommitted/unlinked objects. Unlinked
+open descriptors and streams remain usable until session end. Reclamation is
+intentionally deferred to restart; file bytes and metadata are not one atomic
+transaction, and multiple active OS instances on one store are unsupported. See
+[storage contract](filesystem-storage.md) for the format, migration and limits.
+
+Compiled P1/P2 probes verify links and timestamp mutation. Native P3 additionally
+checks stat follow/no-follow, readlink, shared identity/hash/count, unlink lifetime,
+invalid timestamps, loops, absolute-target refusal and unsupported sync flags.
+Browser tests cover alias writes, nanosecond persistence, directory rename,
+no-change/hash stability, Host plus four concurrent P3 Workers, termination before
+snapshot commit, store isolation and removal through an open Directory Descriptor.
+The pinned engine's async scalar-result lowering is corrected so native
+`is-same-object` writes its boolean to the canonical result pointer.
+
+Validation (2026-11-04, Node 26.13.0, npm 12.2.1, Playwright Chromium):
+`npm run build`, `npm run check`, WIT P2/P3 generation and generated-type comparison
+passed. After integrating main's HTTP implementation, the complete development
+suite passed (261, with 7 production-only skips), the production suite passed (7),
+and HTTP Node tests passed (10). The eight focused storage tests and the
+Pages/API-docs subpath smoke tests passed. Chromium's missing shared libraries were
+extracted under `work/browser-libs` and selected with `LD_LIBRARY_PATH`.
+`npm run test:benchmark` and `npm run benchmark -- --trials 1` also passed; the
+benchmark now supplies its own initialized storage handle. This checks artifact
+integrity and workload execution, without a hardware-dependent performance gate.
