@@ -81,29 +81,6 @@ for (const [mode, output] of [
     );
     expect(result).toMatchObject({ exit: { kind: 'exited', code: 0 }, stdout: output, stderr: '' });
   });
-for (const [mode, operation] of [
-  ['socket', 'wasi:sockets/types@0.3.2/[static]tcp-socket.create'],
-] as const)
-  test(`P3 ${mode} preserves the shared unimplemented Trap`, async ({ page }) => {
-    const result = await page.evaluate(async (mode) => {
-      const { Walos, HostProcessContext, install, run } =
-        await import('/tests/fixtures/host-harness.ts');
-      const os = await Walos.create({
-        storage: await (
-          await navigator.storage.getDirectory()
-        ).getDirectoryHandle('walos-v1', { create: true }),
-      });
-      try {
-        const h = new HostProcessContext(os.getHostProcess());
-        return await run(h, await install(h, 'p3-probe'), ['p3-probe', mode]);
-      } finally {
-        await os.dispose();
-      }
-    }, mode);
-    expect(result.exit.kind).toBe('trap');
-    expect(result.exit).toMatchObject({ message: expect.stringContaining(operation) });
-  });
-
 for (const name of [
   'unknown-world',
   'wrong-version',

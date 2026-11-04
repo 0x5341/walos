@@ -65,11 +65,13 @@ Readlink, unlink and rename operate on the final link itself. A trailing slash
 requires a directory. Empty paths and NUL-containing paths return `invalid`.
 
 Files, directories and symlinks maintain atime, mtime and ctime. Explicit times
-retain the WIT u64 seconds and nanosecond precision. `now` uses `Date.now()` with
+retain the WIT signed 64-bit seconds (including pre-epoch instants) and nanosecond precision. `now` uses `Date.now()` with
 millisecond resolution; both fields in one call use the same captured time.
 `no-change` preserves the field; changing either field updates ctime. Invalid
 nanoseconds or seconds return `invalid` without partially changing metadata.
-Descriptor set-times requires write; path set-times requires mutate-directory.
+P1 stat timestamps outside unsigned 64-bit nanoseconds and P2 stat timestamps
+with negative seconds return overflow. P2 mutation above the common signed seconds
+range also returns overflow. Descriptor set-times requires write; path set-times requires mutate-directory.
 
 Automatic access-time updates are disabled (noatime). Awaited file writes/truncation update
 mtime/ctime and generation when the operation succeeds. Flush/finish commits the

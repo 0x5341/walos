@@ -56,6 +56,7 @@ scope.onmessage = async (event) => {
   }
   if (message.type === 'stop') {
     stopping = true;
+    services?.cancelSockets();
     runtime?.requestStop();
     return;
   }
@@ -118,6 +119,7 @@ scope.onmessage = async (event) => {
         : { kind: 'trap', message: String(error) };
   } finally {
     // Failure of the borrower must never prevent cleanup of its owner.
+    services?.cancelSockets();
     const failures: unknown[] = [];
     try {
       await runtime?.[Symbol.asyncDispose]();

@@ -52,6 +52,8 @@ static void subtask(command_subtask_status_t status) {
   }
   if (handle) command_subtask_drop(handle);
 }
+#include "sockets.h"
+
 static bool services(void) {
   wasi_clocks_system_clock_instant_t wall;
   wasi_clocks_system_clock_now(&wall);
@@ -179,6 +181,11 @@ static bool filesystem_extended(void) {
   times.data_access_timestamp.tag=WASI_FILESYSTEM_TYPES_NEW_TIMESTAMP_NO_CHANGE;
   times.data_modification_timestamp.val.timestamp.nanoseconds=1000000000;
   subtask(wasi_filesystem_types_method_descriptor_set_times(&times,&r)); CHECK(r.is_err && r.val.err.tag==WASI_FILESYSTEM_TYPES_ERROR_CODE_INVALID);
+  times.data_modification_timestamp.val.timestamp.seconds=-1;
+  times.data_modification_timestamp.val.timestamp.nanoseconds=999999999;
+  subtask(wasi_filesystem_types_method_descriptor_set_times(&times,&r)); CHECK(!r.is_err);
+  subtask(wasi_filesystem_types_method_descriptor_stat(fd,&stat));
+  CHECK(!stat.is_err && stat.val.ok.data_modification_timestamp.val.seconds==-1 && stat.val.ok.data_modification_timestamp.val.nanoseconds==999999999);
   sym.old_path=text("/absolute"); sym.new_path=text("bad");
   subtask(wasi_filesystem_types_method_descriptor_symlink_at(&sym,&r)); CHECK(r.is_err && r.val.err.tag==WASI_FILESYSTEM_TYPES_ERROR_CODE_NOT_PERMITTED);
   sym.old_path=text("cycle"); sym.new_path=text("cycle");
@@ -484,6 +491,8 @@ static bool execute(void) {
   if (equals(mode,"future")) return cancel_future();
   if (equals(mode,"file-process")) return file_process();
   if (equals(mode,"services")) return services();
+  if (equals(mode,"sockets")) return sockets_test(false);
+  if (equals(mode,"socket")) return sockets_test(true);
   if (equals(mode,"cat")) return relay();
   if (equals(mode,"cancel")) return cancel_input();
   if (equals(mode,"fs")) return filesystem();
@@ -515,8 +524,6 @@ static bool execute(void) {
   }
   if (equals(mode,"http") || equals(mode,"http-post") || equals(mode,"http-pending")) return http_client(args, false);
   if (equals(mode,"http-invalid")) return http_client(args, true);
-  if (equals(mode,"socket")) { wasi_sockets_types_own_tcp_socket_t socket; wasi_sockets_types_error_code_t error;
-    wasi_sockets_types_static_tcp_socket_create(WASI_SOCKETS_TYPES_IP_ADDRESS_FAMILY_IPV4,&socket,&error); return true; }
   if (equals(mode,"timezone")) {
     command_string_t id;
     CHECK(wasi_clocks_timezone_iana_id(&id));

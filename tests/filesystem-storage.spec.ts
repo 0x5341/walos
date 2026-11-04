@@ -392,3 +392,51 @@ test('provided stores isolate namespaces and a removed directory cannot gain ent
   });
   expect(result).toEqual({ isolated: true, errors: Array(4).fill('no-entry') });
 });
+
+test('signed P3 timestamps survive reload and legacy stat reports overflow', async ({ page }) => {
+  const result = await page.evaluate(async () => {
+    const { Walos, HostProcessContext, install, run } =
+      await import('/tests/fixtures/host-harness.ts');
+    const storage = await navigator.storage.getDirectory();
+    let os = await Walos.create({ storage });
+    let h = new HostProcessContext(os.getHostProcess());
+    let [[root]] = h.fs.getDirectories();
+    const f = await root.openAt({}, 'negative', { create: true }, { read: true, write: true });
+    const a = { tag: 'timestamp' as const, val: { seconds: -0x8000000000000000n, nanoseconds: 0 } };
+    const m = { tag: 'timestamp' as const, val: { seconds: -1n, nanoseconds: 999999999 } };
+    await f.setTimes(a, m);
+    let invalid = false;
+    try {
+      await f.setTimes(a, {
+        tag: 'timestamp',
+        val: { seconds: 0x8000000000000000n, nanoseconds: 0 },
+      });
+    } catch (e: any) {
+      invalid = e.code === 'invalid';
+    }
+    const outcomes = [];
+    for (const name of ['fs-probe', 'p2-fs-probe'])
+      outcomes.push(await run(h, await install(h, name), [name, 'negative']));
+    await os.dispose();
+    os = await Walos.create({ storage });
+    h = new HostProcessContext(os.getHostProcess());
+    [[root]] = h.fs.getDirectories();
+    const stat = await root.statAt({}, 'negative');
+    await os.dispose();
+    return {
+      invalid,
+      outcomes: outcomes.map((x) => ({ exit: x.exit, stdout: x.stdout })),
+      a: stat.dataAccessTimestamp,
+      m: stat.dataModificationTimestamp,
+    };
+  });
+  expect(result).toEqual({
+    invalid: true,
+    outcomes: Array(2).fill({
+      exit: { kind: 'exited', code: 0 },
+      stdout: 'negative timestamp overflow\n',
+    }),
+    a: { seconds: -0x8000000000000000n, nanoseconds: 0 },
+    m: { seconds: -1n, nanoseconds: 999999999 },
+  });
+});

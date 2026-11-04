@@ -173,8 +173,12 @@ export class Wasi implements Runtime {
       [48, stat?.dataModificationTimestamp],
       [56, stat?.statusChangeTimestamp],
     ] as const)
-      if (timestamp)
-        this.u64(out + offset, timestamp.seconds * 1000000000n + BigInt(timestamp.nanoseconds));
+      if (timestamp) {
+        const ns = timestamp.seconds * 1000000000n + BigInt(timestamp.nanoseconds);
+        if (ns < 0n || ns > 0xffffffffffffffffn)
+          throw new ServiceError('overflow', 'Timestamp is outside the P1 range');
+        this.u64(out + offset, ns);
+      }
   }
   imports() {
     const context = this.context;

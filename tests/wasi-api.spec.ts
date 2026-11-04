@@ -170,33 +170,6 @@ test('raw standard stdio Future completes and wrapper disposal keeps Context ali
   });
 });
 
-test('unsupported socket API throws from the shared Context', async ({ page }) => {
-  const errors = await page.evaluate(async () => {
-    const { Walos } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create({
-      storage: await (
-        await navigator.storage.getDirectory()
-      ).getDirectoryHandle('walos-v1', { create: true }),
-    });
-    try {
-      const c = os.getHostProcess();
-      const result = [];
-      for (const call of [() => c.wasi.sockets.types.tcpSocket.create('ipv4')])
-        try {
-          await call();
-          result.push('success');
-        } catch (error: any) {
-          result.push({ name: error.name, operation: error.operation });
-        }
-      return result;
-    } finally {
-      await os.dispose();
-    }
-  });
-  expect(errors).toHaveLength(1);
-  for (const error of errors) expect(error).toMatchObject({ name: 'UnimplementedWasiError' });
-});
-
 test('dedicated streams apply backpressure, drain before EOF and cancel blocked producers', async ({
   page,
 }) => {

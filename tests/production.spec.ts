@@ -84,3 +84,31 @@ for (const [mode, output] of [
       stderr: '',
     });
   });
+
+test('bundled external backend works in Host and native P3 Worker under CSP', async ({ page }) => {
+  await page.goto('/tests/fixtures/production.html');
+  await page.waitForFunction(() => Boolean((window as any).testHost));
+  const result = await page.evaluate(async () => {
+    const h = (window as any).testHost;
+    const os = await h.Walos.create({
+      storage: await (
+        await navigator.storage.getDirectory()
+      ).getDirectoryHandle('walos-v1', { create: true }),
+      sockets: { module: new URL('/tests/fixtures/socket-backend.js', location.href).href },
+    });
+    try {
+      const created = os.getHostProcess().wasi.sockets.types.udpSocket.create('ipv4');
+      if (created.tag !== 'ok') throw new Error('Host backend unavailable');
+      await created.val[Symbol.asyncDispose]();
+      const host = new h.HostProcessContext(os.getHostProcess());
+      return await h.run(host, await h.install(host, 'p3-probe'), ['p3-probe', 'sockets']);
+    } finally {
+      await os.dispose();
+    }
+  });
+  expect(result).toMatchObject({
+    exit: { kind: 'exited', code: 0 },
+    stdout: 'p3-sockets-ok\n',
+    stderr: '',
+  });
+});

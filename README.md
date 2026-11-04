@@ -136,8 +136,11 @@ allow module workers and WebAssembly compilation.
 [Current performance comparison](docs/process-context-integration-performance.md) and the
 [historical engine comparison](docs/benchmarks/2026-10-25-engines.md) retain their
 original measurements; current measurements are linked from the migration notes.
-All official WASI 0.3.2 interfaces are public; HTTP resources and client sending use browser Fetch with [documented limitations](docs/wasi-p3-http.md). HTTP handler and sockets throw from the common Context. Filesystem links and
-timestamp mutation use the shared persistent namespace. See the full
+All official WASI 0.3.2 interfaces are public; HTTP resources and client sending use
+browser Fetch with [documented limitations](docs/wasi-p3-http.md). HTTP handler throws from the common Context. Filesystem links and timestamp
+mutation use the shared persistent namespace.
+Sockets support a [process-local injected backend](docs/sockets-backend.md);
+network access is denied by default. See the full
 [coverage table](docs/wasi-p3-coverage.md) and
 [step-by-step validation/performance record](docs/runtime-validation.md).
 JS Process execution remains deferred to #34.

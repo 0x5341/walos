@@ -241,7 +241,27 @@ export class Wasi2 implements Runtime {
         value: function (this: Descriptor, ...args: any[]) {
           const unwrap = args.map((arg) => (arg instanceof Resource ? arg.value : arg));
           return call(
-            () => this.value[name](...unwrap),
+            () => {
+              if (name === 'setTimes' || name === 'setTimesAt')
+                for (const t of unwrap.slice(-2))
+                  if (t.tag === 'timestamp' && t.val.seconds > 0x7fffffffffffffffn)
+                    throw new ServiceError(
+                      'overflow',
+                      'Timestamp is outside the common filesystem range',
+                    );
+              const result = this.value[name](...unwrap);
+              if (name !== 'stat' && name !== 'statAt') return result;
+              return Promise.resolve(result).then((value) => {
+                for (const t of [
+                  value.dataAccessTimestamp,
+                  value.dataModificationTimestamp,
+                  value.statusChangeTimestamp,
+                ])
+                  if (t && t.seconds < 0n)
+                    throw new ServiceError('overflow', 'Timestamp is outside the P2 range');
+                return value;
+              });
+            },
             'fs',
             (value) =>
               name === 'openAt'

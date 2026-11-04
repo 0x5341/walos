@@ -5,7 +5,12 @@
 #include <unistd.h>
 #include <time.h>
 #include <errno.h>
-int main(void) {
+int main(int argc, char **argv) {
+  if (argc > 1 && !strcmp(argv[1], "negative")) {
+    struct stat st; errno = 0;
+    if (stat("/negative", &st) == 0 || errno != EOVERFLOW) return 12;
+    puts("negative timestamp overflow"); return 0;
+  }
   if (mkdir("/tmp/namespace", 0700))
     return 1;
   int fd = open("/tmp/namespace/a", O_CREAT | O_WRONLY, 0600);

@@ -40,6 +40,12 @@ export class Walos implements AsyncDisposable {
     const env = { ...options.env };
     if (!Object.hasOwn(env, 'PWD')) env.PWD = '/';
     const argv = [...(options.argv ?? [])];
+    const sockets =
+      options.sockets &&
+      structuredClone({
+        module: new URL(options.sockets.module, import.meta.url).href,
+        config: options.sockets.config,
+      });
     try {
       os.currentState = 'booting';
       const root = options.storage;
@@ -69,10 +75,12 @@ export class Walos implements AsyncDisposable {
           clearTimeout(timer);
           reject(error);
         };
-        worker.postMessage({ type: 'boot', argv, env });
+        worker.postMessage({ type: 'boot', argv, env, sockets });
       });
-      os.host = new ProcessServices({ root, pid, ppid: null, argv, env, stdio: [] }, os.rpc, () =>
-        os.check(),
+      os.host = new ProcessServices(
+        { root, pid, ppid: null, argv, env, stdio: [], sockets },
+        os.rpc,
+        () => os.check(),
       );
       await os.host.init();
       if (os.currentState !== 'booting')

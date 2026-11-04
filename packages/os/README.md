@@ -94,7 +94,7 @@ migration and coverage documents for Result/Future/Stream and unsupported APIs.
 P2/P3 classification inspects actual component imports/exports and versions. Mixed,
 unknown and unsupported worlds fail before READY. P3 requires exactly the 0.3.2
 CLI entrypoint and known 0.3.2 imports. `run` returns a normal code, while a stop
-is `terminated` and an unimplemented operation is a Trap. HTTP handler and sockets trap. HTTP client sending uses browser Fetch. Links and timestamp mutation use the common persistent filesystem; see the repository coverage table.
+is `terminated` and an unimplemented operation is a Trap. HTTP handler traps; sockets use a configured backend. HTTP client sending uses browser Fetch. Links and timestamp mutation use the common persistent filesystem; see the repository coverage table.
 The build carries a checked patch to the pinned engine's future-drop producer
 notification; native stream/future cancellation is verified with compiled components.
 
@@ -104,3 +104,10 @@ Filesystem storage now requires a caller-provided dedicated OPFS directory.
 Empty storage initializes format v1; existing walos storage reopens. Unknown data
 is rejected. Internal physical paths are not the WASI namespace; install files
 through the Host API. See [storage contract](../../docs/filesystem-storage.md) for migration and recovery limits.
+
+Sockets use an explicit per-process backend. Pass `sockets: { module, config }`
+to `Walos.create({ storage, sockets })`; each Host/Worker imports the module and calls its
+`createSocketBackend` factory with cloned configuration and process identity.
+Without a backend, networking returns `access-denied`; IP literals resolve locally.
+See the [backend contract](../../docs/sockets-backend.md) for synchronization,
+authorization, bounded streaming, cancellation and cleanup requirements.

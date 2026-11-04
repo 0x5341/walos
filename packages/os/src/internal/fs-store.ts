@@ -78,8 +78,9 @@ export class Store {
         if (
           !t ||
           typeof t.seconds !== 'string' ||
-          !/^[0-9]+$/.test(t.seconds) ||
-          BigInt(t.seconds) > 0xffffffffffffffffn ||
+          !/^-?[0-9]+$/.test(t.seconds) ||
+          BigInt(t.seconds) < -0x8000000000000000n ||
+          BigInt(t.seconds) > 0x7fffffffffffffffn ||
           !Number.isInteger(t.nanoseconds) ||
           t.nanoseconds < 0 ||
           t.nanoseconds >= 1e9
@@ -256,8 +257,8 @@ export class Store {
       if (value.tag === 'timestamp') {
         if (
           !value.val ||
-          value.val.seconds < 0n ||
-          value.val.seconds > 0xffffffffffffffffn ||
+          value.val.seconds < -0x8000000000000000n ||
+          value.val.seconds > 0x7fffffffffffffffn ||
           !Number.isInteger(value.val.nanoseconds) ||
           value.val.nanoseconds < 0 ||
           value.val.nanoseconds >= 1e9

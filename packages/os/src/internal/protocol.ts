@@ -40,6 +40,7 @@ export type StreamRef =
     };
 export interface Spec {
   root: FileSystemDirectoryHandle;
+  sockets?: import('../types.js').SocketBackendOptions;
   file: FileSystemFileHandle;
   argv: string[];
   env: Record<string, string>;
