@@ -1,3 +1,4 @@
+import { SocketServices } from './sockets.js';
 import {
   ServiceError,
   UnimplementedWasiError,
@@ -85,6 +86,7 @@ const size = (length: bigint) => {
 };
 /** Private process bootstrap. Runtime adapters receive only the resulting Context. */
 export interface ContextBootstrap {
+  sockets?: import('../types.js').SocketBackendOptions;
   root: FileSystemDirectoryHandle;
   pid: number;
   ppid: number | null;
@@ -217,10 +219,18 @@ export class ProcessServices {
       }),
       random: guarded(random),
     });
-    const api = createProcessApi(model);
+    this.socketServices = new SocketServices(check);
+    const api = createProcessApi(model, this.socketServices);
     this.context = new ProcessContextImpl(api.context);
-    this.closeApi = api.dispose;
+    this.closeApi = async () => {
+      try {
+        await this.socketServices[Symbol.asyncDispose]();
+      } finally {
+        await api.dispose();
+      }
+    };
   }
+
   private release = (s: StreamResource, moved: boolean) => {
     this.streams.delete(s);
     if (s.stream.ref.id && !moved)
@@ -229,7 +239,13 @@ export class ProcessServices {
   private get platform() {
     return this.bootstrap.platform ?? browserPlatform;
   }
+  cancelSockets() {
+    this.socketServices.stop();
+  }
+  private socketServices: SocketServices;
   async init() {
+    await this.socketServices.init(this.bootstrap.sockets, this.bootstrap);
+
     for (let i = 0; i < 3; i++)
       this.standard.push({
         stream: await this.platform.connect(
@@ -424,8 +440,7 @@ export class ProcessServices {
         r.async(
           async () =>
             (await d.readDirectoryEntry()) as
-              | { name: string; type: 'directory' | 'regular-file' }
-              | undefined,
+              { name: string; type: 'directory' | 'regular-file' } | undefined,
         ),
       [Symbol.asyncDispose]: () => r.dispose(),
     });

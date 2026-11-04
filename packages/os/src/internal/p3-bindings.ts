@@ -185,6 +185,11 @@ export function nativeImports(
         try {
           guard();
           args = args.map(lower);
+          // Canonical list<u8> may arrive as a JS number array; Context uses bytes.
+          if (shape.package === 'wasi:sockets' && op.wit === '[method]udp-socket.send') {
+            args[1] = Uint8Array.from(args[1]);
+            args[2] ??= undefined;
+          }
           // Native future<result<T,E>> resolves/rejects its payload, whereas the
           // shared Context uses explicit tagged Results in Future values.
           if (shape.package === 'wasi:http' && shape.interface === 'types') {

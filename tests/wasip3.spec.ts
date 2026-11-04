@@ -4,9 +4,8 @@ test.beforeEach(async ({ page }) => {
 });
 test('P3 official 0.3.2 native async CLI executes streams and futures', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const { Walos, HostProcessContext, install, run } = await import(
-      '/tests/fixtures/host-harness.ts'
-    );
+    const { Walos, HostProcessContext, install, run } =
+      await import('/tests/fixtures/host-harness.ts');
     const os = await Walos.create();
     try {
       const h = new HostProcessContext(os.getHostProcess());
@@ -34,9 +33,8 @@ for (const [mode, output] of [
   test(`P3 native async ${mode}`, async ({ page }) => {
     const result = await page.evaluate(
       async ({ mode }) => {
-        const { Walos, HostProcessContext, install, run, readAll } = await import(
-          '/tests/fixtures/host-harness.ts'
-        );
+        const { Walos, HostProcessContext, install, run, readAll } =
+          await import('/tests/fixtures/host-harness.ts');
         const os = await Walos.create();
         try {
           const h = new HostProcessContext(os.getHostProcess());
@@ -77,13 +75,11 @@ for (const [mode, output] of [
   });
 for (const [mode, operation] of [
   ['fs-trap', 'wasi:filesystem/types@0.3.2/[method]descriptor.set-times'],
-  ['socket', 'wasi:sockets/types@0.3.2/[static]tcp-socket.create'],
 ] as const)
   test(`P3 ${mode} preserves the shared unimplemented Trap`, async ({ page }) => {
     const result = await page.evaluate(async (mode) => {
-      const { Walos, HostProcessContext, install, run } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
+      const { Walos, HostProcessContext, install, run } =
+        await import('/tests/fixtures/host-harness.ts');
       const os = await Walos.create();
       try {
         const h = new HostProcessContext(os.getHostProcess());
@@ -105,9 +101,8 @@ for (const name of [
 ])
   test(`P3 rejects ${name} before READY and reclaims moved stdio`, async ({ page }) => {
     const result = await page.evaluate(async (name) => {
-      const { Walos, HostProcessContext, install, readAll } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
+      const { Walos, HostProcessContext, install, readAll } =
+        await import('/tests/fixtures/host-harness.ts');
       const os = await Walos.create();
       try {
         const h = new HostProcessContext(os.getHostProcess());
@@ -136,9 +131,8 @@ for (const [mode, exit] of [
 ] as const)
   test(`P3 ${mode} retains its distinct exit result`, async ({ page }) => {
     const result = await page.evaluate(async (mode) => {
-      const { Walos, HostProcessContext, install, run } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
+      const { Walos, HostProcessContext, install, run } =
+        await import('/tests/fixtures/host-harness.ts');
       const os = await Walos.create();
       try {
         const h = new HostProcessContext(os.getHostProcess());
@@ -151,9 +145,8 @@ for (const [mode, exit] of [
   });
 test('P3 cancels a blocked native stream and completes its Future', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const { Walos, HostProcessContext, install, readAll } = await import(
-      '/tests/fixtures/host-harness.ts'
-    );
+    const { Walos, HostProcessContext, install, readAll } =
+      await import('/tests/fixtures/host-harness.ts');
     const os = await Walos.create();
     try {
       const h = new HostProcessContext(os.getHostProcess());
@@ -177,9 +170,8 @@ for (const mode of ['wait', 'hang'])
     page,
   }) => {
     const result = await page.evaluate(async (mode) => {
-      const { Walos, HostProcessContext, install } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
+      const { Walos, HostProcessContext, install } =
+        await import('/tests/fixtures/host-harness.ts');
       const os = await Walos.create();
       try {
         const h = new HostProcessContext(os.getHostProcess()),
@@ -206,9 +198,8 @@ for (const mode of ['wait', 'hang'])
 
 test('P3 native stdout propagates backpressure until its Pipe reader drains', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const { Walos, HostProcessContext, install, readAll, writeAll } = await import(
-      '/tests/fixtures/host-harness.ts'
-    );
+    const { Walos, HostProcessContext, install, readAll, writeAll } =
+      await import('/tests/fixtures/host-harness.ts');
     const os = await Walos.create();
     try {
       const h = new HostProcessContext(os.getHostProcess()),

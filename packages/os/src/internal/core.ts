@@ -27,6 +27,7 @@ export interface CoreEvents {
 export class ProcessManager {
   private nextPid = 1;
   private nextStream = 1;
+  sockets?: import('../types.js').SocketBackendOptions;
   private records = new Map<number, RecordEntry>();
   private owners = new Map<
     number,
@@ -142,7 +143,10 @@ export class ProcessManager {
       };
       worker.onmessageerror = () =>
         this.finish(pid, { kind: 'trap', message: 'worker message error' });
-      worker.postMessage({ type: 'start', pid, ppid: parent, spec }, transferables(spec.stdio));
+      worker.postMessage(
+        { type: 'start', pid, ppid: parent, spec: { ...spec, sockets: this.sockets } },
+        transferables(spec.stdio),
+      );
       r.transferred = true;
       this.publish();
     } catch (e) {

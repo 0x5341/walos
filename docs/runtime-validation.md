@@ -264,6 +264,36 @@ through mise. Chromium 141 used the Ubuntu 24.04 Playwright fallback on Ubuntu
 26.04 with libnspr4/libnss3/libasound2t64 extracted under /tmp; tests used
 LD_LIBRARY_PATH and PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64.
 
+## Issue #53: WASI P3 socket backend
+
+Sockets now use an explicitly configured, process-local backend. Host and every
+Process Worker import the factory module separately with cloned configuration,
+process identity and an abort signal. Transport authorization belongs to the
+backend; the default returns access-denied for socket creation/host-name lookup,
+while IP literals resolve locally. No built-in external TCP/UDP relay is shipped.
+
+The native 0.3.2 C fixture covers TCP connect/listen/accept, byte streams, normal
+EOF, receive cancellation, connection refusal, socket options, UDP datagrams,
+name resolution and typed failures. Browser tests additionally cover IPv6,
+IDNA, reset errors, denied access, bounded backpressure, cancellation of blocked
+send, pending UDP receive disposal, per-process factory/disposal and configuration
+snapshots. A separately bundled backend is loaded in Host and Process Workers
+under the production CSP, including native P3 resource/stream/future conversion.
+
+The generated coverage table marks socket operations backend-dependent. Actual
+transport options and synchronous bind/listen semantics must be provided by the
+backend; unsupported capabilities return not-supported. See
+[sockets backend contract](sockets-backend.md).
+
+Validation for this change: `npm run build` passed, including native fixture
+compilation and all static/generated checks. The full Playwright suite passed
+254 tests (7 production-only tests skipped); the production suite passed all
+7 tests separately. This environment used the installed Chromium headless shell
+with `LD_LIBRARY_PATH=/tmp/walos-browser-libs/extracted/usr/lib/x86_64-linux-gnu`.
+Temporary Playwright configs selected ports 5274/4274 and the repository root as
+the server working directory to avoid a port used by another task; test matches
+and application configuration were unchanged.
+
 ## HTTP resources and client (#54)
 
 The common Context implements HTTP fields, request, response, request-options and

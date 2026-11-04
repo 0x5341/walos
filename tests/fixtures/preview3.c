@@ -52,6 +52,8 @@ static void subtask(command_subtask_status_t status) {
   }
   if (handle) command_subtask_drop(handle);
 }
+#include "sockets.h"
+
 static bool services(void) {
   wasi_clocks_system_clock_instant_t wall;
   wasi_clocks_system_clock_now(&wall);
@@ -430,6 +432,8 @@ static bool execute(void) {
   if (equals(mode,"future")) return cancel_future();
   if (equals(mode,"file-process")) return file_process();
   if (equals(mode,"services")) return services();
+  if (equals(mode,"sockets")) return sockets_test(false);
+  if (equals(mode,"socket")) return sockets_test(true);
   if (equals(mode,"cat")) return relay();
   if (equals(mode,"cancel")) return cancel_input();
   if (equals(mode,"fs")) return filesystem();
@@ -448,8 +452,6 @@ static bool execute(void) {
   }
   if (equals(mode,"http") || equals(mode,"http-post") || equals(mode,"http-pending")) return http_client(args, false);
   if (equals(mode,"http-invalid")) return http_client(args, true);
-  if (equals(mode,"socket")) { wasi_sockets_types_own_tcp_socket_t socket; wasi_sockets_types_error_code_t error;
-    wasi_sockets_types_static_tcp_socket_create(WASI_SOCKETS_TYPES_IP_ADDRESS_FAMILY_IPV4,&socket,&error); return true; }
   if (equals(mode,"timezone")) {
     command_string_t id;
     CHECK(wasi_clocks_timezone_iana_id(&id));

@@ -92,9 +92,16 @@ migration and coverage documents for Result/Future/Stream and unsupported APIs.
 P2/P3 classification inspects actual component imports/exports and versions. Mixed,
 unknown and unsupported worlds fail before READY. P3 requires exactly the 0.3.2
 CLI entrypoint and known 0.3.2 imports. `run` returns a normal code, while a stop
-is `terminated` and an unimplemented operation is a Trap. HTTP, sockets,
+is `terminated` and an unimplemented operation is a Trap. HTTP,
 links and setting timestamps are typed but trap; see the repository coverage table.
 The build carries a checked patch to the pinned engine's future-drop producer
 notification; native stream/future cancellation is verified with compiled components.
 
 Timezone APIs read the browser timezone on each call (TZ is ignored). Browser Intl/tzdb data and the JavaScript Date range limit offset queries; unavailable information returns none. Debug strings are for humans only.
+
+Sockets use an explicit per-process backend. Pass `sockets: { module, config }`
+to `Walos.create()`; each Host/Worker imports the module and calls its
+`createSocketBackend` factory with cloned configuration and process identity.
+Without a backend, networking returns `access-denied`; IP literals resolve locally.
+See the [backend contract](../../docs/sockets-backend.md) for synchronization,
+authorization, bounded streaming, cancellation and cleanup requirements.

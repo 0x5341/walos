@@ -161,9 +161,8 @@ test('raw standard stdio Future completes and wrapper disposal keeps Context ali
 for (const name of ['unimplemented-probe', 'p2-unimplemented-probe'])
   test(`${name} preserves the common unimplemented Trap`, async ({ page }) => {
     const result = await page.evaluate(async (name) => {
-      const { Walos, HostProcessContext, install, run } = await import(
-        '/tests/fixtures/host-harness.ts'
-      );
+      const { Walos, HostProcessContext, install, run } =
+        await import('/tests/fixtures/host-harness.ts');
       const os = await Walos.create();
       try {
         const context = os.getHostProcess(),
@@ -190,31 +189,6 @@ for (const name of ['unimplemented-probe', 'p2-unimplemented-probe'])
     expect(result.exit.kind).toBe('trap');
     if (result.exit.kind === 'trap') expect(result.exit.message).toContain(result.operation);
   });
-
-test('unsupported socket API throws from the shared Context', async ({ page }) => {
-  const errors = await page.evaluate(async () => {
-    const { Walos } = await import('/packages/os/dist/index.js');
-    const os = await Walos.create();
-    try {
-      const c = os.getHostProcess();
-      const result = [];
-      for (const call of [
-        () => c.wasi.sockets.types.tcpSocket.create('ipv4'),
-      ])
-        try {
-          await call();
-          result.push('success');
-        } catch (error: any) {
-          result.push({ name: error.name, operation: error.operation });
-        }
-      return result;
-    } finally {
-      await os.dispose();
-    }
-  });
-  expect(errors).toHaveLength(1);
-  for (const error of errors) expect(error).toMatchObject({ name: 'UnimplementedWasiError' });
-});
 
 test('dedicated streams apply backpressure, drain before EOF and cancel blocked producers', async ({
   page,
