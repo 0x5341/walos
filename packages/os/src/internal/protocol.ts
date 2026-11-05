@@ -2,6 +2,7 @@ import type { Exit, ProcessInfo } from '../types.js';
 import type { ComponentMetrics } from './component.js';
 export type { Exit } from '../types.js';
 export type CoreEvent =
+  | { type: 'socket-connect'; pid: number; ppid: number | null; port: MessagePort }
   | { type: 'http-disconnected'; connection: number }
   | { type: 'processes'; processes: ProcessInfo[] }
   | { type: 'exit'; pid: number; exit: Exit; durationMs: number }
@@ -43,12 +44,14 @@ export interface Spec {
   http?: { listen?: { port: number; path: string }; next?: number };
   root: FileSystemDirectoryHandle;
   sockets?: import('../types.js').SocketBackendOptions;
+  httpTransport?: import('../types.js').HttpTransportOptions;
   file: FileSystemFileHandle;
   argv: string[];
   env: Record<string, string>;
   stdio: (StreamRef | null)[];
 }
 export type Operation =
+  | { op: 'socket-connect' }
   | { op: 'http-connect'; pid?: number; url?: string }
   | { op: 'http-close'; connection: number; cancel: boolean }
   | { op: 'spawn'; spec: Spec }

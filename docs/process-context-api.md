@@ -110,7 +110,8 @@ HTTP services use the `walos:runtime/http@0.3.2` extension and the explicit
 method accepts an optional AbortSignal; HTTP Results retain their standard tagged
 representation. Public `HostHttpService` and `HttpStartOptions` describe these
 views. See [HTTP processes and routing](wasi-p3-http.md) for port/path publication,
-middleware links, internal `client.send`, Fetch fallback and cancellation.
+middleware links, internal `client.send`, configurable external transports,
+`host.http.expose` socket ingress and cancellation.
 
 Standard Results stay Results. Host convenience views unwrap Results to ServiceError;
 ABI adapters translate to their target errno/variant. An unimplemented operation

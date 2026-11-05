@@ -48,6 +48,14 @@ export class Walos implements AsyncDisposable {
         module: new URL(options.sockets.module, import.meta.url).href,
         config: options.sockets.config,
       });
+    const http: WalosOptions['http'] =
+      options.http &&
+      structuredClone({
+        ...options.http,
+        ...(options.http.module
+          ? { module: new URL(options.http.module, import.meta.url).href }
+          : {}),
+      });
     try {
       os.currentState = 'booting';
       const root = options.storage;
@@ -77,10 +85,10 @@ export class Walos implements AsyncDisposable {
           clearTimeout(timer);
           reject(error);
         };
-        worker.postMessage({ type: 'boot', argv, env, sockets });
+        worker.postMessage({ type: 'boot', argv, env, sockets, httpTransport: http });
       });
       os.host = new ProcessServices(
-        { root, pid, ppid: null, argv, env, stdio: [], sockets },
+        { root, pid, ppid: null, argv, env, stdio: [], sockets, httpTransport: http },
         os.rpc,
         () => os.check(),
       );
@@ -141,6 +149,11 @@ export class Walos implements AsyncDisposable {
     this.emit({ type: 'error', error });
   }
   private receive(message: CoreEvent) {
+    if (message.type === 'socket-connect') {
+      if (this.host) void this.host.connectSockets(message.port, message.pid, message.ppid);
+      else message.port.close();
+      return;
+    }
     if (message.type === 'http-disconnected') {
       this.host?.http.disconnected(message.connection);
       return;
@@ -166,6 +179,7 @@ export class Walos implements AsyncDisposable {
       return;
     }
     if (this.currentState === 'disposed' || this.currentState === 'failed') return;
+    if (message.type === 'exit') void this.host?.serviceExited(message.pid);
     if (message.type === 'processes')
       this.currentProcesses = Object.freeze(
         message.processes.map((p) => Object.freeze({ ...p, argv: Object.freeze([...p.argv]) })),

@@ -282,6 +282,8 @@ export function createProcessApi(
   model: Model.ServiceModel,
   sockets?: Pick<import('../types.js').SocketBackend, 'types' | 'ipNameLookup'>,
   http?: HttpProcessApi,
+  network?: import('../wasi-types.js').WasiHttpClient.Interface,
+  networkTimeouts = false,
 ): {
   context: ProcessContext;
   dispose: () => Promise<void>;
@@ -507,8 +509,8 @@ export function createProcessApi(
     }
     group[iface.interface.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = Object.freeze(object);
   }
-  standard.http.types = createHttpTypes(scope);
-  standard.http.client = createHttpClient(scope, http?.send);
+  standard.http.types = createHttpTypes(scope, networkTimeouts);
+  standard.http.client = createHttpClient(scope, http?.send, network);
   standard.http.handler = {
     handle:
       http?.handle ??

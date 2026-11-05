@@ -35,7 +35,7 @@ test.skip(
   !process.env.WALOS_TEST_BUILD,
   'Production bundle checks run through npm run test:production',
 );
-for (const name of ['echo', 'p2-echo', 'p3-probe'])
+for (const name of ['echo', 'p2-echo', 'p3-probe', 'curl'])
   test(`bundled Host starts ${name} through bundled Core/Process Workers`, async ({ page }) => {
     const response = await page.goto('/tests/fixtures/production.html');
     expect(response?.headers()['content-security-policy']).toContain(
@@ -51,14 +51,51 @@ for (const name of ['echo', 'p2-echo', 'p3-probe'])
       });
       try {
         const host = new h.HostProcessContext(os.getHostProcess());
-        return await h.run(host, await h.install(host, name), [name, 'production']);
+        return await h.run(host, await h.install(host, name), [
+          name,
+          name === 'curl' ? '--help' : 'production',
+        ]);
       } finally {
         await os.dispose();
       }
     }, name);
     expect(result.exit).toEqual({ kind: 'exited', code: 0 });
-    expect(result.stdout).toBe(name === 'p3-probe' ? 'native-p3-0.3.2\n' : 'production\n');
+    if (name === 'curl') expect(result.stdout).toContain('Usage: curl');
+    else expect(result.stdout).toBe(name === 'p3-probe' ? 'native-p3-0.3.2\n' : 'production\n');
   });
+
+test('bundled network entries and Go assets initialize a shared session under CSP', async ({
+  page,
+}) => {
+  await page.goto('/tests/fixtures/production.html');
+  const result = await page.evaluate(async () => {
+    const client = await import(/* @vite-ignore */ '/network/tailscale-client.js');
+    const sockets = await import(/* @vite-ignore */ '/network/tailscale-socket.js');
+    const http = await import(/* @vite-ignore */ '/network/http-transport.js');
+    const session = await client.createTailscaleSession({
+      worker: new URL('/network/tailscale-session.js', location.href).href,
+      controlURL: 'http://127.0.0.1:1',
+    });
+    try {
+      return {
+        status: await session.status(),
+        socketFactory: typeof sockets.createSocketBackend,
+        connector: typeof sockets.connectSocketBackend,
+        httpFactory: typeof http.createHttpTransport,
+        ingress: typeof http.createHttpServer,
+      };
+    } finally {
+      await session[Symbol.asyncDispose]();
+    }
+  });
+  expect(result.status.exitReady).toBe(false);
+  expect(result).toMatchObject({
+    socketFactory: 'function',
+    connector: 'function',
+    httpFactory: 'function',
+    ingress: 'function',
+  });
+});
 
 for (const name of ['p2-cat', 'p3-cat'])
   test(`bundled ${name} displays a file operand`, async ({ page }) => {

@@ -41,8 +41,8 @@ All synchronous WIT operations remain synchronous, including create, bind,
 listen, UDP connect/disconnect and socket options. A backend must return
 `not-supported` for capabilities it cannot implement with those semantics;
 it must not acknowledge an asynchronous bind before it has succeeded. Browser
-WebSocket alone cannot supply arbitrary TCP listen or UDP. No external relay,
-DNS service or production transport is included.
+WebSocket alone cannot supply arbitrary TCP listen or UDP. The OS package supplies
+the backend contract; the separate Tailscale package supplies a network transport.
 
 The backend enforces authorization, actual address allocation, UDP peer filtering,
 transport state, supported options and effective option values. It must implement
@@ -86,3 +86,22 @@ Context and native P3 components, including typed failures and stream/resource
 conversion. `tests/fixtures/sockets.h` is compiled against official WIT bindings.
 The coverage table marks all socket operations backend-dependent, not universal
 browser networking support. P1/P2 socket support is outside this change.
+
+## Shared transports and asynchronous listeners
+
+A backend may export `connectSocketBackend(init, port)` for transports that need
+a Window-owned connection. Dedicated process Workers receive an optional
+`init.connect()` callback returning their attached MessagePort. Core transfers
+the setup port to the Host; the Host module transfers it into its shared
+transport. Data then flows directly over that port. Host factories can establish
+their connection directly. The configuration remains structured-cloneable.
+
+`SocketBackend.listenTcp(address)` is an optional asynchronous Host extension. It
+returns a cancellable Result containing an actual bound address, a bounded stream
+of connected TCP sockets, and async dispose. The wrapper validates the address,
+tracks accepted sockets, and disposes queued connections on cancellation. Backend
+implementations without the extension use their synchronous TCP bind/listen
+operations. This extension does not change the WASI synchronous contract.
+
+See [@walos/tailscale-socket](../packages/tailscale-socket/README.md) for the
+shared Go/Wasm implementation and its explicitly prepared UDP bindings.

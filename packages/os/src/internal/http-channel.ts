@@ -17,6 +17,7 @@ type Metadata = {
   authority?: string;
   path?: string;
   timeout?: bigint;
+  networkTimeouts?: { connect?: bigint; first?: bigint };
   status?: number;
 };
 type Name = 'request' | 'response';
@@ -97,6 +98,7 @@ export class HttpChannel implements AsyncDisposable {
       value.authority = message.getAuthority();
       value.path = message.getPathWithQuery();
       value.timeout = message.options?.getBetweenBytesTimeout();
+      value.networkTimeouts = message.options?.copyNetworkTimeouts();
     } else value.status = message.getStatusCode();
     message.move();
     this.owned.add(message.headers);
@@ -151,7 +153,9 @@ export class HttpChannel implements AsyncDisposable {
       new HttpRequest(
         headers,
         body,
-        value.timeout === undefined ? undefined : this.own(new HttpRequestOptions(value.timeout)),
+        value.timeout === undefined && value.networkTimeouts === undefined
+          ? undefined
+          : this.own(new HttpRequestOptions(value.timeout, false, () => {}, value.networkTimeouts)),
       ),
     );
     request.setMethod(value.method!);

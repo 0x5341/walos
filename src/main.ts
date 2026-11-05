@@ -6,6 +6,7 @@ import {
   type HostOutput as OutputStream,
   type HostInput as InputStream,
 } from '@walos/os';
+import { setupNetwork, type DemoNetwork } from './demo-network';
 
 const terminal = document.querySelector<HTMLPreElement>('#terminal')!;
 const input = document.querySelector<HTMLInputElement>('#input')!;
@@ -13,6 +14,16 @@ const state = document.querySelector('#state')!;
 const processes = document.querySelector('#processes')!;
 const stop = document.querySelector<HTMLButtonElement>('#interrupt')!;
 const encoder = new TextEncoder();
+let generation = 0;
+let activeOS: Walos | undefined;
+let inputEvents: AbortController | undefined;
+window.addEventListener(
+  'pagehide',
+  () => {
+    void activeOS?.dispose();
+  },
+  { once: true },
+);
 async function writeAll(output: OutputStream, bytes: Uint8Array) {
   for (let offset = 0; offset < bytes.length;) {
     const ready = output.subscribe();
@@ -27,38 +38,57 @@ async function writeAll(output: OutputStream, bytes: Uint8Array) {
   }
   await output.blockingFlush();
 }
-async function display(stream: InputStream) {
+async function display(stream: InputStream, run: number) {
   const decoder = new TextDecoder();
   try {
     for (;;) {
       const bytes = await stream.blockingRead(65536n);
-      terminal.textContent += decoder.decode(bytes, { stream: true });
+      if (run === generation) terminal.textContent += decoder.decode(bytes, { stream: true });
     }
   } catch (error) {
-    if (!(error instanceof ServiceError) || error.code !== 'closed') throw error;
-    terminal.textContent += decoder.decode();
+    if (run === generation) {
+      if (!(error instanceof ServiceError) || error.code !== 'closed') throw error;
+      terminal.textContent += decoder.decode();
+    }
   } finally {
-    await stream[Symbol.asyncDispose]();
+    try {
+      await stream[Symbol.asyncDispose]();
+    } catch (error) {
+      if (run === generation) throw error;
+    }
   }
 }
-async function start() {
+async function start(network?: DemoNetwork) {
+  const run = ++generation;
+  input.disabled = stop.disabled = true;
+  stop.onclick = null;
+  inputEvents?.abort();
+  const oldOS = activeOS;
+  activeOS = undefined;
+  await oldOS?.dispose();
+  inputEvents = new AbortController();
+  const events = inputEvents;
+  state.textContent = 'Starting…';
   const os = await Walos.create({
     storage: await (
       await navigator.storage.getDirectory()
     ).getDirectoryHandle('walos-v1', { create: true }),
     env: { PWD: '/', PATH: '/bin' },
+    ...network,
   });
-  window.addEventListener('pagehide', () => void os.dispose());
+  activeOS = os;
   try {
     const host = new HostProcessContext(os.getHostProcess());
     const render = () => {
+      if (run !== generation) return;
       processes.textContent = os.processes
         .map((p) => `${p.pid}  ${p.state.toLowerCase()}  ${p.argv.join(' ') || 'Host'}`)
         .join('\n');
     };
     os.subscribe((event) => {
       if (event.type === 'processes') render();
-      if (event.type === 'error') terminal.textContent += `\n${event.error.message}\n`;
+      if (run === generation && event.type === 'error')
+        terminal.textContent += `\n${event.error.message}\n`;
     });
     render();
     state.textContent = 'Installing demo commands…';
@@ -91,6 +121,7 @@ async function start() {
       'p2-sort',
       'p3-probe',
       'p3-cat',
+      'curl',
     ]) {
       const response = await fetch(`${import.meta.env.BASE_URL}bin/${name}.wasm`);
       if (!response.ok) throw new Error(`Cannot install ${name}: ${response.status}`);
@@ -112,7 +143,7 @@ async function start() {
     const [stdin, writer] = await host.io.createPipe();
     const [stdout, out] = await host.io.createPipe();
     const [stderr, err] = await host.io.createPipe();
-    const displays = Promise.all([display(stdout), display(stderr)]);
+    const displays = Promise.all([display(stdout, run), display(stderr, run)]);
     void displays.catch(() => {});
     const child = await host.process.spawn(
       executable,
@@ -131,39 +162,66 @@ async function start() {
     input.disabled = false;
     input.focus();
     let pending = Promise.resolve();
-    input.addEventListener('keydown', (event) => {
-      if (event.ctrlKey && event.key.toLowerCase() === 'c') {
-        event.preventDefault();
-        void child.requestStop();
-        return;
-      }
-      if (event.key !== 'Enter') return;
-      const line = input.value;
-      input.value = '';
-      terminal.textContent += `${line}\n`; // local echo belongs to this UI
-      pending = pending
-        .then(() => writeAll(writer, encoder.encode(`${line}\n`)))
-        .catch((error) => {
-          terminal.textContent += `${error}\n`;
-        });
-    });
+    input.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.ctrlKey && event.key.toLowerCase() === 'c') {
+          event.preventDefault();
+          void child.requestStop().catch((error) => {
+            if (run === generation) terminal.textContent += `${error}\n`;
+          });
+          return;
+        }
+        if (event.key !== 'Enter') return;
+        const line = input.value;
+        input.value = '';
+        terminal.textContent += `${line}\n`; // local echo belongs to this UI
+        pending = pending
+          .then(() => writeAll(writer, encoder.encode(`${line}\n`)))
+          .catch((error) => {
+            if (run === generation) terminal.textContent += `${error}\n`;
+          });
+      },
+      { signal: events.signal },
+    );
     stop.disabled = false;
     stop.onclick = () => {
-      void child.requestStop();
+      void child.requestStop().catch((error) => {
+        if (run === generation) terminal.textContent += `${error}\n`;
+      });
     };
-    await child.wait();
-    await child[Symbol.asyncDispose]();
-    await writer[Symbol.asyncDispose]();
-    await displays;
-    input.disabled = true;
-    stop.disabled = true;
-    state.textContent = 'Shell exited';
+    // Startup resolves once input is usable. Shell completion belongs to this run.
+    void (async () => {
+      await child.wait();
+      if (run !== generation) return;
+      await child[Symbol.asyncDispose]();
+      await writer[Symbol.asyncDispose]();
+      await displays;
+      events.abort();
+      input.disabled = stop.disabled = true;
+      state.textContent = 'Shell exited';
+    })().catch((error) => {
+      if (run !== generation) return;
+      events.abort();
+      input.disabled = stop.disabled = true;
+      state.textContent = 'Shell failed';
+      terminal.textContent += `${error}\n`;
+    });
   } catch (error) {
     await os.dispose();
+    if (activeOS === os) activeOS = undefined;
+    events.abort();
     throw error;
   }
 }
-void start().catch((error) => {
-  state.textContent = 'OS failed';
-  terminal.textContent += String(error);
-});
+let restarting = Promise.resolve();
+function restart(network?: DemoNetwork) {
+  const next = restarting.then(() => start(network));
+  restarting = next.catch((error) => {
+    state.textContent = 'OS failed';
+    terminal.textContent += `${error}\n`;
+  });
+  return next;
+}
+setupNetwork(restart);
+void restart().catch(() => {});

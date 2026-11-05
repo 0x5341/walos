@@ -7,6 +7,7 @@ export class HttpRequestOptions implements HTTP.RequestOptions {
     private between?: bigint,
     private immutable = false,
     private release = () => {},
+    private network?: { connect?: bigint; first?: bigint },
   ) {}
   private check() {
     if (!this.live)
@@ -25,17 +26,21 @@ export class HttpRequestOptions implements HTTP.RequestOptions {
   }
   getConnectTimeout() {
     this.check();
-    return undefined;
+    return this.network?.connect;
   }
   setConnectTimeout(value: bigint | undefined) {
-    return this.set(value, false);
+    const result = this.set(value, this.network !== undefined);
+    if (result.tag === 'ok' && this.network) this.network.connect = value;
+    return result;
   }
   getFirstByteTimeout() {
     this.check();
-    return undefined;
+    return this.network?.first;
   }
   setFirstByteTimeout(value: bigint | undefined) {
-    return this.set(value, false);
+    const result = this.set(value, this.network !== undefined);
+    if (result.tag === 'ok' && this.network) this.network.first = value;
+    return result;
   }
   getBetweenBytesTimeout() {
     this.check();
@@ -46,13 +51,16 @@ export class HttpRequestOptions implements HTTP.RequestOptions {
     if (result.tag === 'ok') this.between = value;
     return result;
   }
+  copyNetworkTimeouts() {
+    return this.network && { ...this.network };
+  }
   clone() {
     this.check();
-    return new HttpRequestOptions(this.between);
+    return new HttpRequestOptions(this.between, false, () => {}, this.copyNetworkTimeouts());
   }
   view(release: () => void) {
     this.check();
-    return new HttpRequestOptions(this.between, true, release);
+    return new HttpRequestOptions(this.between, true, release, this.copyNetworkTimeouts());
   }
   move() {
     const result = this.clone();

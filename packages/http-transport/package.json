@@ -1,0 +1,27 @@
+{
+  "name": "@walos/http-transport",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "description": "HTTP/1.1 and TLS over a walos socket backend",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./http.wasm": "./dist/http.wasm",
+    "./wasm_exec.js": "./dist/wasm_exec.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node ../../scripts/build-network-wasm.mjs http"
+  },
+  "peerDependencies": {
+    "@walos/os": "^0.3.0"
+  }
+}

@@ -21,9 +21,13 @@ description = "Install Chromium for Playwright tests"
 depends = ["setup:npm"]
 run = "npx playwright install chromium --with-deps"
 
+[tasks."setup:network"]
+description = "Install the checksum-pinned Go compiler for HTTP/Tailscale Wasm"
+run = "bash scripts/setup-network-tools.sh"
+
 [tasks.setup]
-description = "Set up npm dependencies and WASI tools for demo development"
-depends = ["setup:npm", "setup:wasi"]
+description = "Set up npm dependencies, WASI tools and Go for demo development"
+depends = ["setup:npm", "setup:wasi", "setup:network"]
 
 [tasks."build:apps"]
 description = "Build demo applications and WASI fixtures"
@@ -32,6 +36,20 @@ run = "npm run build:apps"
 [tasks."build:os"]
 description = "Build the OS package without WASI tools"
 run = "npm run build:os"
+
+[tasks."build:network"]
+description = "Build HTTP/Tailscale TypeScript and Go/Wasm packages"
+run = "npm run build:network"
+
+[tasks."test:network"]
+description = "Test HTTP framing/TLS/ingress and shared Tailscale sessions"
+depends = ["build:network"]
+run = "npm run test:network"
+
+[tasks."test:tailscale-e2e"]
+description = "Run Chromium against local Tailscale control, DERP and exit servers"
+depends = ["build:apps"]
+run = "npm run test:tailscale-e2e"
 
 [tasks.dev]
 description = "Build demo applications and start Vite"
@@ -57,7 +75,7 @@ run = "npm test"
 
 [tasks."test:production"]
 description = "Build demo applications and run production Playwright tests"
-depends = ["build:apps"]
+depends = ["build:apps", "build:network"]
 run = "npm run test:production"
 
 [tasks.format]

@@ -12,7 +12,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-26.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.1.0
@@ -24,6 +24,7 @@ jobs:
       - run: bash scripts/setup-sdk.sh
       - run: bash scripts/setup-wit-bindgen.sh
       - run: bash scripts/setup-runtime-tools.sh
+      - run: bash scripts/setup-network-tools.sh
       - run: npm run build
       # Vite cleans dist; generate docs afterwards so both sites share one artifact.
       - run: npm run build:docs

@@ -145,3 +145,18 @@ export async function httpServiceExample(host: HostProcessContext, executable: F
   // @ts-expect-error middleware next must be a service handle
   host.http.start(executable, { next: 123 });
 }
+
+export const customFetchFactory: import('@walos/os').HttpFetchFactory = async (init) => ({
+  fetch: (url, options) =>
+    fetch(url, {
+      ...options,
+      signal: AbortSignal.any([init.signal, ...(options.signal ? [options.signal] : [])]),
+    }),
+  async [Symbol.asyncDispose]() {},
+});
+const socketHttp: import('@walos/os').HttpSocketsOptions = {
+  transport: 'sockets',
+  module: 'https://example.invalid/http-transport.js',
+  config: { additionalCa: 'PEM' },
+};
+void socketHttp;

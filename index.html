@@ -16,7 +16,7 @@
       </header>
       <section class="intro">
         <p>A small OS, running in your browser.</p>
-        <span>Preview 1 / 2 · trusted applications · Chromium</span>
+        <span>Preview 1 / 2 / 3 · trusted applications · Chromium</span>
       </section>
       <div class="workspace">
         <section class="console">
@@ -38,10 +38,40 @@
           </div>
         </section>
         <aside>
+          <h2>Tailscale</h2>
+          <p id="network-state" role="status">Disconnected · HTTP uses browser Fetch</p>
+          <div class="network-actions">
+            <button id="tailscale-login" type="button">Log in to Tailscale</button>
+            <button id="tailscale-disconnect" type="button" disabled>Disconnect</button>
+          </div>
+          <a id="tailscale-auth" target="_blank" rel="noopener noreferrer" hidden
+            >Open Tailscale login</a
+          >
+          <label for="tailscale-exit">Exit node</label>
+          <select id="tailscale-exit" disabled>
+            <option value="">Log in to see exit nodes</option>
+          </select>
+          <button id="tailscale-use" type="button" disabled>Use exit node</button>
+          <details id="tailscale-options">
+            <summary>Login options</summary>
+            <label for="tailscale-key">Auth key (optional)</label>
+            <input id="tailscale-key" type="password" autocomplete="off" />
+            <label for="tailscale-control">Control server URL (optional)</label>
+            <input
+              id="tailscale-control"
+              type="url"
+              placeholder="Tailscale default"
+              autocomplete="off"
+            />
+          </details>
+          <p>
+            Applying or disconnecting restarts the Shell. Files persist. The Tailscale session lasts
+            until this tab closes; reload requires login again.
+          </p>
           <h2>Try it</h2>
           <code
             >cd /home<br />echo hello | p2-cat | sort<br />p2-echo hello<br />echo saved &gt;
-            note.txt<br />cat &lt; note.txt</code
+            note.txt<br />cat &lt; note.txt<br />curl --help<br />curl https://example.com/</code
           >
           <h2>Processes</h2>
           <pre id="processes"></pre>
@@ -49,7 +79,7 @@
           <p>
             Small WASI Shell. Child stdin requires redirection; automatic interactive input
             forwarding is unavailable. Stop ends the Shell; already running children may finish
-            independently. No network, job control, or security isolation.
+            independently. No job control or security isolation.
           </p>
         </aside>
       </div>

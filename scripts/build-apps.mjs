@@ -95,3 +95,4 @@ await import('./build-p2-probe.mjs');
 
 await import('./build-p3-probe.mjs');
 await import('./build-http-probe.mjs');
+await import('./build-curl.mjs');
