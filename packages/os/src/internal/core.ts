@@ -30,6 +30,7 @@ export class ProcessManager {
   private nextConnection = 1;
   private connections = new Map<number, { caller: number; target: number }>();
   sockets?: import('../types.js').SocketBackendOptions;
+  httpTransport?: import('../types.js').HttpTransportOptions;
   private records = new Map<number, RecordEntry>();
   private owners = new Map<
     number,
@@ -182,7 +183,12 @@ export class ProcessManager {
       worker.onmessageerror = () =>
         this.finish(pid, { kind: 'trap', message: 'worker message error' });
       worker.postMessage(
-        { type: 'start', pid, ppid: parent, spec: { ...spec, sockets: this.sockets } },
+        {
+          type: 'start',
+          pid,
+          ppid: parent,
+          spec: { ...spec, sockets: this.sockets, httpTransport: this.httpTransport },
+        },
         transferables(spec.stdio),
       );
       r.transferred = true;
@@ -220,6 +226,17 @@ export class ProcessManager {
     let ports: Transferable[] = [];
     try {
       switch (m.op) {
+        case 'socket-connect': {
+          if (!this.sockets || r.hostSend)
+            throw new RpcFailure('invalid-resource', 'Socket transport connection unavailable');
+          const channel = new MessageChannel();
+          this.emit({ type: 'socket-connect', pid: r.pid, ppid: r.parent, port: channel.port1 }, [
+            channel.port1,
+          ]);
+          value = channel.port2;
+          ports = [channel.port2];
+          break;
+        }
         case 'http-connect': {
           let target = m.pid === undefined ? undefined : this.records.get(m.pid);
           if (m.pid !== undefined && !r.handles.has(m.pid) && r.spec.http?.next !== m.pid)

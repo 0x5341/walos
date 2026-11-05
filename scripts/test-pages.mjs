@@ -7,6 +7,7 @@ import { chromium, expect } from '@playwright/test';
 // Match Pages project hosting: no SPA fallback and no COOP/COEP headers.
 const prefix = '/walos/';
 const root = resolve('dist');
+const networkWasm = [];
 const mime = {
   '.html': 'text/html',
   '.js': 'text/javascript',
@@ -16,6 +17,7 @@ const mime = {
 };
 const server = createServer(async (request, response) => {
   const path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+  if (/\/assets\/(tailscale|http)-.*\.wasm/.test(path)) networkWasm.push(path);
   const file = resolve(root, path.slice(prefix.length), path.endsWith('/') ? 'index.html' : '');
   if (!path.startsWith(prefix) || !file.startsWith(root + sep)) {
     response.writeHead(404).end();
@@ -61,6 +63,21 @@ try {
   }
   await command('echo pages-p3-file > /home/pages-p3-file');
   assert.match(await command('p3-cat /home/pages-p3-file'), /\npages-p3-file\n/);
+  assert.match(await command('curl --help'), /Usage: curl/);
+  assert.deepEqual(networkWasm, [], 'network Wasm must remain lazy until login');
+  await page.evaluate(async () => {
+    const client = await import('/walos/network/tailscale-client.js');
+    const session = await client.createTailscaleSession({
+      worker: new URL('/walos/network/tailscale-session.js', location.href).href,
+      controlURL: 'http://127.0.0.1:1',
+    });
+    try {
+      if ((await session.status()).exitReady) throw new Error('Unexpected exit readiness');
+    } finally {
+      await session[Symbol.asyncDispose]();
+    }
+  });
+  assert.equal(networkWasm.length, 1, 'login loads Tailscale Wasm from the Pages subpath');
   await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory();
     const writer = await (

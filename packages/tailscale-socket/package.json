@@ -1,0 +1,28 @@
+{
+  "name": "@walos/tailscale-socket",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "description": "Browser Tailscale socket backend with a shared Go/Wasm session",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./session.worker.js": "./dist/session.worker.js",
+    "./tailscale.wasm": "./dist/tailscale.wasm",
+    "./wasm_exec.js": "./dist/wasm_exec.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node ../../scripts/build-network-wasm.mjs tailscale"
+  },
+  "peerDependencies": {
+    "@walos/os": "^0.3.0"
+  }
+}

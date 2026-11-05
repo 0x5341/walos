@@ -142,9 +142,11 @@ export function createHttpClient(
     add<T extends AsyncDisposable>(value: T): T;
   },
   local?: (request: HttpRequest) => Promise<Reply | undefined>,
+  transport: import('../types.js').HttpFetch | WasiHttpClient.Interface = (url, init) =>
+    globalThis.fetch(url, init),
 ): WasiHttpClient.Interface {
   if (local) {
-    const network = createHttpClient(scope);
+    const network = createHttpClient(scope, undefined, transport);
     return {
       send(request) {
         if (!(request instanceof HttpRequest))
@@ -171,6 +173,7 @@ export function createHttpClient(
       },
     };
   }
+  if (typeof transport !== 'function') return transport;
   return {
     send(request) {
       if (!(request instanceof HttpRequest))
@@ -284,7 +287,7 @@ export function createHttpClient(
             redirect: 'error',
           };
           if (body) init.duplex = 'half';
-          const response = await fetch(url, init);
+          const response = await transport(url, init);
           sent!(ok);
           const fields = scope.add(
             new HttpFields(

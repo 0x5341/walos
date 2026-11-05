@@ -1,3 +1,5 @@
+import { exposeHostNetwork } from './internal/host-network.js';
+import { ServiceError, type HttpExposeOptions, type HttpExposure } from './types.js';
 import type { ProcessContext } from './types.js';
 import {
   createAbiView,
@@ -27,7 +29,12 @@ export class HostProcessContext implements AsyncDisposable {
   readonly fs: ReturnType<typeof createAbiView>['fs'];
   readonly io: ReturnType<typeof createAbiView>['io'];
   readonly process: ReturnType<typeof createAbiView>['process'];
-  readonly http: ReturnType<typeof createAbiView>['http'];
+  readonly http: ReturnType<typeof createAbiView>['http'] & {
+    expose(
+      service: import('./internal/abi-view.js').AbiHttpService,
+      options: HttpExposeOptions,
+    ): Promise<HttpExposure>;
+  };
   readonly clock: ReturnType<typeof createAbiView>['clock'];
   readonly random: ReturnType<typeof createAbiView>['random'];
   constructor(readonly context: ProcessContext) {
@@ -39,7 +46,18 @@ export class HostProcessContext implements AsyncDisposable {
     this.fs = this.methods(view.fs);
     this.io = this.methods(view.io);
     this.process = this.methods(view.process);
-    this.http = this.methods(view.http);
+    this.http = this.methods({
+      ...view.http,
+      expose: async (
+        service: import('./internal/abi-view.js').AbiHttpService,
+        options: HttpExposeOptions,
+      ) => {
+        if (service?.namespace !== context)
+          throw new ServiceError('invalid-resource', 'Foreign HTTP service');
+        service.pid();
+        return this.own(await exposeHostNetwork(context, service.resource, options));
+      },
+    });
     this.clock = view.clock;
     this.random = view.random;
   }

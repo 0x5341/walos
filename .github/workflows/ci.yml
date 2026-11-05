@@ -9,7 +9,7 @@ jobs:
   chromium:
     # Playwright 1.64.1 supports Ubuntu 26.04; ubuntu-latest can move to newer releases.
     runs-on: ubuntu-26.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v7.1.0
@@ -27,8 +27,13 @@ jobs:
       - run: npm run check:wit:p3
       - run: npm run check:wit
       - run: diff -ru wit/generated work/wit-generated
+      - run: bash scripts/setup-network-tools.sh
       - run: npm run build
+      - run: npm pack --workspace @walos/http-transport --workspace @walos/tailscale-socket --dry-run
       - run: npm run test:http
+      - run: npm run check:network
+      - run: npm run test:network
+      - run: npm run test:tailscale-e2e
       - run: npm test
       - run: npm run test:production
       - run: npm run test:pages

@@ -98,7 +98,7 @@ is `terminated` and an unimplemented operation is a Trap. Sockets use a configur
 backend. `host.http.start(executable, { listen: { port: 3000, path: '/api' } })`
 starts a native P3 HTTP service in its own Worker. Host and other P3 processes
 reach it through `wasi.http.client.send` to `http://localhost:3000/api/...`.
-Unmatched URLs use browser Fetch. Middleware accepts a fixed `next` service;
+Unmatched URLs use the configured external transport (browser Fetch by default). Middleware accepts a fixed `next` service;
 omitting `listen` creates a private handler. See
 [HTTP routing, streaming and lifecycle](../../docs/wasi-p3-http.md).
 Links and timestamp mutation use the common persistent filesystem; see the repository coverage table.
@@ -118,3 +118,12 @@ to `Walos.create({ storage, sockets })`; each Host/Worker imports the module and
 Without a backend, networking returns `access-denied`; IP literals resolve locally.
 See the [backend contract](../../docs/sockets-backend.md) for synchronization,
 authorization, bounded streaming, cancellation and cleanup requirements.
+
+`http: { transport: 'fetch', module, config }` loads a process-local `createFetch`
+factory for a custom proxy. `http: { transport: 'sockets', module, config }` loads
+an HTTP/TLS transport over the configured socket backend. Local service routing
+runs first; failures never switch transports. `host.http.expose(service, options)`
+bridges an explicit socket listener to a service, optionally with TLS. See
+[HTTP transport and ingress](../../docs/wasi-p3-http.md#configurable-external-transport),
+[@walos/http-transport](../http-transport/README.md) and
+[@walos/tailscale-socket](../tailscale-socket/README.md).

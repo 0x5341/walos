@@ -40,7 +40,7 @@ With [mise](https://mise.jdx.dev/), the repository configuration selects Node 26
 
 ```sh
 mise install
-mise run setup          # npm ci + pinned WASI tools (Linux x86-64)
+mise run setup          # npm ci + pinned WASI/Go tools (Linux x86-64)
 mise run dev            # build demo applications and start Vite
 ```
 
@@ -65,6 +65,7 @@ wit-bindgen 0.63.0 and wasm-tools 1.263.0 (Linux x86-64):
 bash scripts/setup-sdk.sh
 bash scripts/setup-wit-bindgen.sh
 bash scripts/setup-runtime-tools.sh
+bash scripts/setup-network-tools.sh
 npm run build:apps
 npm run dev
 ```
@@ -85,7 +86,22 @@ p3-probe
 p2-pwd
 export MESSAGE=hello
 echo $MESSAGE
+curl --help
 ```
+
+The Tailscale panel logs in interactively (or with an optional auth key), lists
+advertised exit nodes, and applies the selected node to the Shell and its children.
+Open the login link, approve this ephemeral device, select an online exit node,
+then click **Use exit node** and run `curl https://example.com/`. Applying or
+disconnecting restarts the Shell while preserving files. Exit loss blocks external
+traffic until it recovers or you explicitly disconnect. Reload requires login again.
+The Tailscale Wasm download begins only when logging in. SharedWorker is required.
+
+`curl` is a small native WASI 0.3.2 command built from `apps/curl.c`, with `-i`,
+`-X METHOD` and `-d TEXT`. It streams responses and can write to files with Shell
+redirection. Redirects are returned without following them. With no applied
+Tailscale session it uses the default browser Fetch transport and its CORS/upload
+restrictions; with a selected exit it uses socket HTTP/TLS. It is not libcurl.
 
 The Shell supports PATH lookup, `cd`/PWD updates, `export`, `exit`, quotes,
 whole-word `$NAME`/`$?`, pipes and `<`, `>`, `>>`. It has no job control, globbing,
@@ -99,7 +115,10 @@ independently. See [migration notes](docs/process-context-migration.md) for thes
 
 ```sh
 npm run check
+npm run check:network
 npm run build
+npm run test:network
+npm run test:tailscale-e2e
 npm test
 npm run test:production
 npm run test:pages
@@ -137,12 +156,16 @@ allow module workers and WebAssembly compilation.
 [historical engine comparison](docs/benchmarks/2026-10-25-engines.md) retain their
 original measurements; current measurements are linked from the migration notes.
 All official WASI 0.3.2 interfaces are public; HTTP resources and client sending use
-browser Fetch and process-local HTTP service routing with
+configurable Fetch or socket HTTP/TLS transports and process-local HTTP service routing with
 [documented behavior and limitations](docs/wasi-p3-http.md). Native P3 HTTP service
 and middleware processes start through `host.http.start`. Filesystem links and timestamp
 mutation use the shared persistent namespace.
 Sockets support a [process-local injected backend](docs/sockets-backend.md);
-network access is denied by default. See the full
+socket access is denied by default. Separate packages provide
+[@walos/http-transport](packages/http-transport/README.md) and
+[@walos/tailscale-socket](packages/tailscale-socket/README.md). Standard Go 1.27.3
+is selected; TinyGo evaluation and verification evidence are recorded in
+[network transports](docs/implementation/network-transports.md). See the full
 [coverage table](docs/wasi-p3-coverage.md) and
 [step-by-step validation/performance record](docs/runtime-validation.md).
 JS Process execution remains deferred to #34.

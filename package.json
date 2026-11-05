@@ -7,10 +7,10 @@
     "node": ">=26.13.0"
   },
   "scripts": {
-    "dev": "npm run build:os && vite --host 127.0.0.1",
+    "dev": "npm run build:network && vite --host 127.0.0.1",
     "build:apps": "node scripts/build-apps.mjs",
     "check": "npm run build:os && tsc --noEmit && npm run check:public && npm run check:runtime && npm run check:wasi",
-    "build": "npm run build:apps && npm run check && vite build",
+    "build": "npm run build:apps && npm run build:network && npm run check && vite build",
     "test": "playwright test",
     "preview": "vite preview --host 127.0.0.1",
     "check:wit": "node -e \"require('node:fs').rmSync('work/wit-generated',{recursive:true,force:true})\" && jco types wit -o work/wit-generated && node scripts/format-wit-types.mjs",
@@ -26,7 +26,14 @@
     "generate:wasi": "node scripts/generate-wasi-api.mjs && node scripts/generate-wasi-coverage.mjs",
     "check:wasi": "node scripts/generate-wasi-api.mjs --check && node scripts/generate-wasi-coverage.mjs --check",
     "check:wit:p3": "jco types wit/p3 --world-name command --all-features -o work/wit-p3-generated && jco types wit/p3 --world-name http-service --all-features -o work/wit-p3-generated/http-service && jco types wit/p3 --world-name http-middleware --all-features -o work/wit-p3-generated/http-middleware",
-    "test:http": "npm run build:os && node --test scripts/http.test.mjs"
+    "test:http": "npm run build:os && node --test scripts/http.test.mjs",
+    "build:http-transport": "npm run build:os && npm run build --workspace @walos/http-transport",
+    "test:http-sockets": "npm run build:http-transport && node scripts/http-sockets.test.mjs",
+    "evaluate:tinygo": "node scripts/evaluate-tinygo.mjs",
+    "build:network": "npm run build:os && npm run build --workspace @walos/http-transport && npm run build --workspace @walos/tailscale-socket",
+    "check:network": "tsc -p packages/http-transport/tsconfig.json --noEmit && tsc -p packages/tailscale-socket/tsconfig.json --noEmit",
+    "test:network": "node scripts/http.test.mjs && node scripts/http-sockets.test.mjs && node scripts/http-ingress.test.mjs && node scripts/tailscale-session.test.mjs && node scripts/network-go.mjs http test .",
+    "test:tailscale-e2e": "WALOS_TAILSCALE_E2E=1 node scripts/network-go.mjs tailscale test -count=1 -run TestBrowserExitNode -v -timeout 180s ."
   },
   "devDependencies": {
     "@bytecodealliance/jco": "1.41.0",
@@ -40,7 +47,9 @@
     "packages/*"
   ],
   "dependencies": {
-    "@walos/os": "*"
+    "@walos/os": "*",
+    "@walos/http-transport": "*",
+    "@walos/tailscale-socket": "*"
   },
   "overrides": {
     "@bytecodealliance/jco-std": {

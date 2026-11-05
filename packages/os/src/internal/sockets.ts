@@ -1,5 +1,11 @@
 import { Future, cancellable, cancelAsync, type Stream } from '../async.js';
-import type { SocketBackend, SocketBackendInit, SocketBackendOptions } from '../types.js';
+import type {
+  SocketBackend,
+  SocketBackendInit,
+  SocketBackendOptions,
+  SocketListener,
+  SocketOperation,
+} from '../types.js';
 import type { Result, WasiSocketsTypes as S } from '../wasi-types.js';
 
 const err = (tag: S.ErrorCode['tag']): Result<never, S.ErrorCode> => ({
@@ -33,6 +39,10 @@ const validAddress = (a: S.IpSocketAddress, family: S.IpAddressFamily, remote: b
 /** Per-process ownership boundary. Transport and authorization remain backend responsibilities. */
 export class SocketServices implements AsyncDisposable {
   private backend?: SocketBackend;
+  private options?: SocketBackendOptions;
+  private module?: {
+    connectSocketBackend?: (init: SocketBackendInit, port: MessagePort) => Promise<void>;
+  };
   private abort = new AbortController();
   private live = new Set<AsyncDisposable>();
   private closed = false;
@@ -41,13 +51,16 @@ export class SocketServices implements AsyncDisposable {
   async init(
     options: SocketBackendOptions | undefined,
     identity: Pick<SocketBackendInit, 'pid' | 'ppid'>,
+    connect?: () => Promise<MessagePort>,
   ) {
     if (!options) return;
-    const module = await import(/* @vite-ignore */ options.module);
+    this.options = options;
+    const module = (this.module = await import(/* @vite-ignore */ options.module));
     if (typeof module.createSocketBackend !== 'function')
       throw new Error('Missing createSocketBackend export');
     const backend = await module.createSocketBackend({
       ...identity,
+      connect,
       config: structuredClone(options.config),
       signal: this.abort.signal,
     });
@@ -64,6 +77,19 @@ export class SocketServices implements AsyncDisposable {
     if (this.abort.signal.aborted) {
       await backend[Symbol.asyncDispose]();
       throw new Error('Socket backend initialization cancelled');
+    }
+  }
+  async connectPort(port: MessagePort, identity: Pick<SocketBackendInit, 'pid' | 'ppid'>) {
+    try {
+      if (!this.module?.connectSocketBackend || !this.options || this.abort.signal.aborted)
+        throw new Error('Host socket connection factory unavailable');
+      await this.module.connectSocketBackend(
+        { ...identity, config: structuredClone(this.options.config), signal: this.abort.signal },
+        port,
+      );
+    } catch (error) {
+      port.postMessage({ event: { type: 'error', message: String(error) } });
+      port.close();
     }
   }
   stop() {
@@ -131,6 +157,111 @@ export class SocketServices implements AsyncDisposable {
         }
       });
     },
+  };
+  readonly listenTcp = (
+    address: S.IpSocketAddress,
+  ): SocketOperation<Result<SocketListener, S.ErrorCode>> => {
+    this.assert();
+    if (!validAddress(address, address?.tag, false))
+      return Promise.resolve(err('invalid-argument'));
+    if (!this.backend) return Promise.resolve(err('access-denied'));
+    let cancelled = false;
+    let listener: SocketListener | undefined;
+    let underlying: SocketOperation<Result<SocketListener, S.ErrorCode>> | undefined;
+    const operation = (async (): Promise<Result<SocketListener, S.ErrorCode>> => {
+      let result: Result<SocketListener, S.ErrorCode>;
+      const native = !!this.backend!.listenTcp;
+      if (native) {
+        underlying = this.backend!.listenTcp!(structuredClone(address));
+        result = await underlying;
+      } else {
+        const created = this.types.tcpSocket.create(address.tag);
+        if (created.tag === 'err') return created;
+        const socket = created.val;
+        const bound = socket.bind(address);
+        if (bound.tag === 'err') {
+          await socket[Symbol.asyncDispose]();
+          return bound;
+        }
+        const listening = socket.listen();
+        if (listening.tag === 'err') {
+          await socket[Symbol.asyncDispose]();
+          return listening;
+        }
+        const actual = socket.getLocalAddress();
+        if (actual.tag === 'err') {
+          await socket[Symbol.asyncDispose]();
+          return actual;
+        }
+        result = {
+          tag: 'ok',
+          val: {
+            address: actual.val,
+            connections: listening.val,
+            [Symbol.asyncDispose]: () => socket[Symbol.asyncDispose](),
+          },
+        };
+      }
+      if (result.tag === 'err') return result;
+      const original = result.val;
+      if (cancelled || this.closed) {
+        await original[Symbol.asyncDispose]();
+        return err('connection-aborted');
+      }
+      if (!validAddress(original.address, address.tag, false)) {
+        await original[Symbol.asyncDispose]();
+        throw new Error('Invalid listener address from backend');
+      }
+      let closed = false;
+      let disposal: Promise<void> | undefined;
+      const map = async (items: ArrayLike<S.TcpSocket> | undefined) => {
+        if (items === undefined) return undefined;
+        if (closed || this.closed) {
+          await Promise.allSettled(Array.from(items, (socket) => socket[Symbol.asyncDispose]()));
+          return undefined;
+        }
+        return Array.from(items, (socket) =>
+          native ? (this.wrap(socket, true, address.tag, true) as S.TcpSocket) : socket,
+        );
+      };
+      const close = () =>
+        (disposal ??= (async () => {
+          closed = true;
+          await Promise.allSettled([
+            original.connections.cancel(),
+            original[Symbol.asyncDispose](),
+          ]);
+          this.live.delete(listener!);
+        })());
+      listener = {
+        address: structuredClone(original.address),
+        connections: {
+          read: async (maximum) => map(await original.connections.read(maximum)),
+          tryRead: async (maximum) => {
+            const value = await original.connections.tryRead(maximum);
+            return value.tag === 'data'
+              ? { tag: 'data', val: (await map(value.val)) ?? [] }
+              : value;
+          },
+          ready: () => original.connections.ready(),
+          waitReady: () => original.connections.waitReady(),
+          cancel: close,
+          [Symbol.asyncDispose]: close,
+        },
+        [Symbol.asyncDispose]: close,
+      };
+      this.live.add(listener);
+      return { tag: 'ok', val: listener };
+    })();
+    const cancel = async () => {
+      cancelled = true;
+      if (underlying) {
+        await cancelAsync(underlying);
+        await underlying.cancel?.();
+      }
+      await listener?.[Symbol.asyncDispose]();
+    };
+    return Object.assign(cancellable(operation, cancel), { cancel });
   };
   private create(kind: 'tcpSocket' | 'udpSocket', family: S.IpAddressFamily) {
     this.assert();

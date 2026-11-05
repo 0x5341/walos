@@ -1,3 +1,5 @@
+import { registerHostNetwork } from './host-network.js';
+import { HttpTransportServices } from './http-transport.js';
 import type { NewTime } from './fs-store.js';
 import { SocketServices } from './sockets.js';
 import { HttpProcesses } from './http-processes.js';
@@ -93,6 +95,7 @@ const size = (length: bigint) => {
 export interface ContextBootstrap {
   http?: Spec['http'];
   sockets?: import('../types.js').SocketBackendOptions;
+  httpTransport?: import('../types.js').HttpTransportOptions;
   root: FileSystemDirectoryHandle;
   pid: number;
   ppid: number | null;
@@ -137,6 +140,11 @@ export class ProcessServices {
   private standard: { stream: Awaited<ReturnType<typeof connect>>; shared: SharedStream }[] = [];
   readonly context: ProcessContext;
   readonly http: HttpProcesses;
+  private httpTransport = new HttpTransportServices();
+  private bridges = new Map<number, Set<import('../types.js').HttpExposure>>();
+  private bridgeAbort = new AbortController();
+  private activeHttpServices = new Map<number, Http.Service>();
+  private exitedHttpServices = new WeakSet<Http.Service>();
   private httpServices = new WeakSet<Http.Service>();
   private closeApi: () => Promise<void>;
   constructor(
@@ -226,102 +234,204 @@ export class ProcessServices {
     });
     this.socketServices = new SocketServices(check);
     this.http = new HttpProcesses(rpc, check);
-    const api = createProcessApi(model, this.socketServices, {
-      send: (request) => this.http.send(request),
-      handle: (request) => {
-        if (bootstrap.http?.next === undefined) {
-          return Promise.resolve(request[Symbol.asyncDispose]()).then(() => ({
-            tag: 'err',
-            val: { tag: 'configuration-error' },
-          }));
-        }
-        if (!(request instanceof HttpRequest))
-          throw new ServiceError('invalid-resource', 'Foreign HTTP request');
-        const pending = this.http.send(this.http.add(request.transfer()), bootstrap.http.next);
-        return cancellable(
-          pending.then((value) => value!),
-          () => cancelAsync(pending),
-        );
-      },
-      start: async (file, args, environment, listen, next, stdout, stderr) => {
-        let nextPid: number | undefined;
-        if (next) {
-          try {
-            nextPid = this.httpServices.has(next) ? next.pid() : -1;
-          } catch {
-            nextPid = -1;
+    const api = createProcessApi(
+      model,
+      this.socketServices,
+      {
+        send: (request) => this.http.send(request),
+        handle: (request) => {
+          if (bootstrap.http?.next === undefined) {
+            return Promise.resolve(request[Symbol.asyncDispose]()).then(() => ({
+              tag: 'err',
+              val: { tag: 'configuration-error' },
+            }));
           }
-        }
-        const child = await this.spawn(file, args, environment, undefined, stdout, stderr, {
-          listen: listen && { ...listen },
-          next: nextPid,
-        });
-        let live = true;
-        const assert = () => {
-          if (!live) throw new ServiceError('invalid-resource', 'HTTP service handle disposed');
-        };
-        const service: Http.Service = {
-          pid: () => {
-            assert();
-            return child.pid();
-          },
-          handle: (request) => {
-            assert();
-            if (!(request instanceof HttpRequest))
-              throw new ServiceError('invalid-resource', 'Foreign HTTP request');
-            const operation = this.http.send(this.http.add(request.transfer()), child.pid(), true);
-            const finished =
-              (operation as Promise<unknown> & { finished?: Promise<void> }).finished ?? operation;
-            return Object.assign(
-              cancellable(
-                operation.then((value) => value!),
-                () => cancelAsync(operation),
-                finished,
-              ),
-              { finished },
-            );
-          },
-          wait: async () => {
-            assert();
+          if (!(request instanceof HttpRequest))
+            throw new ServiceError('invalid-resource', 'Foreign HTTP request');
+          const pending = this.http.send(this.http.add(request.transfer()), bootstrap.http.next);
+          return cancellable(
+            pending.then((value) => value!),
+            () => cancelAsync(pending),
+          );
+        },
+        start: async (file, args, environment, listen, next, stdout, stderr) => {
+          let nextPid: number | undefined;
+          if (next) {
             try {
-              const exit = await child.wait();
-              return {
-                tag: 'ok',
-                val:
-                  exit.kind === 'exited'
-                    ? { tag: 'exited', val: exit.code }
-                    : { tag: exit.kind, val: exit.message },
-              } as const;
-            } catch (error) {
-              if (error instanceof ServiceError && error.code === 'already-consumed')
-                return { tag: 'err', val: { tag: 'already-consumed' } };
-              throw error;
+              nextPid = this.httpServices.has(next) ? next.pid() : -1;
+            } catch {
+              nextPid = -1;
             }
-          },
-          requestStop: () => {
-            assert();
-            return child.requestStop();
-          },
-          [Symbol.asyncDispose]: () => {
-            live = false;
-            return child[Symbol.asyncDispose]();
-          },
-        };
-        this.httpServices.add(service);
-        return service;
+          }
+          const child = await this.spawn(file, args, environment, undefined, stdout, stderr, {
+            listen: listen && { ...listen },
+            next: nextPid,
+          });
+          const childPid = child.pid();
+          let live = true;
+          const assert = () => {
+            if (!live) throw new ServiceError('invalid-resource', 'HTTP service handle disposed');
+          };
+          const service: Http.Service = {
+            pid: () => {
+              assert();
+              return child.pid();
+            },
+            handle: (request) => {
+              assert();
+              if (!(request instanceof HttpRequest))
+                throw new ServiceError('invalid-resource', 'Foreign HTTP request');
+              const operation = this.http.send(
+                this.http.add(request.transfer()),
+                child.pid(),
+                true,
+              );
+              const finished =
+                (operation as Promise<unknown> & { finished?: Promise<void> }).finished ??
+                operation;
+              return Object.assign(
+                cancellable(
+                  operation.then((value) => value!),
+                  () => cancelAsync(operation),
+                  finished,
+                ),
+                { finished },
+              );
+            },
+            wait: async () => {
+              assert();
+              try {
+                const exit = await child.wait();
+                return {
+                  tag: 'ok',
+                  val:
+                    exit.kind === 'exited'
+                      ? { tag: 'exited', val: exit.code }
+                      : { tag: exit.kind, val: exit.message },
+                } as const;
+              } catch (error) {
+                if (error instanceof ServiceError && error.code === 'already-consumed')
+                  return { tag: 'err', val: { tag: 'already-consumed' } };
+                throw error;
+              }
+            },
+            requestStop: async () => {
+              assert();
+              await this.serviceExited(childPid);
+              return child.requestStop();
+            },
+            [Symbol.asyncDispose]: async () => {
+              if (!live) return;
+              live = false;
+              await this.serviceExited(childPid);
+              return child[Symbol.asyncDispose]();
+            },
+          };
+          this.httpServices.add(service);
+          this.activeHttpServices.set(childPid, service);
+          return service;
+        },
       },
-    });
+      this.httpTransport,
+      bootstrap.httpTransport?.transport === 'sockets',
+    );
     this.context = new ProcessContextImpl(api.context);
-    this.closeApi = async () => {
-      try {
-        await this.http[Symbol.asyncDispose]();
-        await this.socketServices[Symbol.asyncDispose]();
-      } finally {
-        await api.dispose();
+    registerHostNetwork(this.context, async (service, options) => {
+      this.check();
+      if (!this.httpServices.has(service))
+        throw new ServiceError('invalid-resource', 'Foreign HTTP service');
+      const pid = service.pid();
+      if (this.exitedHttpServices.has(service))
+        throw new ServiceError('closed', 'HTTP service exited');
+      const moduleUrl =
+        options.module ??
+        (bootstrap.httpTransport?.transport === 'sockets'
+          ? bootstrap.httpTransport.module
+          : undefined);
+      if (!moduleUrl) throw new ServiceError('invalid', 'HTTP server module is required');
+      const module = await import(/* @vite-ignore */ moduleUrl);
+      if (typeof module.createHttpServer !== 'function')
+        throw new TypeError('Missing createHttpServer export');
+      const bridge = await module.createHttpServer(
+        {
+          pid: bootstrap.pid,
+          ppid: bootstrap.ppid,
+          config: structuredClone(options.config ?? bootstrap.httpTransport?.config),
+          signal: this.bridgeAbort.signal,
+          http: this.context.wasi.http.types,
+          sockets: this.socketServices,
+          handle: (
+            request: import('../wasi-types.js').WasiHttpTypes.Request,
+            signal: AbortSignal,
+          ) => {
+            const pending = service.handle(request);
+            const cancel = () => {
+              void cancelAsync(pending);
+            };
+            signal.addEventListener('abort', cancel, { once: true });
+            if (signal.aborted) cancel();
+            const finished =
+              (pending as Promise<unknown> & { finished?: Promise<void> }).finished ?? pending;
+            void finished
+              .finally(() => signal.removeEventListener('abort', cancel))
+              .catch(() => {});
+            return pending;
+          },
+        },
+        structuredClone(options),
+      );
+      if (this.closing || this.bridgeAbort.signal.aborted || this.exitedHttpServices.has(service)) {
+        await bridge[Symbol.asyncDispose]();
+        throw new Error('Host is closing');
       }
+      try {
+        service.pid();
+      } catch (error) {
+        await bridge[Symbol.asyncDispose]();
+        throw error;
+      }
+      const owned = this.bridges.get(pid) ?? new Set();
+      this.bridges.set(pid, owned);
+      const dispose = bridge[Symbol.asyncDispose].bind(bridge);
+      let disposal: Promise<void> | undefined;
+      Object.defineProperty(bridge, Symbol.asyncDispose, {
+        configurable: true,
+        value: () =>
+          (disposal ??= Promise.resolve(dispose()).finally(() => {
+            owned.delete(bridge);
+            if (!owned.size) this.bridges.delete(pid);
+          })),
+      });
+      owned.add(bridge);
+      return bridge;
+    });
+    this.closeApi = async () => {
+      const results = await Promise.allSettled([
+        ...[...this.bridges.values()].flatMap((bridges) =>
+          [...bridges].map((bridge) => bridge[Symbol.asyncDispose]()),
+        ),
+        this.http[Symbol.asyncDispose](),
+        this.httpTransport[Symbol.asyncDispose](),
+        this.socketServices[Symbol.asyncDispose](),
+      ]);
+      await api.dispose();
+      const failed = results.find((result) => result.status === 'rejected');
+      if (failed?.status === 'rejected') throw failed.reason;
     };
   }
 
+  connectSockets(port: MessagePort, pid: number, ppid: number | null) {
+    return this.socketServices.connectPort(port, { pid, ppid });
+  }
+  async serviceExited(pid: number) {
+    const service = this.activeHttpServices.get(pid);
+    if (!service) return;
+    this.activeHttpServices.delete(pid);
+    this.exitedHttpServices.add(service);
+    await Promise.allSettled(
+      [...(this.bridges.get(pid) ?? [])].map((bridge) => bridge[Symbol.asyncDispose]()),
+    );
+  }
   private release = (s: StreamResource, moved: boolean) => {
     this.streams.delete(s);
     if (s.stream.ref.id && !moved)
@@ -332,10 +442,20 @@ export class ProcessServices {
   }
   cancelSockets() {
     this.socketServices.stop();
+    this.httpTransport.stop();
+    this.bridgeAbort.abort();
   }
   private socketServices: SocketServices;
   async init() {
-    await this.socketServices.init(this.bootstrap.sockets, this.bootstrap);
+    await this.socketServices.init(
+      this.bootstrap.sockets,
+      this.bootstrap,
+      this.bootstrap.ppid === null ? undefined : () => this.rpc.call({ op: 'socket-connect' }),
+    );
+    await this.httpTransport.init(this.bootstrap.httpTransport, this.bootstrap, {
+      sockets: this.socketServices,
+      http: this.context.wasi.http.types,
+    });
 
     for (let i = 0; i < 3; i++)
       this.standard.push({
@@ -659,6 +779,7 @@ export class ProcessServices {
   }
   private async close() {
     this.closing = true;
+    this.bridgeAbort.abort();
     const results = await Promise.allSettled([this.closeApi()]);
     results.push(...(await Promise.allSettled([...this.resources].map((r) => r.dispose()))));
     await Promise.allSettled([...this.pending]);

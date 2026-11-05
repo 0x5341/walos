@@ -58,10 +58,10 @@ exit. A replacement never receives requests already bound to an older process.
 
 Only `http` and the URL hostname `localhost` use this registry. Missing scheme
 still defaults to HTTPS, and missing HTTP port is 80. With no matching live
-registration, `client.send` uses browser Fetch, including unmatched localhost
+registration, `client.send` uses the configured external transport (Fetch by default), including unmatched localhost
 ports/paths. After selecting an internal service, errors, busy, traps and stops
-never fall back to Fetch or retry. `https`, IP literals and other hostnames use
-Fetch directly. This routing is not a network or capability isolation boundary.
+never fall back to the external transport or retry. `https`, IP literals and other
+hostnames use the external transport. This routing is not a network or capability isolation boundary.
 
 Each service has its own Worker and serves one exchange at a time, without a
 queue. Busy lasts through request and response EOF, trailers and handling-result
@@ -75,7 +75,8 @@ uses ordinary URL routing. Unlinked Context handler calls return
 Incoming browser requests are supplied explicitly by Host JavaScript. These
 ports are virtual within Walos: they do not open browser/OS TCP listeners, and
 ordinary browser `fetch()` does not enter the registry. Service Worker integration
-and external HTTP listeners are not provided.
+is left to the consumer. Explicit socket listeners are available through
+`host.http.expose`, described below.
 
 ## Internal streaming and lifetime
 
@@ -112,7 +113,7 @@ message invalidates its old handle.
 
 ## Browser transport
 
-HTTP and HTTPS use Fetch in the calling process, with CORS mode, same-origin
+By default HTTP and HTTPS use Fetch in the calling process, with CORS mode, same-origin
 credentials and redirects rejected. Missing scheme defaults to HTTPS; authority
 is required, and missing path defaults to `/`. Userinfo is rejected. Browser
 CSP, mixed content, network policy and CORS remain in effect. This is not a
@@ -148,3 +149,43 @@ Dropping a body or cancelling send aborts the transport, cancels input streams
 and settles pending body futures. Process/OS disposal performs the same cleanup.
 EOF and the trailer result describe body reception; the separate handling result
 future communicates the consumer's outcome to the producer.
+
+## Configurable external transport
+
+`Walos.create({ storage, http: { transport: 'fetch', module, config } })` loads a
+module exporting `createFetch(init)`. The factory receives cloned `config`,
+`pid`, `ppid`, and a process `AbortSignal`, and returns `{ fetch, [Symbol.asyncDispose] }`.
+The fetch function accepts a URL and RequestInit and returns a Response. It may
+rewrite the URL or implement a caller-defined proxy protocol. Browser Fetch
+restrictions still apply; walos does not define a proxy wire protocol.
+
+Omitting `http` keeps standard browser Fetch. The module URL and cloneable
+configuration are snapshotted before initialization awaits, inherited by all
+children, and instantiated independently in each process. Factory failures reject
+OS creation or process startup. Abort is propagated to pending requests before
+backend disposal. Modules must work in the main thread and module Workers and be
+bundled as separate entries under the application's CORS/CSP policy.
+
+For HTTP/HTTPS over the socket backend, use `http: { transport: 'sockets', module,
+config }` with the separate `@walos/http-transport` entry. That module exports
+`createHttpTransport(init)` and returns a cancellable WASI HTTP client and async
+dispose method. Initialization includes the process's HTTP types and wrapped
+socket services. See [the transport package](../packages/http-transport/README.md).
+
+Both modes preserve internal localhost routing priority. A selected local service
+failure never retries over the network, and external transport failures never
+switch to another transport.
+
+`host.http.expose(service, options)` opens an explicit HTTP ingress bridge.
+Specify `address` as a WASI IP socket address; a zero port requests an ephemeral
+port. `module` defaults to the configured sockets HTTP module and may be provided
+independently when outbound requests use Fetch. The returned exposure reports
+the actual address and supports async dispose. Optional `tls` contains PEM
+`certificate` and `key`; the bridge serves HTTPS with caller-provided credentials.
+
+Limits default to 32 connections, 64 KiB headers, a 10-second header deadline and
+a 30-second idle/read deadline. Busy services receive 503, failures before headers
+receive 502, and failures after headers abort the connection. Service exit and OS
+disposal close associated bridges and active exchanges. Sockets transport request
+options support connect, first-byte and between-byte timeouts; internal localhost
+requests retain their existing behavior and do not apply network deadlines.

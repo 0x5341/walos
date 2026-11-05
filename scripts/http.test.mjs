@@ -217,3 +217,95 @@ test('request setters reject malformed URI components without changing existing 
     assert.equal(request.setPathWithQuery(path).tag, 'err');
   assert.equal(request.getPathWithQuery(), '/path?key=value%20here');
 });
+
+// Dynamic module configuration must behave identically outside the browser.
+const fetchModule = (source) => `data:text/javascript,${encodeURIComponent(source)}`;
+async function transportSetup(t, options) {
+  const { HttpTransportServices } = await import('../packages/os/dist/internal/http-transport.js');
+  const transport = new HttpTransportServices();
+  t.after(() => transport[Symbol.asyncDispose]());
+  await transport.init(options, { pid: 7, ppid: 3 });
+  const { types } = setup(t);
+  return { transport, types };
+}
+function transportRequest(types, authority = 'example.invalid') {
+  const [request] = types.request.new(
+    types.fields.new(),
+    undefined,
+    new Future(ok(undefined)),
+    undefined,
+  );
+  request.setScheme({ tag: 'HTTPS' });
+  request.setAuthority(authority);
+  return request;
+}
+test('custom fetch receives cloned config, process identity and request URL', async (t) => {
+  const config = { prefix: 'proxy' };
+  const { transport, types } = await transportSetup(t, {
+    module: fetchModule(`export function createFetch(init) {
+      init.config.prefix += '-copy';
+      return { fetch: async (url) => new Response(init.config.prefix + ':' + init.pid + ':' + init.ppid + ':' + url.href),
+        async [Symbol.asyncDispose]() {} };
+    }`),
+    config,
+  });
+  const reply = await transport.send(transportRequest(types));
+  assert.equal(reply.tag, 'ok');
+  const [body] = types.response.consumeBody(reply.val, new Future(ok(undefined)));
+  assert.equal(
+    new TextDecoder().decode(await body.read(65536)),
+    'proxy-copy:7:3:https://example.invalid/',
+  );
+  assert.equal(await body.read(65536), undefined);
+  assert.deepEqual(config, { prefix: 'proxy' });
+});
+test('local routes run before custom transport and never retry a selected failure', async (t) => {
+  let called = 0;
+  const { types } = setup(t);
+  const client = createHttpClient(
+    { add: (value) => value },
+    async () => ({ tag: 'err', val: { tag: 'destination-not-found' } }),
+    async () => {
+      called++;
+      throw new Error('network should not run');
+    },
+  );
+  const reply = await client.send(transportRequest(types, 'localhost:3000'));
+  assert.equal(reply.val.tag, 'destination-not-found');
+  assert.equal(called, 0);
+});
+test('disposing a custom fetch aborts pending requests and disposes the backend once', async (t) => {
+  const key = `walosFetchDisposed${Date.now()}`;
+  t.after(() => {
+    delete globalThis[key];
+  });
+  const { transport, types } = await transportSetup(t, {
+    module: fetchModule(`export function createFetch(init) {
+      return { fetch: (url, options) => new Promise((resolve, reject) => {
+        if (options.signal.aborted) reject(new Error('aborted'));
+        else options.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+      }), async [Symbol.asyncDispose]() { globalThis[${JSON.stringify(key)}] = (globalThis[${JSON.stringify(key)}] || 0) + 1; } };
+    }`),
+  });
+  const pending = transport.send(transportRequest(types));
+  await Promise.resolve();
+  await transport[Symbol.asyncDispose]();
+  assert.equal((await pending).tag, 'err');
+  await transport[Symbol.asyncDispose]();
+  assert.equal(globalThis[key], 1);
+});
+test('bad HTTP modules fail initialization instead of falling back', async () => {
+  const { HttpTransportServices } = await import('../packages/os/dist/internal/http-transport.js');
+  for (const [source, message] of [
+    ['export const unrelated = 1;', /Missing createFetch/],
+    ['export function createFetch() { return {}; }', /Invalid HTTP fetch/],
+    ['export function createFetch() { throw new Error("factory failed"); }', /factory failed/],
+  ]) {
+    const transport = new HttpTransportServices();
+    await assert.rejects(
+      transport.init({ module: fetchModule(source) }, { pid: 1, ppid: null }),
+      message,
+    );
+    await transport[Symbol.asyncDispose]();
+  }
+});

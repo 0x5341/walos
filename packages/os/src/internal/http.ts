@@ -7,7 +7,7 @@ import { HttpBody } from './http-body.js';
 import { HttpRequest, HttpResponse } from './http-resources.js';
 
 type Scope = { add<T extends AsyncDisposable>(value: T): T };
-export function createHttpTypes(scope: Scope): HTTP.Interface {
+export function createHttpTypes(scope: Scope, networkTimeouts = false): HTTP.Interface {
   const fields = (value: HTTP.Fields) => {
     if (!(value instanceof HttpFields))
       throw new ServiceError('invalid-resource', 'Foreign HTTP fields');
@@ -26,7 +26,12 @@ export function createHttpTypes(scope: Scope): HTTP.Interface {
         return result;
       },
     },
-    requestOptions: { new: () => scope.add(new HttpRequestOptions()) },
+    requestOptions: {
+      new: () =>
+        scope.add(
+          new HttpRequestOptions(undefined, false, () => {}, networkTimeouts ? {} : undefined),
+        ),
+    },
     request: {
       new: (headers, contents, trailers, options) => {
         if (options && !(options instanceof HttpRequestOptions))
